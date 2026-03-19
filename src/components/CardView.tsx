@@ -1,15 +1,13 @@
 /**
  * CardView — fullscreen overlay stile Letterboxd.
- * Poster grande che riempie lo schermo, CTA in basso fisso,
- * swipe orizzontale per navigare tra i film della lista.
- * Le CTA (Watch/Like/Rate/Watchlist) funzionano direttamente senza caricare detail.
+ * Poster grande, swipe orizzontale tra film, CTA funzionanti in basso.
+ * Rate apre solo le stelle (no dialog completa).
  */
 import { useState, useRef } from 'react';
 import { X, Eye, Heart, Star, Bookmark, BookmarkCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { TMDBMovieDetail } from '../types';
 import { getImageUrl, getMovieDetail, getTitle, getReleaseDate } from '../services/tmdb';
 import { formatYear, formatRating, cn } from '../utils';
-import { RatingModal } from './RatingModal';
 
 export interface CardItem {
   id: number;
@@ -18,7 +16,6 @@ export interface CardItem {
   release_date: string;
   vote_average: number;
   media_type: 'movie' | 'tv';
-  personal_rating?: number | null;
 }
 
 interface CardViewProps {
@@ -29,26 +26,29 @@ interface CardViewProps {
   getPersonalRating: (id: number) => number | null;
   onMarkWatched: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
   onUnmarkWatched: (id: number) => Promise<void>;
-  onUpdateRating?: (id: number, rating: number | null) => Promise<void>;
+  onUpdateRating: (id: number, rating: number | null) => Promise<void>;
   onToggleLiked?: (id: number) => Promise<void>;
   onAddToWatchlist: (movie: TMDBMovieDetail) => Promise<void>;
   onRemoveFromWatchlist: (id: number) => Promise<void>;
   onOpenFull?: (id: number, mediaType: 'movie' | 'tv') => void;
-  onClose?: () => void;
+  onClose: () => void;
   initialIndex?: number;
 }
 
+type BottomMode = 'cta' | 'rate';
+
 export function CardView({
   items, watchedIds, watchlistIds, likedIds,
-  getPersonalRating, onMarkWatched, onUnmarkWatched,
+  getPersonalRating, onMarkWatched, onUnmarkWatched, onUpdateRating,
   onToggleLiked, onAddToWatchlist, onRemoveFromWatchlist,
   onOpenFull, onClose, initialIndex = 0,
 }: CardViewProps) {
-  const [index, setIndex] = useState(initialIndex);
-  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [index, setIndex] = useState(Math.min(initialIndex, items.length - 1));
   const [imgErr, setImgErr] = useState(false);
+  const [bottomMode, setBottomMode] = useState<BottomMode>('cta');
+  const [actionLoading, setActionLoading] = useState(false);
 
-  // Swipe animation state
+  // Swipe state
   const [dragX, setDragX] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const touchStartX = useRef<number | null>(null);
@@ -71,11 +71,12 @@ export function CardView({
   function goTo(i: number) {
     setIndex(i);
     setImgErr(false);
+    setBottomMode('cta');
   }
 
-  // Touch swipe handlers
+  // ── Touch swipe ─────────────────────────────────────────────────
   function handleTouchStart(e: React.TouchEvent) {
-    if (isAnimating) return;
+    if (isAnimating || bottomMode === 'rate') return;
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     swipeLocked.current = null;
@@ -125,32 +126,47 @@ export function CardView({
     activeDragX.current = 0;
   }
 
-  // Load full detail only when needed (for watch/watchlist)
+  // ── Actions ─────────────────────────────────────────────────────
   async function getDetail(): Promise<TMDBMovieDetail | null> {
     try { return await getMovieDetail(item.id, item.media_type); }
     catch { return null; }
   }
 
-  async function handleMarkWatched(rating: number | null, liked: boolean) {
-    const d = await getDetail();
-    if (d) {
-      await onMarkWatched(d, rating);
-      if (liked && onToggleLiked) await onToggleLiked(item.id);
-    }
-    setShowRatingModal(false);
+  async function handleWatchToggle() {
+    if (actionLoading) return;
+    setActionLoading(true);
+    try {
+      if (isWatched) {
+        await onUnmarkWatched(item.id);
+      } else {
+        const d = await getDetail();
+        if (d) await onMarkWatched(d, personalRating);
+      }
+    } finally { setActionLoading(false); }
+  }
+
+  async function handleLikeToggle() {
+    if (actionLoading || !onToggleLiked) return;
+    setActionLoading(true);
+    try { await onToggleLiked(item.id); }
+    finally { setActionLoading(false); }
   }
 
   async function handleWatchlistToggle() {
-    if (isOnWatchlist) {
-      onRemoveFromWatchlist(item.id);
-    } else {
-      const d = await getDetail();
-      if (d) onAddToWatchlist(d);
-    }
+    if (actionLoading) return;
+    setActionLoading(true);
+    try {
+      if (isOnWatchlist) {
+        await onRemoveFromWatchlist(item.id);
+      } else {
+        const d = await getDetail();
+        if (d) await onAddToWatchlist(d);
+      }
+    } finally { setActionLoading(false); }
   }
 
-  async function handleLikedToggle() {
-    if (onToggleLiked) onToggleLiked(item.id);
+  async function handleRateChange(newRating: number | null) {
+    await onUpdateRating(item.id, newRating);
   }
 
   const isDragged = swipeLocked.current === 'h' && dragX !== 0;
@@ -161,26 +177,35 @@ export function CardView({
       className="fixed inset-0 z-[85] bg-film-black flex flex-col"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      {/* Header */}
+      {/* ── Header ── */}
       <div
-        className="flex items-center justify-between px-5 pt-3 pb-2 shrink-0"
+        className="relative flex items-center px-5 pb-2 shrink-0"
         style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)' }}
       >
-        <div className="text-center flex-1">
+        {/* Counter left */}
+        <span className="text-film-subtle text-xs font-mono w-12">
+          {index + 1}/{items.length}
+        </span>
+
+        {/* Title center */}
+        <div className="flex-1 text-center px-2 min-w-0">
           <p className="text-film-text font-semibold text-base truncate">{title}</p>
           <p className="text-film-muted text-sm">{formatYear(getReleaseDate(item))}</p>
         </div>
+
+        {/* Close right — 48×48 tap target */}
         <button
           onClick={onClose}
-          className="absolute right-5 w-8 h-8 flex items-center justify-center active:opacity-60"
+          className="w-12 h-8 flex items-center justify-center active:opacity-50 transition-opacity"
+          style={{ touchAction: 'manipulation' }}
         >
           <X size={22} className="text-film-text" />
         </button>
       </div>
 
-      {/* Poster area — fills available height */}
+      {/* ── Poster area ── */}
       <div
-        className="flex-1 min-h-0 px-5 py-2 relative"
+        className="flex-1 min-h-0 px-4 py-2 relative"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -203,9 +228,9 @@ export function CardView({
           )}
         </div>
 
-        {/* TMDB rating */}
+        {/* TMDB rating badge */}
         {item.vote_average > 0 && (
-          <div className="absolute top-5 left-8 bg-film-black/70 backdrop-blur-sm px-2.5 py-1 rounded-xl">
+          <div className="absolute top-4 left-7 bg-film-black/70 backdrop-blur-sm px-2.5 py-1 rounded-xl pointer-events-none">
             <span className="text-film-accent font-mono font-bold text-sm">★ {formatRating(item.vote_average)}</span>
           </div>
         )}
@@ -213,13 +238,13 @@ export function CardView({
         {/* Nav arrows */}
         {canPrev && (
           <button onClick={() => goTo(index - 1)}
-            className="absolute left-6 top-1/2 -translate-y-1/2 w-10 h-10 bg-film-black/60 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform">
+            className="absolute left-5 top-1/2 -translate-y-1/2 w-11 h-11 bg-film-black/60 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform">
             <ChevronLeft size={20} className="text-white" />
           </button>
         )}
         {canNext && (
           <button onClick={() => goTo(index + 1)}
-            className="absolute right-6 top-1/2 -translate-y-1/2 w-10 h-10 bg-film-black/60 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform">
+            className="absolute right-5 top-1/2 -translate-y-1/2 w-11 h-11 bg-film-black/60 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform">
             <ChevronRight size={20} className="text-white" />
           </button>
         )}
@@ -235,85 +260,187 @@ export function CardView({
         </div>
       )}
 
-      {/* Bottom CTA bar — sempre visibile */}
-      <div className="shrink-0 px-5 pb-3 pt-2 border-t border-film-border bg-film-black">
-        <div className="grid grid-cols-4 gap-2">
-          {/* Watch */}
-          <BottomCta
-            label={isWatched ? 'Watched' : 'Watch'}
-            icon={<Eye size={24} strokeWidth={isWatched ? 2.5 : 1.5} />}
-            active={isWatched}
-            activeColor="text-green-400"
-            onClick={() => isWatched ? onUnmarkWatched(item.id) : setShowRatingModal(true)}
-          />
-
-          {/* Like */}
-          <BottomCta
-            label="Like"
-            icon={<Heart size={24} fill={isLiked ? 'currentColor' : 'none'} strokeWidth={isLiked ? 2 : 1.5} />}
-            active={isLiked}
-            activeColor="text-pink-400"
-            onClick={handleLikedToggle}
-          />
-
-          {/* Rate */}
-          <BottomCta
-            label={personalRating ? `${personalRating}★` : 'Rate'}
-            icon={<Star size={24} fill={personalRating ? 'currentColor' : 'none'} strokeWidth={personalRating ? 2 : 1.5} />}
-            active={!!personalRating}
-            activeColor="text-film-accent"
-            onClick={() => setShowRatingModal(true)}
-          />
-
-          {/* Watchlist */}
-          <BottomCta
-            label={isOnWatchlist ? 'Saved' : 'Watchlist'}
-            icon={isOnWatchlist
-              ? <BookmarkCheck size={24} strokeWidth={2} />
-              : <Bookmark size={24} strokeWidth={1.5} />
-            }
-            active={isOnWatchlist}
-            activeColor="text-purple-400"
-            onClick={handleWatchlistToggle}
-          />
-        </div>
-
-        {/* Open full detail */}
-        {onOpenFull && (
-          <button
-            onClick={() => onOpenFull(item.id, item.media_type)}
-            className="w-full mt-2 py-2 text-film-subtle text-xs text-center active:opacity-60 transition-opacity"
-          >
-            Scheda completa →
-          </button>
+      {/* ── Bottom bar ── */}
+      <div className="shrink-0 px-5 pb-2 pt-3 border-t border-film-border/50 bg-film-black">
+        {bottomMode === 'cta' ? (
+          /* Normal CTA mode */
+          <>
+            <div className="grid grid-cols-4 gap-3">
+              <CtaBtn
+                label={isWatched ? 'Watched' : 'Watch'}
+                icon={<Eye size={22} strokeWidth={isWatched ? 2.5 : 1.5} />}
+                active={isWatched}
+                color="text-green-400"
+                loading={actionLoading}
+                onClick={handleWatchToggle}
+              />
+              <CtaBtn
+                label="Like"
+                icon={<Heart size={22} fill={isLiked ? 'currentColor' : 'none'} strokeWidth={isLiked ? 2 : 1.5} />}
+                active={isLiked}
+                color="text-pink-400"
+                loading={actionLoading}
+                onClick={handleLikeToggle}
+              />
+              <CtaBtn
+                label={personalRating ? `${personalRating}★` : 'Rate'}
+                icon={<Star size={22} fill={personalRating ? 'currentColor' : 'none'} strokeWidth={personalRating ? 2 : 1.5} />}
+                active={!!personalRating}
+                color="text-film-accent"
+                onClick={() => setBottomMode('rate')}
+              />
+              <CtaBtn
+                label={isOnWatchlist ? 'Saved' : 'Watchlist'}
+                icon={isOnWatchlist
+                  ? <BookmarkCheck size={22} strokeWidth={2} />
+                  : <Bookmark size={22} strokeWidth={1.5} />
+                }
+                active={isOnWatchlist}
+                color="text-purple-400"
+                loading={actionLoading}
+                onClick={handleWatchlistToggle}
+              />
+            </div>
+            {onOpenFull && (
+              <button
+                onClick={() => onOpenFull(item.id, item.media_type)}
+                className="w-full mt-2 py-1.5 text-film-subtle text-xs text-center active:opacity-60">
+                Scheda completa →
+              </button>
+            )}
+          </>
+        ) : (
+          /* Rate mode — solo stelle */
+          <div className="py-2">
+            <p className="text-film-subtle text-xs text-center uppercase tracking-widest mb-4">
+              {personalRating ? `${personalRating} / 5` : 'Tocca o scorri per votare'}
+            </p>
+            <InlineStarRating
+              value={personalRating}
+              onChange={handleRateChange}
+            />
+            <button
+              onClick={() => setBottomMode('cta')}
+              className="w-full mt-5 py-3 bg-film-surface border border-film-border rounded-2xl text-film-text text-sm font-medium active:scale-[0.98] transition-transform"
+            >
+              {personalRating ? 'Fatto' : 'Salta'}
+            </button>
+          </div>
         )}
       </div>
-
-      {/* Rating modal */}
-      {showRatingModal && (
-        <RatingModal
-          movie={{ id: item.id, title, poster_path: item.poster_path, media_type: item.media_type } as TMDBMovieDetail}
-          initialWatched={isWatched}
-          initialLiked={isLiked}
-          onConfirm={handleMarkWatched}
-          onCancel={() => setShowRatingModal(false)}
-        />
-      )}
     </div>
   );
 }
 
-function BottomCta({ label, icon, active, activeColor, onClick }: {
+// ── Inline star rating (swipe/touch, no modal) ───────────────────
+
+function InlineStarRating({
+  value,
+  onChange,
+}: {
+  value: number | null;
+  onChange: (r: number | null) => void;
+}) {
+  const [live, setLive] = useState<number | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+  const STAR_COUNT = 5;
+  const displayed = live ?? value ?? 0;
+
+  function ratingFromX(clientX: number): number {
+    const el = ref.current;
+    if (!el) return 0;
+    const rect = el.getBoundingClientRect();
+    const starW = rect.width / STAR_COUNT;
+    const x = Math.max(0, Math.min(clientX - rect.left, rect.width - 1));
+    const starIdx = Math.floor(x / starW);
+    const offset = x - starIdx * starW;
+    const half = offset < starW / 2;
+    return Math.max(0.5, Math.min(5, half ? starIdx + 0.5 : starIdx + 1));
+  }
+
+  function onTouchStart(e: React.TouchEvent) {
+    dragging.current = true;
+    setLive(ratingFromX(e.touches[0].clientX));
+  }
+  function onTouchMove(e: React.TouchEvent) {
+    e.preventDefault();
+    if (dragging.current) setLive(ratingFromX(e.touches[0].clientX));
+  }
+  function onTouchEnd() {
+    dragging.current = false;
+    if (live !== null) onChange(live === value ? null : live);
+    setLive(null);
+  }
+  function onMouseMove(e: React.MouseEvent) { setLive(ratingFromX(e.clientX)); }
+  function onMouseLeave() { setLive(null); }
+  function onClick(e: React.MouseEvent) {
+    const r = ratingFromX(e.clientX);
+    onChange(r === value ? null : r);
+  }
+
+  return (
+    <div
+      ref={ref}
+      className="flex w-full cursor-pointer touch-none select-none"
+      style={{ gap: 8 }}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onMouseMove={onMouseMove}
+      onMouseLeave={onMouseLeave}
+      onClick={onClick}
+    >
+      {[1, 2, 3, 4, 5].map(star => {
+        const full = displayed >= star;
+        const half = !full && displayed >= star - 0.5;
+        return (
+          <svg
+            key={star}
+            viewBox="0 0 24 24"
+            className="flex-1"
+            style={{ height: 48 }}
+          >
+            {half && (
+              <defs>
+                <linearGradient id={`hg${star}`} x1="0" x2="1" y1="0" y2="0">
+                  <stop offset="50%" stopColor="#E8C547" />
+                  <stop offset="50%" stopColor="transparent" />
+                </linearGradient>
+              </defs>
+            )}
+            <polygon
+              points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"
+              stroke={full || half ? '#E8C547' : '#3A3A52'}
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+              fill={full ? '#E8C547' : half ? `url(#hg${star})` : 'none'}
+            />
+          </svg>
+        );
+      })}
+    </div>
+  );
+}
+
+function CtaBtn({
+  label, icon, active, color, loading, onClick,
+}: {
   label: string; icon: React.ReactNode;
-  active: boolean; activeColor: string; onClick: () => void;
+  active: boolean; color: string;
+  loading?: boolean; onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center gap-1.5 py-2 active:scale-90 transition-transform"
+      disabled={loading}
+      className="flex flex-col items-center gap-1.5 py-2 active:scale-90 transition-transform disabled:opacity-50"
+      style={{ touchAction: 'manipulation' }}
     >
-      <span className={cn('transition-colors', active ? activeColor : 'text-white/40')}>{icon}</span>
-      <span className={cn('text-xs font-medium', active ? 'text-white/90' : 'text-white/40')}>{label}</span>
+      <span className={cn('transition-colors', active ? color : 'text-white/40')}>{icon}</span>
+      <span className={cn('text-xs font-medium leading-none', active ? 'text-white/90' : 'text-white/40')}>
+        {label}
+      </span>
     </button>
   );
 }

@@ -93,7 +93,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
   function resetAll() {
     setDirectorQuery('');
     setActorQuery('');
-    onChange({ watchedStatus: 'all', mediaType: filters.mediaType, withProviders: [], withAwards: false });
+    onChange({ watchedStatus: 'all', mediaType: filters.mediaType, withProviders: [], withAwards: false, decade: undefined });
   }
 
   return (
@@ -149,9 +149,11 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
                 className="w-full bg-film-card border border-film-border rounded-lg px-3 py-2 text-sm text-film-text appearance-none cursor-pointer focus:outline-none focus:border-film-accent transition-colors"
               >
                 <option value="">Qualsiasi decade</option>
-                {DECADES.map(d => (
-                  <option key={d.value} value={d.value}>{d.label}</option>
-                ))}
+                {DECADES
+                  .filter(d => filters.mediaType !== 'tv' || d.start >= 1970)
+                  .map(d => (
+                    <option key={d.value} value={d.value}>{d.label}</option>
+                  ))}
               </select>
               <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-film-muted pointer-events-none" />
             </div>
@@ -199,7 +201,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
       </FilterSection>
 
       {/* Voto IMDB */}
-      <FilterSection icon={<Star size={14} />} label="Voto minimo">
+      <FilterSection icon={<Star size={14} />} label="Voto minimo IMDB">
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs text-film-muted">
             <span>Qualsiasi</span>
@@ -327,8 +329,8 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
         </div>
       </FilterSection>
 
-      {/* Oscar */}
-      <FilterSection icon={<Star size={14} />} label="Premi">
+      {/* Oscar — solo per film */}
+      {filters.mediaType !== 'tv' ? <FilterSection icon={<Star size={14} />} label="Premi">
         <button
           onClick={() => onChange({ ...filters, withAwards: !filters.withAwards })}
           className={cn(
@@ -340,7 +342,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
         >
           🏆 Candidature / vittorie Oscar
         </button>
-      </FilterSection>
+      </FilterSection> : null}
 
     </div>
   );

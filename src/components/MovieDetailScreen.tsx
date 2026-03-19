@@ -31,7 +31,9 @@ interface MovieDetailScreenProps {
   onAddToWatchlist: () => void;
   onRemoveFromWatchlist: () => void;
   onShuffle?: () => void;
+  onIncrementRewatch?: (id: number, delta: number) => Promise<void>;
   onOpenMovie?: (id: number, mediaType: 'movie' | 'tv') => void;
+  rewatchCount?: number;
   loading?: boolean;
 }
 
@@ -41,7 +43,7 @@ export function MovieDetailScreen({
   playlist, playlistIndex = 0, onSwipeToIndex,
   onBack, onMarkWatched, onUnmarkWatched, onUpdateRating,
   onAddToWatchlist, onRemoveFromWatchlist,
-  onShuffle, onOpenMovie, loading,
+  onShuffle, onOpenMovie, onIncrementRewatch, rewatchCount = 0, loading,
 }: MovieDetailScreenProps) {
   const [showFullCast, setShowFullCast] = useState(false);
   const [posterError, setPosterError] = useState(false);
@@ -394,6 +396,31 @@ export function MovieDetailScreen({
               <div className="flex items-center gap-3 px-4 py-3 bg-film-surface rounded-2xl border border-film-border mb-4">
                 <span className="text-film-subtle text-xs uppercase tracking-wider shrink-0">Il tuo voto</span>
                 <StarRating value={personalRating ?? null} onChange={r => onUpdateRating?.(r)} size="sm" />
+              </div>
+            )}
+
+
+            {/* Rewatch counter — solo se visto */}
+            {isWatched && onIncrementRewatch && (
+              <div className="flex items-center justify-between px-4 py-3 bg-film-surface rounded-2xl border border-film-border mb-4">
+                <div>
+                  <p className="text-film-text text-sm font-medium">Rewatch</p>
+                  <p className="text-film-subtle text-xs mt-0.5">
+                    {rewatchCount === 0 ? 'Prima visione' : `Rivisto ${rewatchCount} ${rewatchCount === 1 ? 'volta' : 'volte'}`}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => onIncrementRewatch(movie.id, -1)}
+                    disabled={rewatchCount === 0}
+                    className="w-9 h-9 rounded-full bg-film-card border border-film-border flex items-center justify-center text-film-text text-lg active:scale-90 transition-transform disabled:opacity-30"
+                  >−</button>
+                  <span className="text-film-accent font-mono font-bold text-lg w-6 text-center">{rewatchCount}</span>
+                  <button
+                    onClick={() => onIncrementRewatch(movie.id, 1)}
+                    className="w-9 h-9 rounded-full bg-film-accent text-film-black flex items-center justify-center font-bold text-lg active:scale-90 transition-transform"
+                  >+</button>
+                </div>
               </div>
             )}
 

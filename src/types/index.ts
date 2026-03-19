@@ -132,6 +132,7 @@ export interface WatchedMovie {
   vote_average: number;
   personal_rating: number | null;
   liked: boolean;
+  rewatchCount: number;            // volte che l'utente ha rivisto
   addedAt: string;
   media_type: 'movie' | 'tv';
 }

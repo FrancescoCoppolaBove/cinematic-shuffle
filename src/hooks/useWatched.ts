@@ -5,6 +5,7 @@ import { getTitle, getReleaseDate } from '../services/tmdb';
 import {
   fetchWatchedMovies, addWatchedToFirestore, removeWatchedFromFirestore,
   updatePersonalRating as updateRatingFs, updateLiked as updateLikedFs,
+  updateRewatchCount as updateRewatchCountFs,
   fetchWatchlist, addToWatchlistFirestore, removeFromWatchlistFirestore,
 } from '../services/firestore';
 
@@ -56,6 +57,7 @@ export function useWatched(user: User | null) {
       vote_average: movie.vote_average,
       personal_rating: personalRating,
       liked: false,
+      rewatchCount: 0,
       media_type: movie.media_type,
     };
     await addWatchedToFirestore(user.uid, entry);
@@ -77,6 +79,14 @@ export function useWatched(user: User | null) {
     await updateRatingFs(user.uid, movieId, rating);
     setWatchedMovies(prev => prev.map(m => m.id === movieId ? { ...m, personal_rating: rating } : m));
   }, [user]);
+
+  const incrementRewatch = useCallback(async (movieId: number, delta: number) => {
+    if (!user) return;
+    const current = watchedMovies.find(m => m.id === movieId);
+    const newCount = Math.max(0, (current?.rewatchCount ?? 0) + delta);
+    await updateRewatchCountFs(user.uid, movieId, newCount);
+    setWatchedMovies(prev => prev.map(m => m.id === movieId ? { ...m, rewatchCount: newCount } : m));
+  }, [user, watchedMovies]);
 
   const toggleLiked = useCallback(async (movieId: number) => {
     if (!user) return;
@@ -111,7 +121,7 @@ export function useWatched(user: User | null) {
   return {
     watchedMovies, watchedIds, watchlist, watchlistIds,
     loading, refresh,
-    markWatched, unmarkWatched, updateRating, toggleLiked,
+    markWatched, unmarkWatched, updateRating, toggleLiked, incrementRewatch,
     addToWatchlist, removeFromWatchlist,
   };
 }

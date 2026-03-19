@@ -18,6 +18,7 @@ interface ShuffleViewProps {
   onUpdateRating: (id: number, rating: number | null) => Promise<void>;
   onAddToWatchlist: (movie: TMDBMovieDetail) => Promise<void>;
   onRemoveFromWatchlist: (id: number) => Promise<void>;
+  onIncrementRewatch?: (id: number, delta: number) => Promise<void>;
   onOpenMovieGlobal?: (id: number, mediaType: 'movie' | 'tv', playlist?: import('../hooks/useNavigationStack').PlaylistItem[], index?: number) => void;
 }
 
@@ -33,6 +34,7 @@ export function ShuffleView({
   watchedIds, watchlistIds, watchedMovies,
   onMarkWatched, onUnmarkWatched,
   onAddToWatchlist, onRemoveFromWatchlist,
+  onIncrementRewatch,
   onOpenMovieGlobal,
 }: ShuffleViewProps) {
   const [filters, setFilters] = useState<MovieFilters>(DEFAULT_FILTERS);
@@ -137,6 +139,8 @@ export function ShuffleView({
           onAddToWatchlist={() => onAddToWatchlist(movie)}
           onRemoveFromWatchlist={() => onRemoveFromWatchlist(movie.id)}
           onOpenDetail={() => onOpenMovieGlobal?.(movie.id, movie.media_type)}
+          onIncrementRewatch={onIncrementRewatch}
+          rewatchCount={watchedMovies.find(m => m.id === movie.id)?.rewatchCount ?? 0}
           loading={loading}
         />
       )}

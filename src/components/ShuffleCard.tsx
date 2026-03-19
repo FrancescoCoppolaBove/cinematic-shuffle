@@ -20,6 +20,8 @@ interface ShuffleCardProps {
   onAddToWatchlist: () => void;
   onRemoveFromWatchlist: () => void;
   onOpenDetail: () => void;
+  onIncrementRewatch?: (id: number, delta: number) => Promise<void>;
+  rewatchCount?: number;
   loading?: boolean;
 }
 
@@ -27,7 +29,7 @@ export function ShuffleCard({
   movie, isWatched, isOnWatchlist,
   onShuffle, onMarkWatched, onUnmarkWatched,
   onAddToWatchlist, onRemoveFromWatchlist,
-  onOpenDetail, loading,
+  onOpenDetail, onIncrementRewatch, rewatchCount = 0, loading,
 }: ShuffleCardProps) {
   const [posterErr, setPosterErr] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
@@ -217,6 +219,29 @@ export function ShuffleCard({
               <span>{isOnWatchlist ? 'Salvato' : 'Watchlist'}</span>
             </button>
           </div>
+
+          {/* Rewatch counter — solo se visto */}
+          {isWatched && onIncrementRewatch && (
+            <div className="flex items-center justify-between px-3 py-2.5 bg-film-surface rounded-xl border border-film-border">
+              <div>
+                <p className="text-film-muted text-xs font-medium">Rewatch</p>
+                <p className="text-film-subtle text-xs">
+                  {rewatchCount === 0 ? 'Prima visione' : `Rivisto ${rewatchCount}×`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button onClick={() => onIncrementRewatch(movie.id, -1)} disabled={rewatchCount === 0}
+                  className="w-8 h-8 rounded-full bg-film-card border border-film-border flex items-center justify-center text-film-text active:scale-90 transition-transform disabled:opacity-30">
+                  −
+                </button>
+                <span className="text-film-accent font-mono font-bold w-5 text-center">{rewatchCount}</span>
+                <button onClick={() => onIncrementRewatch(movie.id, 1)}
+                  className="w-8 h-8 rounded-full bg-film-accent text-film-black flex items-center justify-center font-bold active:scale-90 transition-transform">
+                  +
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Scheda completa */}
           <button

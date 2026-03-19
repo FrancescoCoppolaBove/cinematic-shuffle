@@ -262,6 +262,7 @@ function PopularFullPage({
               onAddToWatchlist={async () => {}}
               onRemoveFromWatchlist={async () => {}}
               onOpenFull={(id, _mt) => { const item = items.find(i => i.id === id); const idx = items.findIndex(i => i.id === id); if (item) onSelect(item, filtered, idx); }}
+              onClose={() => {}}
             />
           ) : (
             <div className="grid grid-cols-3 gap-2.5">

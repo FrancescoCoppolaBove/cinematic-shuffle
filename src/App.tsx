@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { TrendingUp, Shuffle, Search, Eye, Bookmark, X, CheckCircle } from 'lucide-react';
 import type { AppView, TMDBMovieDetail } from './types';
 import { useAuth } from './hooks/useAuth';
@@ -95,7 +95,7 @@ export default function App() {
   const { user, loading: authLoading, error: authError, signInWithGoogle, signOut } = useAuth();
   const {
     watchedMovies, watchedIds, watchlist, watchlistIds, loading: watchedLoading,
-    markWatched, unmarkWatched, updateRating,
+    markWatched, unmarkWatched, updateRating, toggleLiked, incrementRewatch,
     addToWatchlist, removeFromWatchlist,
   } = useWatched(user);
   const { showUpdate, applyUpdate, dismissUpdate } = useUpdatePrompt();
@@ -114,6 +114,11 @@ export default function App() {
 
   const getPersonalRating = useCallback((id: number) =>
     watchedMovies.find(m => m.id === id)?.personal_rating ?? null, [watchedMovies]);
+
+  const likedIds = useMemo(
+    () => new Set(watchedMovies.filter(m => m.liked).map(m => m.id)),
+    [watchedMovies]
+  );
 
   // ─── Open movie detail (fullscreen) ──────────────────────────
   const openMovieDetail = useCallback(async (
@@ -195,10 +200,13 @@ export default function App() {
   // Shared props passed to all main views
   const sharedProps = {
     watchedIds, watchlistIds, watchedMovies,
+    likedIds,
     getPersonalRating,
     onMarkWatched: markWatched,
     onUnmarkWatched: unmarkWatched,
     onUpdateRating: updateRating,
+    onToggleLiked: toggleLiked,
+    onIncrementRewatch: incrementRewatch,
     onAddToWatchlist: addToWatchlist,
     onRemoveFromWatchlist: removeFromWatchlist,
     onOpenMovie: (id: number, mt: 'movie' | 'tv') => openMovieDetail(id, mt),
@@ -401,6 +409,8 @@ export default function App() {
           onAddToWatchlist={() => addToWatchlist(detailMovie)}
           onRemoveFromWatchlist={() => removeFromWatchlist(detailMovie.id)}
           onOpenMovie={openRelatedMovie}
+          onIncrementRewatch={incrementRewatch}
+          rewatchCount={detailMovie ? (watchedMovies.find(m => m.id === detailMovie.id)?.rewatchCount ?? 0) : 0}
           loading={detailLoading}
         />
       )}
