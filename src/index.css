@@ -3,56 +3,60 @@
 @tailwind utilities;
 
 @layer base {
-  *, *::before, *::after {
-    box-sizing: border-box;
-  }
+  *, *::before, *::after { box-sizing: border-box; }
 
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Prevent font size inflation on mobile */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   body {
     @apply bg-film-black text-film-text font-body;
     margin: 0;
+    /* Safe area support for iPhone notch/home indicator */
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 4px;
+  /* Prevent tap highlight on mobile */
+  * { -webkit-tap-highlight-color: transparent; }
+
+  /* Scrollbar - desktop only */
+  @media (min-width: 768px) {
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { @apply bg-film-black; }
+    ::-webkit-scrollbar-thumb { @apply bg-film-border rounded-full; }
+    ::-webkit-scrollbar-thumb:hover { @apply bg-film-subtle; }
   }
 
-  ::-webkit-scrollbar-track {
-    @apply bg-film-black;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    @apply bg-film-border rounded-full;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-film-subtle;
-  }
-
-  /* Range input styling */
+  /* Range input */
   input[type="range"] {
     -webkit-appearance: none;
     appearance: none;
     @apply w-full h-1 rounded-full bg-film-border outline-none;
   }
-
   input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    @apply w-4 h-4 rounded-full bg-film-accent cursor-pointer;
-    margin-top: 0;
+    @apply w-5 h-5 rounded-full bg-film-accent cursor-pointer;
   }
-
   input[type="range"]::-moz-range-thumb {
-    @apply w-4 h-4 rounded-full bg-film-accent cursor-pointer border-0;
+    @apply w-5 h-5 rounded-full bg-film-accent cursor-pointer border-0;
   }
 
-  /* Select styling */
-  select option {
-    @apply bg-film-card text-film-text;
+  select option { @apply bg-film-card text-film-text; }
+}
+
+@layer utilities {
+  /* Hide scrollbar but keep scroll functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+  /* Safe area padding for fixed bottom nav */
+  .pb-safe { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+  .mb-safe { margin-bottom: env(safe-area-inset-bottom); }
 }

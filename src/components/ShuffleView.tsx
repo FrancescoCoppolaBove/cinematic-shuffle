@@ -106,6 +106,7 @@ export function ShuffleView({
           isWatched={watchedIds.has(movie.id)}
           isOnWatchlist={watchlistIds.has(movie.id)}
           personalRating={getPersonalRating(movie.id)}
+          showShuffleBtn={true}
           onMarkWatched={r => onMarkWatched(movie, r)}
           onUnmarkWatched={() => onUnmarkWatched(movie.id)}
           onUpdateRating={r => onUpdateRating(movie.id, r)}

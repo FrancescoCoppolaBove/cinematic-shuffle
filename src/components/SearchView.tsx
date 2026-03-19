@@ -108,12 +108,14 @@ export function SearchView({
             isWatched={watchedIds.has(selectedMovie.id)}
             isOnWatchlist={watchlistIds.has(selectedMovie.id)}
             personalRating={getPersonalRating(selectedMovie.id)}
+            showShuffleBtn={false}
             onMarkWatched={r => onMarkWatched(selectedMovie, r)}
             onUnmarkWatched={() => onUnmarkWatched(selectedMovie.id)}
             onUpdateRating={r => onUpdateRating(selectedMovie.id, r)}
             onAddToWatchlist={() => onAddToWatchlist(selectedMovie)}
             onRemoveFromWatchlist={() => onRemoveFromWatchlist(selectedMovie.id)}
             onShuffle={() => { setSelectedMovie(null); setQuery(''); }}
+            onOpenMovie={async (id, mt) => { const d = await (await import('../services/tmdb')).getMovieDetail(id, mt); setSelectedMovie(d); }}
           />
         </div>
       )}

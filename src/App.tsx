@@ -196,7 +196,7 @@ export default function App() {
       </header>
 
       {/* Main */}
-      <main className="max-w-3xl mx-auto px-4 py-6 pb-28">
+      <main className="max-w-3xl mx-auto px-4 py-4 pb-28">
         {view === 'home' && <HomeView
             watchedIds={watchedIds}
             watchlistIds={watchlistIds}
@@ -228,7 +228,7 @@ export default function App() {
 
       {/* Bottom nav (hidden on profile) */}
       {view !== 'profile' && (
-        <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-film-border bg-film-black/95 backdrop-blur-md">
+        <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-film-border bg-film-black/95 backdrop-blur-md" style={{paddingBottom: "env(safe-area-inset-bottom)"}}>
           <div className="max-w-3xl mx-auto px-4 flex">
             {NAV.map(({ view: v, icon: Icon, label }) => {
               const active = view === v;

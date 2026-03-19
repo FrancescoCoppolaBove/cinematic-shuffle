@@ -50,12 +50,14 @@ export function WatchlistView({
           isWatched={watchedIds.has(selectedMovie.id)}
           isOnWatchlist={watchlistIds.has(selectedMovie.id)}
           personalRating={getPersonalRating(selectedMovie.id)}
+          showShuffleBtn={false}
           onMarkWatched={r => { onMarkWatched(selectedMovie, r); setSelectedMovie(null); }}
           onUnmarkWatched={() => onUnmarkWatched(selectedMovie.id)}
           onUpdateRating={r => onUpdateRating(selectedMovie.id, r)}
           onAddToWatchlist={() => onAddToWatchlist(selectedMovie)}
           onRemoveFromWatchlist={() => { onRemoveFromWatchlist(selectedMovie.id); setSelectedMovie(null); }}
           onShuffle={() => setSelectedMovie(null)}
+          onOpenMovie={async (id, mt) => { const { getMovieDetail } = await import('../services/tmdb'); setSelectedMovie(await getMovieDetail(id, mt)); }}
         />
       </div>
     );

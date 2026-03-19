@@ -20,14 +20,38 @@ export interface TMDBCrewMember {
   profile_path: string | null;
 }
 
+export interface TMDBVideo {
+  id: string;
+  key: string;          // YouTube video ID
+  name: string;
+  site: string;         // "YouTube"
+  type: string;         // "Trailer", "Teaser", etc.
+  official: boolean;
+}
+
+export interface TMDBWatchProvider {
+  provider_id: number;
+  provider_name: string;
+  logo_path: string;
+  display_priority: number;
+}
+
+export interface TMDBWatchProviders {
+  flatrate?: TMDBWatchProvider[]; // streaming
+  rent?: TMDBWatchProvider[];
+  buy?: TMDBWatchProvider[];
+  free?: TMDBWatchProvider[];
+  ads?: TMDBWatchProvider[];
+}
+
 export interface TMDBMovieBasic {
   id: number;
   title: string;
-  name?: string; // TV shows use "name" instead of "title"
+  name?: string;
   poster_path: string | null;
   backdrop_path: string | null;
   release_date: string;
-  first_air_date?: string; // TV shows
+  first_air_date?: string;
   vote_average: number;
   vote_count: number;
   genre_ids: number[];
@@ -39,7 +63,7 @@ export interface TMDBMovieBasic {
 export interface TMDBMovieDetail {
   id: number;
   title: string;
-  name?: string; // TV shows
+  name?: string;
   original_title: string;
   original_name?: string;
   poster_path: string | null;
@@ -51,16 +75,35 @@ export interface TMDBMovieDetail {
   genres: TMDBGenre[];
   overview: string;
   runtime: number | null;
-  episode_run_time?: number[]; // TV shows
+  episode_run_time?: number[];
   original_language: string;
   tagline: string;
   status: string;
   media_type: 'movie' | 'tv';
   number_of_seasons?: number;
   number_of_episodes?: number;
+  // belongs_to_collection — for franchise/saga
+  belongs_to_collection?: {
+    id: number;
+    name: string;
+    poster_path: string | null;
+    backdrop_path: string | null;
+  } | null;
   credits: {
     cast: TMDBCastMember[];
     crew: TMDBCrewMember[];
+  };
+  videos?: {
+    results: TMDBVideo[];
+  };
+  similar?: {
+    results: TMDBMovieBasic[];
+  };
+  recommendations?: {
+    results: TMDBMovieBasic[];
+  };
+  'watch/providers'?: {
+    results: Record<string, TMDBWatchProviders & { link?: string }>;
   };
 }
 
@@ -85,7 +128,7 @@ export interface WatchedMovie {
   poster_path: string | null;
   release_date: string;
   vote_average: number;
-  personal_rating: number | null; // 0.5–5 stelle, null = non valutato
+  personal_rating: number | null;
   addedAt: string;
   media_type: 'movie' | 'tv';
 }
@@ -154,16 +197,11 @@ export const TMDB_TV_GENRES: TMDBGenre[] = [
   { id: 10751, name: 'Famiglia' },
   { id: 10762, name: 'Per bambini' },
   { id: 9648, name: 'Mistero' },
-  { id: 10763, name: 'News' },
-  { id: 10764, name: 'Reality' },
   { id: 10765, name: 'Sci-Fi & Fantasy' },
-  { id: 10766, name: 'Soap' },
-  { id: 10767, name: 'Talk' },
   { id: 10768, name: 'Guerra & Politica' },
   { id: 37, name: 'Western' },
 ];
 
-// Legacy export for backward compat
 export const TMDB_GENRES = TMDB_MOVIE_GENRES;
 
 export const DECADES = [
