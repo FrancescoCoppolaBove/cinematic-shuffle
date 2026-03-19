@@ -14,10 +14,12 @@ import { useMemo } from 'react';
 interface HomeViewProps {
   watchedIds: Set<number>;
   watchlistIds: Set<number>;
+  likedIds?: Set<number>;
   getPersonalRating: (id: number) => number | null;
   onMarkWatched: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
   onUnmarkWatched: (id: number) => Promise<void>;
   onUpdateRating: (id: number, rating: number | null) => Promise<void>;
+  onToggleLiked?: (id: number) => Promise<void>;
   onAddToWatchlist: (movie: TMDBMovieDetail) => Promise<void>;
   onRemoveFromWatchlist: (id: number) => Promise<void>;
   onOpenMovieGlobal: (id: number, mediaType: 'movie' | 'tv') => void;
@@ -40,8 +42,17 @@ export function HomeView(props: HomeViewProps) {
         mediaType={subView.mediaType}
         watchedIds={props.watchedIds}
         watchlistIds={props.watchlistIds}
+        likedIds={props.likedIds}
+        getPersonalRating={props.getPersonalRating}
+        onMarkWatched={props.onMarkWatched}
+        onUnmarkWatched={props.onUnmarkWatched}
+        onUpdateRating={props.onUpdateRating}
+        onToggleLiked={props.onToggleLiked}
+        onAddToWatchlist={props.onAddToWatchlist}
+        onRemoveFromWatchlist={props.onRemoveFromWatchlist}
         onBack={() => setSubView({ kind: 'home' })}
         onSelect={(item, playlist, idx) => (props.onOpenMovieGlobal as Function)(item.id, item.media_type, playlist?.map((i: TrendingItem) => ({ id: i.id, mediaType: i.media_type, title: i.title, poster_path: i.poster_path })), idx)}
+        onOpenMovieGlobal={props.onOpenMovieGlobal}
       />
     );
   }
@@ -164,13 +175,25 @@ function TrendingSection({
 // ── Full popular page ─────────────────────────────────────────────
 
 function PopularFullPage({
-  mediaType, watchedIds, watchlistIds, onBack, onSelect,
+  mediaType, watchedIds, watchlistIds, likedIds,
+  getPersonalRating, onMarkWatched, onUnmarkWatched,
+  onUpdateRating, onToggleLiked, onAddToWatchlist, onRemoveFromWatchlist,
+  onBack, onSelect, onOpenMovieGlobal,
 }: {
   mediaType: 'movie' | 'tv';
   watchedIds: Set<number>;
   watchlistIds: Set<number>;
+  likedIds?: Set<number>;
+  getPersonalRating: (id: number) => number | null;
+  onMarkWatched: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
+  onUnmarkWatched: (id: number) => Promise<void>;
+  onUpdateRating: (id: number, rating: number | null) => Promise<void>;
+  onToggleLiked?: (id: number) => Promise<void>;
+  onAddToWatchlist: (movie: TMDBMovieDetail) => Promise<void>;
+  onRemoveFromWatchlist: (id: number) => Promise<void>;
   onBack: () => void;
   onSelect: (item: TrendingItem, playlist: TrendingItem[], index: number) => void;
+  onOpenMovieGlobal: (id: number, mediaType: 'movie' | 'tv') => void;
 }) {
   const [items, setItems] = useState<TrendingItem[]>([]);
   const [page, setPage] = useState(1);
@@ -252,17 +275,19 @@ function PopularFullPage({
 
           {viewMode === 'card' ? (
             <CardView
-              items={filtered.map(i => ({ ...i, personal_rating: null }))}
+              items={filtered}
               watchedIds={watchedIds}
               watchlistIds={watchlistIds}
-              getPersonalRating={() => null}
-              onMarkWatched={async (_movie, _r) => {}}
-              onUnmarkWatched={async () => {}}
-              onUpdateRating={async () => {}}
-              onAddToWatchlist={async () => {}}
-              onRemoveFromWatchlist={async () => {}}
-              onOpenFull={(id, _mt) => { const item = items.find(i => i.id === id); const idx = items.findIndex(i => i.id === id); if (item) onSelect(item, filtered, idx); }}
-              onClose={() => {}}
+              likedIds={likedIds}
+              getPersonalRating={getPersonalRating}
+              onMarkWatched={onMarkWatched}
+              onUnmarkWatched={onUnmarkWatched}
+              onUpdateRating={onUpdateRating}
+              onToggleLiked={onToggleLiked}
+              onAddToWatchlist={onAddToWatchlist}
+              onRemoveFromWatchlist={onRemoveFromWatchlist}
+              onOpenFull={(id, mt) => onOpenMovieGlobal(id, mt)}
+              onClose={() => setViewMode('grid')}
             />
           ) : (
             <div className="grid grid-cols-3 gap-2.5">
