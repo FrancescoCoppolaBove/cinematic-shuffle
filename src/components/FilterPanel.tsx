@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, ChevronDown, Search, Star, Calendar, Clapperboard, User, Film } from 'lucide-react';
 import type { MovieFilters } from '../types';
-import { TMDB_GENRES, DECADES } from '../types';
+import { TMDB_MOVIE_GENRES, TMDB_TV_GENRES, DECADES } from '../types';
 import { searchPersons } from '../services/tmdb';
 import { cn } from '../utils';
 
@@ -91,7 +91,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
   function resetAll() {
     setDirectorQuery('');
     setActorQuery('');
-    onChange({ watchedStatus: 'all' });
+    onChange({ watchedStatus: 'all', mediaType: filters.mediaType });
   }
 
   return (
@@ -176,7 +176,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
       {/* Generi */}
       <FilterSection icon={<Film size={14} />} label="Genere">
         <div className="flex flex-wrap gap-2">
-          {TMDB_GENRES.map(genre => {
+          {(filters.mediaType === 'tv' ? TMDB_TV_GENRES : TMDB_MOVIE_GENRES).map(genre => {
             const active = (filters.genreIds || []).includes(genre.id);
             return (
               <button

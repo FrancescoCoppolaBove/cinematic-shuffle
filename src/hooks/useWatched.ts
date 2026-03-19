@@ -1,132 +1,108 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { User } from 'firebase/auth';
-import type { WatchedMovie, TMDBMovieDetail } from '../types';
+import type { WatchedMovie, WatchlistItem, TMDBMovieDetail } from '../types';
+import { getTitle, getReleaseDate } from '../services/tmdb';
 import {
-  getWatchedMovies as getLsMovies,
-  getWatchedIds as getLsIds,
-  addWatchedMovie as addLsMovie,
-  removeWatchedMovie as removeLsMovie,
-} from '../store/watched';
-import {
-  fetchWatchedMovies,
-  addWatchedMovieToFirestore,
-  removeWatchedMovieFromFirestore,
-  updatePersonalRating as updateRatingFirestore,
-  migrateLocalStorageToFirestore,
+  fetchWatchedMovies, addWatchedToFirestore, removeWatchedFromFirestore,
+  updatePersonalRating as updateRatingFs,
+  fetchWatchlist, addToWatchlistFirestore, removeFromWatchlistFirestore,
 } from '../services/firestore';
 
-interface UseWatchedReturn {
-  watchedMovies: WatchedMovie[];
-  watchedIds: Set<number>;
-  loading: boolean;
-  migratedCount: number | null;
-  markWatched: (movie: TMDBMovieDetail, personalRating?: number | null) => Promise<void>;
-  unmarkWatched: (id: number) => Promise<void>;
-  updateRating: (movieId: number, rating: number | null) => Promise<void>;
-  checkWatched: (id: number) => boolean;
-  refresh: () => Promise<void>;
-}
-
-export function useWatched(user: User | null): UseWatchedReturn {
+export function useWatched(user: User | null) {
   const [watchedMovies, setWatchedMovies] = useState<WatchedMovie[]>([]);
   const [watchedIds, setWatchedIds] = useState<Set<number>>(new Set());
+  const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
+  const [watchlistIds, setWatchlistIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
-  const [migratedCount, setMigratedCount] = useState<number | null>(null);
   const prevUid = useRef<string | null>(null);
 
+  const loadAll = useCallback(async (uid: string) => {
+    setLoading(true);
+    const [watched, wl] = await Promise.all([
+      fetchWatchedMovies(uid),
+      fetchWatchlist(uid),
+    ]);
+    setWatchedMovies(watched);
+    setWatchedIds(new Set(watched.map(m => m.id)));
+    setWatchlist(wl);
+    setWatchlistIds(new Set(wl.map(m => m.id)));
+    setLoading(false);
+  }, []);
+
   useEffect(() => {
-    async function load() {
-      if (user) {
-        if (prevUid.current !== user.uid) {
-          prevUid.current = user.uid;
-          setLoading(true);
-          const migrated = await migrateLocalStorageToFirestore(user.uid);
-          if (migrated > 0) setMigratedCount(migrated);
-          const movies = await fetchWatchedMovies(user.uid);
-          setWatchedMovies(movies);
-          setWatchedIds(new Set(movies.map(m => m.id)));
-          setLoading(false);
-        }
-      } else {
-        prevUid.current = null;
-        const movies = getLsMovies();
-        setWatchedMovies(movies);
-        setWatchedIds(getLsIds());
-      }
+    if (user && prevUid.current !== user.uid) {
+      prevUid.current = user.uid;
+      void loadAll(user.uid);
     }
-    void load();
-  }, [user]);
+    if (!user) {
+      prevUid.current = null;
+      setWatchedMovies([]); setWatchedIds(new Set());
+      setWatchlist([]); setWatchlistIds(new Set());
+    }
+  }, [user, loadAll]);
 
   const refresh = useCallback(async () => {
-    if (user) {
-      setLoading(true);
-      const movies = await fetchWatchedMovies(user.uid);
-      setWatchedMovies(movies);
-      setWatchedIds(new Set(movies.map(m => m.id)));
-      setLoading(false);
-    } else {
-      const movies = getLsMovies();
-      setWatchedMovies(movies);
-      setWatchedIds(getLsIds());
-    }
-  }, [user]);
+    if (user) await loadAll(user.uid);
+  }, [user, loadAll]);
 
-  const markWatched = useCallback(async (
-    movie: TMDBMovieDetail,
-    personalRating: number | null = null
-  ) => {
-    const entry: WatchedMovie = {
+  // ─── Watched ────────────────────────────────────────────────────
+  const markWatched = useCallback(async (movie: TMDBMovieDetail, personalRating: number | null = null) => {
+    if (!user) return;
+    const entry: Omit<WatchedMovie, 'addedAt'> = {
       id: movie.id,
-      title: movie.title,
+      title: getTitle(movie),
       poster_path: movie.poster_path,
-      release_date: movie.release_date,
+      release_date: getReleaseDate(movie),
       vote_average: movie.vote_average,
       personal_rating: personalRating,
-      addedAt: new Date().toISOString(),
+      media_type: movie.media_type,
     };
-    if (user) {
-      await addWatchedMovieToFirestore(user.uid, entry, personalRating);
-    } else {
-      addLsMovie(entry);
+    await addWatchedToFirestore(user.uid, entry);
+    // If it was on watchlist, remove it
+    if (watchlistIds.has(movie.id)) {
+      await removeFromWatchlistFirestore(user.uid, movie.id);
     }
     await refresh();
-  }, [user, refresh]);
+  }, [user, watchlistIds, refresh]);
 
   const unmarkWatched = useCallback(async (id: number) => {
-    if (user) {
-      await removeWatchedMovieFromFirestore(user.uid, id);
-    } else {
-      removeLsMovie(id);
-    }
+    if (!user) return;
+    await removeWatchedFromFirestore(user.uid, id);
     await refresh();
   }, [user, refresh]);
 
   const updateRating = useCallback(async (movieId: number, rating: number | null) => {
-    if (user) {
-      await updateRatingFirestore(user.uid, movieId, rating);
-    } else {
-      const movies = getLsMovies();
-      const updated = movies.map(m =>
-        m.id === movieId ? { ...m, personal_rating: rating } : m
-      );
-      localStorage.setItem('cinematic_watched_movies', JSON.stringify(updated));
-    }
+    if (!user) return;
+    await updateRatingFs(user.uid, movieId, rating);
+    setWatchedMovies(prev => prev.map(m => m.id === movieId ? { ...m, personal_rating: rating } : m));
+  }, [user]);
+
+  // ─── Watchlist ──────────────────────────────────────────────────
+  const addToWatchlist = useCallback(async (movie: TMDBMovieDetail) => {
+    if (!user) return;
+    if (watchlistIds.has(movie.id)) return;
+    const item: Omit<WatchlistItem, 'addedAt'> = {
+      id: movie.id,
+      title: getTitle(movie),
+      poster_path: movie.poster_path,
+      release_date: getReleaseDate(movie),
+      vote_average: movie.vote_average,
+      media_type: movie.media_type,
+    };
+    await addToWatchlistFirestore(user.uid, item);
+    await refresh();
+  }, [user, watchlistIds, refresh]);
+
+  const removeFromWatchlist = useCallback(async (id: number) => {
+    if (!user) return;
+    await removeFromWatchlistFirestore(user.uid, id);
     await refresh();
   }, [user, refresh]);
 
-  const checkWatched = useCallback((id: number): boolean => {
-    return watchedIds.has(id);
-  }, [watchedIds]);
-
   return {
-    watchedMovies,
-    watchedIds,
-    loading,
-    migratedCount,
-    markWatched,
-    unmarkWatched,
-    updateRating,
-    checkWatched,
-    refresh,
+    watchedMovies, watchedIds, watchlist, watchlistIds,
+    loading, refresh,
+    markWatched, unmarkWatched, updateRating,
+    addToWatchlist, removeFromWatchlist,
   };
 }

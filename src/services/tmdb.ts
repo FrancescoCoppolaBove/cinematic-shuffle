@@ -1,4 +1,4 @@
-import type { TMDBMovieBasic, TMDBMovieDetail, MovieFilters, SearchResult } from '../types';
+import type { TMDBMovieBasic, TMDBMovieDetail, MovieFilters, SearchResult, TrendingItem } from '../types';
 import { DECADES } from '../types';
 
 const BASE_URL = 'https://api.themoviedb.org/3';
@@ -9,9 +9,17 @@ export const getImageUrl = (path: string | null, size: 'w92' | 'w185' | 'w342' |
   return `${IMG_BASE}/${size}${path}`;
 };
 
+// Helper: TV shows use "name" and "first_air_date" instead of "title"/"release_date"
+export function getTitle(item: { title?: string; name?: string }): string {
+  return item.title || item.name || 'Titolo sconosciuto';
+}
+export function getReleaseDate(item: { release_date?: string; first_air_date?: string }): string {
+  return item.release_date || item.first_air_date || '';
+}
+
 function getApiKey(): string {
   const key = import.meta.env.VITE_TMDB_API_KEY;
-  if (!key || key === 'la_tua_api_key_qui') {
+  if (!key || key === 'la_tua_tmdb_api_key_qui') {
     throw new Error('API key TMDB mancante. Configura VITE_TMDB_API_KEY nel file .env');
   }
   return key;
@@ -23,7 +31,6 @@ async function apiFetch<T>(endpoint: string, params: Record<string, string> = {}
   url.searchParams.set('api_key', apiKey);
   url.searchParams.set('language', 'it-IT');
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-
   const res = await fetch(url.toString());
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -32,11 +39,32 @@ async function apiFetch<T>(endpoint: string, params: Record<string, string> = {}
   return res.json() as Promise<T>;
 }
 
-export async function getMovieDetail(id: number): Promise<TMDBMovieDetail> {
-  return apiFetch<TMDBMovieDetail>(`/movie/${id}`, {
+// ─── Detail ───────────────────────────────────────────────────────
+
+export async function getMovieDetail(id: number, mediaType: 'movie' | 'tv' = 'movie'): Promise<TMDBMovieDetail> {
+  const data = await apiFetch<TMDBMovieDetail>(`/${mediaType}/${id}`, {
     append_to_response: 'credits',
   });
+  return { ...data, media_type: mediaType };
 }
+
+// ─── Trending (homepage) ──────────────────────────────────────────
+
+export async function getTrending(mediaType: 'movie' | 'tv', timeWindow: 'day' | 'week' = 'week'): Promise<TrendingItem[]> {
+  const res = await apiFetch<{ results: TMDBMovieBasic[] }>(`/trending/${mediaType}/${timeWindow}`);
+  return res.results.slice(0, 12).map(m => ({
+    id: m.id,
+    title: getTitle(m),
+    poster_path: m.poster_path,
+    backdrop_path: m.backdrop_path,
+    vote_average: m.vote_average,
+    release_date: getReleaseDate(m),
+    media_type: mediaType,
+    overview: m.overview,
+  }));
+}
+
+// ─── Discover ─────────────────────────────────────────────────────
 
 interface DiscoverResponse {
   results: TMDBMovieBasic[];
@@ -44,182 +72,131 @@ interface DiscoverResponse {
   total_results: number;
 }
 
-export async function discoverMovies(filters: MovieFilters, page: number = 1): Promise<DiscoverResponse> {
+export async function discoverContent(filters: MovieFilters, page = 1): Promise<DiscoverResponse> {
+  const mediaType = filters.mediaType === 'tv' ? 'tv' : 'movie';
   const params: Record<string, string> = {
     page: String(page),
-    'vote_count.gte': '50', // Evita film con troppi pochi voti
+    'vote_count.gte': '50',
     sort_by: 'vote_count.desc',
   };
 
-  // Anno specifico
-  if (filters.year) {
-    params['primary_release_year'] = String(filters.year);
-  }
+  // Anno / Decade
+  const dateGteKey = mediaType === 'tv' ? 'first_air_date.gte' : 'primary_release_date.gte';
+  const dateLteKey = mediaType === 'tv' ? 'first_air_date.lte' : 'primary_release_date.lte';
+  const yearKey = mediaType === 'tv' ? 'first_air_date_year' : 'primary_release_year';
 
-  // Decade
-  if (filters.decade && !filters.year) {
+  if (filters.year) {
+    params[yearKey] = String(filters.year);
+  } else if (filters.decade) {
     const decade = DECADES.find(d => d.value === filters.decade);
     if (decade) {
-      params['primary_release_date.gte'] = `${decade.start}-01-01`;
-      params['primary_release_date.lte'] = `${decade.end}-12-31`;
+      params[dateGteKey] = `${decade.start}-01-01`;
+      params[dateLteKey] = `${decade.end}-12-31`;
     }
   }
 
-  // Generi
-  if (filters.genreIds && filters.genreIds.length > 0) {
-    params['with_genres'] = filters.genreIds.join(',');
-  }
+  if (filters.genreIds?.length) params['with_genres'] = filters.genreIds.join(',');
+  if (filters.minImdbRating) params['vote_average.gte'] = String(filters.minImdbRating);
+  if (filters.actorIds?.length) params['with_cast'] = filters.actorIds.join(',');
 
-  // Rating minimo
-  if (filters.minImdbRating) {
-    params['vote_average.gte'] = String(filters.minImdbRating);
-  }
-
-  // Attori
-  if (filters.actorIds && filters.actorIds.length > 0) {
-    params['with_cast'] = filters.actorIds.join(',');
-  }
-
-  // Regista
   if (filters.directorName) {
-    // Cerchiamo prima la person, poi usiamo l'ID
-    const directorId = await findPersonId(filters.directorName, 'directing');
-    if (directorId) {
-      params['with_crew'] = String(directorId);
-    }
+    const id = await findPersonId(filters.directorName);
+    if (id) params['with_crew'] = String(id);
   }
 
-  return apiFetch<DiscoverResponse>('/discover/movie', params);
+  return apiFetch<DiscoverResponse>(`/discover/${mediaType}`, params);
 }
 
-async function findPersonId(name: string, _department?: string): Promise<number | null> {
+async function findPersonId(name: string): Promise<number | null> {
   try {
-    const res = await apiFetch<{ results: { id: number; name: string; known_for_department: string }[] }>('/search/person', {
-      query: name,
-    });
-    if (res.results.length > 0) {
-      return res.results[0].id;
-    }
-    return null;
-  } catch {
-    return null;
-  }
+    const res = await apiFetch<{ results: { id: number }[] }>('/search/person', { query: name });
+    return res.results[0]?.id ?? null;
+  } catch { return null; }
 }
 
 export async function searchPersons(query: string): Promise<{ id: number; name: string; profile_path: string | null; known_for_department: string }[]> {
   if (!query.trim()) return [];
-  const res = await apiFetch<{ results: { id: number; name: string; profile_path: string | null; known_for_department: string }[] }>('/search/person', {
-    query,
-  });
+  const res = await apiFetch<{ results: { id: number; name: string; profile_path: string | null; known_for_department: string }[] }>('/search/person', { query });
   return res.results.slice(0, 8);
 }
 
-export async function searchMovies(query: string): Promise<SearchResult[]> {
+export async function searchContent(query: string): Promise<SearchResult[]> {
   if (!query.trim()) return [];
-  const res = await apiFetch<{ results: TMDBMovieBasic[] }>('/search/movie', {
-    query,
-  });
-  return res.results.slice(0, 10).map(m => ({
-    id: m.id,
-    title: m.title,
-    poster_path: m.poster_path,
-    release_date: m.release_date,
-    vote_average: m.vote_average,
-    genre_ids: m.genre_ids,
-  }));
+  // multi-search returns both movies and TV
+  const res = await apiFetch<{ results: (TMDBMovieBasic & { media_type: 'movie' | 'tv' | 'person' })[] }>('/search/multi', { query });
+  return res.results
+    .filter(r => r.media_type === 'movie' || r.media_type === 'tv')
+    .slice(0, 12)
+    .map(m => ({
+      id: m.id,
+      title: getTitle(m),
+      poster_path: m.poster_path,
+      release_date: getReleaseDate(m),
+      vote_average: m.vote_average,
+      genre_ids: m.genre_ids || [],
+      media_type: m.media_type as 'movie' | 'tv',
+    }));
 }
 
-// ====================================================
-// ALGORITMO SHUFFLE AVANZATO
-// Evita ripetizioni recenti usando un pool rotante
-// ====================================================
+// Legacy for backward compat
+export const searchMovies = searchContent;
+
+// ─── Shuffle algorithm ────────────────────────────────────────────
 
 const SHUFFLE_HISTORY_KEY = 'cinematic_shuffle_history';
-const MAX_HISTORY = 50; // Tiene traccia degli ultimi 50 film estratti
+const MAX_HISTORY = 50;
 
 function getShuffleHistory(): number[] {
-  try {
-    return JSON.parse(localStorage.getItem(SHUFFLE_HISTORY_KEY) || '[]') as number[];
-  } catch {
-    return [];
-  }
+  try { return JSON.parse(localStorage.getItem(SHUFFLE_HISTORY_KEY) || '[]') as number[]; }
+  catch { return []; }
 }
-
-function addToShuffleHistory(id: number): void {
-  const history = getShuffleHistory();
-  const updated = [id, ...history.filter(h => h !== id)].slice(0, MAX_HISTORY);
-  localStorage.setItem(SHUFFLE_HISTORY_KEY, JSON.stringify(updated));
+function addToShuffleHistory(id: number) {
+  const h = getShuffleHistory();
+  localStorage.setItem(SHUFFLE_HISTORY_KEY, JSON.stringify([id, ...h.filter(x => x !== id)].slice(0, MAX_HISTORY)));
 }
+export function clearShuffleHistory() { localStorage.removeItem(SHUFFLE_HISTORY_KEY); }
 
-export function clearShuffleHistory(): void {
-  localStorage.removeItem(SHUFFLE_HISTORY_KEY);
-}
-
-// Fisher-Yates shuffle
 function shuffleArray<T>(arr: T[]): T[] {
-  const copy = [...arr];
-  for (let i = copy.length - 1; i > 0; i--) {
+  const c = [...arr];
+  for (let i = c.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
+    [c[i], c[j]] = [c[j], c[i]];
   }
-  return copy;
+  return c;
 }
 
-export async function getRandomMovie(
-  filters: MovieFilters,
-  watchedIds: Set<number>
-): Promise<TMDBMovieDetail | null> {
+export async function getRandomContent(filters: MovieFilters, watchedIds: Set<number>): Promise<TMDBMovieDetail | null> {
   const history = getShuffleHistory();
+  const first = await discoverContent(filters, 1);
+  const totalPages = Math.min(first.total_pages, 50);
+  if (first.total_results === 0) return null;
 
-  // Prima scopri quante pagine totali ci sono
-  const firstPage = await discoverMovies(filters, 1);
-  const totalPages = Math.min(firstPage.total_pages, 50); // TMDB limita a 500 risultati (50 pagine da 20)
-  const totalResults = firstPage.total_results;
-
-  if (totalResults === 0) return null;
-
-  // Pool di pagine disponibili (randomizzato)
   const pagePool = shuffleArray(Array.from({ length: totalPages }, (_, i) => i + 1));
+  const mediaType = filters.mediaType === 'tv' ? 'tv' : 'movie';
 
-  // Proviamo fino a 5 pagine diverse
   for (let attempt = 0; attempt < Math.min(5, totalPages); attempt++) {
     const page = pagePool[attempt];
-    const response = page === 1 ? firstPage : await discoverMovies(filters, page);
-
-    // Candidati: esclude visti (se richiesto) e film visti di recente nello shuffle
+    const response = page === 1 ? first : await discoverContent(filters, page);
     let candidates = response.results.filter(m => {
-      // Filtro "già visto"
       if (filters.watchedStatus === 'unwatched' && watchedIds.has(m.id)) return false;
       if (filters.watchedStatus === 'watched' && !watchedIds.has(m.id)) return false;
       return true;
     });
-
-    // Scoraggia (non blocca) i film visti di recente nello shuffle
-    // I primi 10 della history hanno 90% di probabilità di essere esclusi
-    const recentHistory = history.slice(0, 10);
-    const penalizedCandidates = candidates.filter(m => !recentHistory.includes(m.id));
-
-    // Se ci sono candidati non recenti, usali. Altrimenti usa tutti i candidati
-    const pool = penalizedCandidates.length > 0 ? penalizedCandidates : candidates;
-
-    if (pool.length > 0) {
-      // Scegli un film random dal pool
-      const chosen = pool[Math.floor(Math.random() * pool.length)];
+    const recent = history.slice(0, 10);
+    const pool = candidates.filter(m => !recent.includes(m.id));
+    const chosen = (pool.length > 0 ? pool : candidates)[Math.floor(Math.random() * (pool.length > 0 ? pool : candidates).length)];
+    if (chosen) {
       addToShuffleHistory(chosen.id);
-      return getMovieDetail(chosen.id);
+      return getMovieDetail(chosen.id, mediaType);
     }
   }
 
-  // Fallback: prendi un qualsiasi film dalla prima pagina ignorando la history
-  const allCandidates = firstPage.results.filter(m => {
+  const fallback = first.results.find(m => {
     if (filters.watchedStatus === 'unwatched' && watchedIds.has(m.id)) return false;
     if (filters.watchedStatus === 'watched' && !watchedIds.has(m.id)) return false;
     return true;
   });
-
-  if (allCandidates.length === 0) return null;
-
-  const fallback = allCandidates[Math.floor(Math.random() * allCandidates.length)];
+  if (!fallback) return null;
   addToShuffleHistory(fallback.id);
-  return getMovieDetail(fallback.id);
+  return getMovieDetail(fallback.id, mediaType);
 }
