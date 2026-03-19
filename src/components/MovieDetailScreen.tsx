@@ -21,10 +21,9 @@ interface MovieDetailScreenProps {
   personalRating?: number | null;
   showShuffleBtn?: boolean;
   backLabel?: string;
-  // Playlist for horizontal swipe
   playlist?: PlaylistItem[];
   playlistIndex?: number;
-  onSwipeToIndex?: (index: number) => void;  // called when user swipes to adjacent film
+  onSwipeToIndex?: (index: number) => void;
   onBack: () => void;
   onMarkWatched: (rating: number | null) => void;
   onUnmarkWatched: () => void;
@@ -50,16 +49,23 @@ export function MovieDetailScreen({
   const [collectionParts, setCollectionParts] = useState<TMDBMovieBasic[] | null>(null);
   const [collectionName, setCollectionName] = useState('');
   const [loadingCollection, setLoadingCollection] = useState(false);
-  // Sticky header visibility
   const [showStickyHeader, setShowStickyHeader] = useState(false);
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const backdropRef = useRef<HTMLDivElement>(null);
+  // ── Swipe animation state ──────────────────────────────────────
+  // dragX: current live offset while finger is down (follows finger in real time)
+  // slideDir: direction of the commit animation once finger lifts
+  const [dragX, setDragX] = useState(0);
 
-  // Touch tracking for horizontal swipe (playlist navigation)
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Raw touch tracking (refs, not state — updated every frame)
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const swipeLocked = useRef<'horizontal' | 'vertical' | null>(null);
+  const activeDragX = useRef(0); // mirrors dragX for use inside closures
 
   const title = getTitle(movie);
   const releaseDate = getReleaseDate(movie);
@@ -90,11 +96,11 @@ export function MovieDetailScreen({
     ? (movie.episode_run_time?.[0] ? `${movie.episode_run_time[0]}min/ep` : null)
     : movie.runtime;
 
-  const hasPlaylist = playlist && playlist.length > 1 && onSwipeToIndex;
+  const hasPlaylist = !!(playlist && playlist.length > 1 && onSwipeToIndex);
   const canGoPrev = hasPlaylist && playlistIndex > 0;
   const canGoNext = hasPlaylist && playlistIndex < (playlist?.length ?? 0) - 1;
 
-  // Reset on movie change
+  // Reset content on movie change (after swipe animation completes)
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
     setShowFullCast(false);
@@ -115,66 +121,107 @@ export function MovieDetailScreen({
     }
   }, [movie.id, movie.belongs_to_collection?.id, isTV]);
 
-  // Scroll listener for sticky header
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-    // Show sticky header after scrolling past backdrop (~220px)
     setShowStickyHeader(el.scrollTop > 200);
   }, []);
 
-  // Touch handlers for horizontal swipe (only when playlist exists)
+  // ── Touch handlers ─────────────────────────────────────────────
+
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (!hasPlaylist) return;
+    if (!hasPlaylist || isAnimating) return;
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     swipeLocked.current = null;
-  }, [hasPlaylist]);
+    activeDragX.current = 0;
+  }, [hasPlaylist, isAnimating]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!hasPlaylist || touchStartX.current === null || touchStartY.current === null) return;
+
     const dx = e.touches[0].clientX - touchStartX.current;
     const dy = e.touches[0].clientY - touchStartY.current;
 
-    // Determine direction once (within first 8px of movement)
+    // Lock direction after 8px of movement
     if (!swipeLocked.current && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
       swipeLocked.current = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical';
     }
 
-    // If horizontal swipe locked — prevent vertical scroll to make it feel native
     if (swipeLocked.current === 'horizontal') {
       e.preventDefault();
-    }
-  }, [hasPlaylist]);
 
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (!hasPlaylist || touchStartX.current === null || swipeLocked.current !== 'horizontal') {
+      // Resistance at the edges: if swiping left at first item or right at last, add rubber band
+      let resistedDx = dx;
+      if ((dx > 0 && !canGoPrev) || (dx < 0 && !canGoNext)) {
+        // Rubber band: sqrt dampening makes it feel elastic
+        resistedDx = Math.sign(dx) * Math.sqrt(Math.abs(dx)) * 8;
+      }
+
+      activeDragX.current = resistedDx;
+      setDragX(resistedDx);
+    }
+  }, [hasPlaylist, canGoPrev, canGoNext]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (!hasPlaylist || swipeLocked.current !== 'horizontal') {
       touchStartX.current = null;
       touchStartY.current = null;
       swipeLocked.current = null;
+      setDragX(0);
       return;
     }
 
-    const dx = e.changedTouches[0].clientX - touchStartX.current;
-    const threshold = 60; // px minimo per triggerare il cambio
+    const dx = activeDragX.current;
+    const threshold = 80; // px needed to commit
 
     if (dx < -threshold && canGoNext) {
-      onSwipeToIndex!(playlistIndex + 1);
+      // Commit: slide out to the left
+
+      setIsAnimating(true);
+      setDragX(-window.innerWidth); // fly off screen
+      setTimeout(() => {
+        onSwipeToIndex!(playlistIndex + 1);
+        setDragX(0);
+
+        setIsAnimating(false);
+      }, 280);
     } else if (dx > threshold && canGoPrev) {
-      onSwipeToIndex!(playlistIndex - 1);
+      // Commit: slide out to the right
+
+      setIsAnimating(true);
+      setDragX(window.innerWidth);
+      setTimeout(() => {
+        onSwipeToIndex!(playlistIndex - 1);
+        setDragX(0);
+
+        setIsAnimating(false);
+      }, 280);
+    } else {
+      // Snap back: spring return to center
+      setDragX(0);
     }
 
     touchStartX.current = null;
     touchStartY.current = null;
     swipeLocked.current = null;
+    activeDragX.current = 0;
   }, [hasPlaylist, canGoNext, canGoPrev, onSwipeToIndex, playlistIndex]);
+
+  // CSS transition string:
+  // - During drag: no transition (follows finger instantly)
+  // - On release: spring-like cubic-bezier for snap-back or commit
+  const isBeingDragged = swipeLocked.current === 'horizontal' && dragX !== 0;
+  const transitionStyle = isBeingDragged
+    ? 'none'
+    : 'transform 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94)';
 
   return (
     <div
       className="fixed inset-0 z-[80] bg-film-black"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      {/* ── Scrollable content ── */}
+      {/* ── Scrollable + swipeable content wrapper ── */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
@@ -184,300 +231,297 @@ export function MovieDetailScreen({
         className="h-full overflow-y-auto"
         style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
       >
-        {/* ── Hero backdrop ── */}
+        {/* This inner div is what physically moves during swipe */}
         <div
-          ref={backdropRef}
-          className="relative w-full"
-          style={{ height: '65vw', minHeight: 220, maxHeight: 400 }}
+          ref={contentRef}
+          style={{
+            transform: dragX !== 0 ? `translateX(${dragX}px)` : 'translateX(0)',
+            transition: transitionStyle,
+            willChange: 'transform',
+          }}
         >
-          {backdrop ? (
-            <img src={backdrop} alt="" className="absolute inset-0 w-full h-full object-cover" />
-          ) : (
-            <div className="absolute inset-0 bg-film-surface" />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-b from-film-black/40 via-film-black/10 to-film-black" />
-
-          {/* Back button */}
-          <button
-            onClick={onBack}
-            className="absolute z-10 flex items-center gap-1.5 active:opacity-60 transition-opacity"
-            style={{ top: 'calc(env(safe-area-inset-top) + 12px)', left: 16 }}
+          {/* ── Hero backdrop ── */}
+          <div
+            className="relative w-full"
+            style={{ height: '65vw', minHeight: 220, maxHeight: 400 }}
           >
-            <div className="w-9 h-9 rounded-full bg-film-black/65 backdrop-blur-md flex items-center justify-center border border-white/10">
-              <ChevronLeft size={20} className="text-white" />
-            </div>
-            <span className="text-white/90 text-sm font-medium drop-shadow-lg">{backLabel}</span>
-          </button>
+            {backdrop ? (
+              <img src={backdrop} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            ) : (
+              <div className="absolute inset-0 bg-film-surface" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-b from-film-black/40 via-film-black/10 to-film-black" />
 
-          {/* Playlist position indicator (top right) */}
-          {hasPlaylist && (
-            <div className="absolute z-10" style={{ top: 'calc(env(safe-area-inset-top) + 16px)', right: 16 }}>
-              <span className="text-white/70 text-xs bg-film-black/50 backdrop-blur-sm px-2 py-1 rounded-lg">
-                {playlistIndex + 1}/{playlist!.length}
-              </span>
-            </div>
-          )}
-
-          {/* Trailer play */}
-          {trailerUrl && (
-            <a href={trailerUrl} target="_blank" rel="noopener noreferrer"
-              className="absolute inset-0 flex items-center justify-center">
-              <div className="w-16 h-16 rounded-full bg-film-black/50 backdrop-blur-sm border border-white/20 flex items-center justify-center active:scale-90 transition-transform">
-                <Play size={26} className="text-white ml-1" fill="white" />
-              </div>
-            </a>
-          )}
-
-          {/* Swipe hint arrows for playlist */}
-          {canGoPrev && (
+            {/* Back button */}
             <button
-              onClick={() => onSwipeToIndex!(playlistIndex - 1)}
-              className="absolute left-0 top-1/2 -translate-y-1/2 h-20 w-10 flex items-center justify-center"
+              onClick={onBack}
+              className="absolute z-10 flex items-center gap-1.5 active:opacity-60 transition-opacity"
+              style={{ top: 'calc(env(safe-area-inset-top) + 12px)', left: 16 }}
             >
-              <div className="w-7 h-7 rounded-full bg-film-black/50 backdrop-blur-sm flex items-center justify-center">
-                <ChevronLeft size={16} className="text-white/70" />
+              <div className="w-9 h-9 rounded-full bg-film-black/65 backdrop-blur-md flex items-center justify-center border border-white/10">
+                <ChevronLeft size={20} className="text-white" />
               </div>
+              <span className="text-white/90 text-sm font-medium drop-shadow-lg">{backLabel}</span>
             </button>
-          )}
-          {canGoNext && (
-            <button
-              onClick={() => onSwipeToIndex!(playlistIndex + 1)}
-              className="absolute right-0 top-1/2 -translate-y-1/2 h-20 w-10 flex items-center justify-center"
-            >
-              <div className="w-7 h-7 rounded-full bg-film-black/50 backdrop-blur-sm flex items-center justify-center">
-                <ChevronLeft size={16} className="text-white/70 rotate-180" />
+
+            {/* Playlist counter */}
+            {hasPlaylist && (
+              <div className="absolute z-10 flex items-center gap-2"
+                style={{ top: 'calc(env(safe-area-inset-top) + 16px)', right: 16 }}>
+                <span className="text-white/70 text-xs bg-film-black/50 backdrop-blur-sm px-2.5 py-1 rounded-xl">
+                  {playlistIndex + 1} / {playlist!.length}
+                </span>
               </div>
-            </button>
-          )}
-
-          {/* Media badge */}
-          <div className="absolute bottom-4 left-4">
-            <span className={cn(
-              'flex items-center gap-1 text-xs px-2.5 py-1 rounded-xl font-medium backdrop-blur-sm border',
-              isTV
-                ? 'bg-purple-900/80 border-purple-500/50 text-purple-200'
-                : 'bg-film-black/70 border-white/10 text-white/70'
-            )}>
-              {isTV ? <Tv size={11} /> : <Film size={11} />}
-              {isTV ? 'Serie TV' : 'Film'}
-            </span>
-          </div>
-        </div>
-
-        {/* ── Content ── */}
-        <div className="px-4">
-          {/* Poster + title */}
-          <div className="flex gap-4 items-end mb-5">
-            <div className="shrink-0 -mt-16 relative z-10">
-              <div className="w-28 aspect-[2/3] rounded-2xl overflow-hidden border-2 border-film-black shadow-2xl bg-film-card">
-                {poster ? (
-                  <img src={poster} alt={title} className="w-full h-full object-cover"
-                    onError={() => setPosterError(true)} />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-3xl">
-                    {isTV ? '📺' : '🎬'}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex-1 min-w-0 pb-1">
-              <h1 className="font-display text-2xl leading-tight tracking-wide text-film-text break-words">
-                {title}
-              </h1>
-              {movie.tagline && (
-                <p className="text-film-accent text-xs italic mt-1 leading-snug">"{movie.tagline}"</p>
-              )}
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2">
-                <div className="flex items-center gap-1">
-                  <Star size={12} className={ratingColor} fill="currentColor" />
-                  <span className={cn('font-mono font-bold text-sm', ratingColor)}>{formatRating(rating)}</span>
-                  <span className="text-film-subtle text-xs">/10</span>
-                </div>
-                <span className="text-film-border text-xs">·</span>
-                <span className="text-film-muted text-xs">{formatYear(releaseDate)}</span>
-                {runtime && (
-                  <>
-                    <span className="text-film-border text-xs">·</span>
-                    <div className="flex items-center gap-1 text-film-muted">
-                      <Clock size={11} />
-                      <span className="text-xs">{typeof runtime === 'number' ? formatRuntime(runtime) : runtime}</span>
-                    </div>
-                  </>
-                )}
-                {isTV && movie.number_of_seasons && (
-                  <>
-                    <span className="text-film-border text-xs">·</span>
-                    <span className="text-film-muted text-xs">{movie.number_of_seasons} stagioni</span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Generi */}
-          <div className="flex flex-wrap gap-1.5 mb-4">
-            {movie.genres?.map(g => (
-              <span key={g.id} className="px-2.5 py-1 rounded-xl bg-film-surface border border-film-border text-film-muted text-xs">
-                {g.name}
-              </span>
-            ))}
-          </div>
-
-          {/* Regia */}
-          {director && (
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-film-subtle text-xs uppercase tracking-wider">Regia</span>
-              <span className="text-film-text text-sm font-medium">{director.name}</span>
-            </div>
-          )}
-          {creator && (
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-film-subtle text-xs uppercase tracking-wider">Creato da</span>
-              <span className="text-film-text text-sm font-medium">{creator.name}</span>
-            </div>
-          )}
-
-          {/* Rating personale */}
-          {isWatched && (
-            <div className="flex items-center gap-3 px-4 py-3 bg-film-surface rounded-2xl border border-film-border mb-4">
-              <span className="text-film-subtle text-xs uppercase tracking-wider shrink-0">Il tuo voto</span>
-              <StarRating value={personalRating ?? null} onChange={r => onUpdateRating?.(r)} size="sm" />
-            </div>
-          )}
-
-          {/* CTAs */}
-          <div className="flex flex-wrap gap-2 mb-6">
-            {showShuffleBtn && onShuffle && (
-              <button onClick={onShuffle} disabled={loading}
-                className="flex items-center gap-2 bg-film-accent text-film-black font-semibold px-4 py-2.5 rounded-2xl text-sm active:scale-95 transition-all disabled:opacity-50">
-                <Shuffle size={15} className={loading ? 'animate-spin-slow' : ''} />
-                {loading ? 'Cercando...' : 'Altro'}
-              </button>
             )}
 
+            {/* Trailer play */}
             {trailerUrl && (
               <a href={trailerUrl} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border border-red-800/50 bg-red-950/30 text-red-400 active:scale-95 transition-all">
-                <Play size={14} fill="currentColor" />Trailer
+                className="absolute inset-0 flex items-center justify-center">
+                <div className="w-16 h-16 rounded-full bg-film-black/50 backdrop-blur-sm border border-white/20 flex items-center justify-center active:scale-90 transition-transform">
+                  <Play size={26} className="text-white ml-1" fill="white" />
+                </div>
               </a>
             )}
 
-            {!isWatched ? (
-              <button onClick={() => setShowRatingModal(true)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border border-film-border bg-film-surface text-film-muted active:scale-95 transition-all">
-                <Eye size={14} />Già visto
-              </button>
-            ) : (
-              <button onClick={onUnmarkWatched}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border border-film-red/50 bg-film-red/10 text-film-red active:scale-95 transition-all">
-                <EyeOff size={14} />Rimuovi
-              </button>
+            {/* Swipe progress indicator — dots strip under backdrop */}
+            {hasPlaylist && playlist!.length <= 20 && (
+              <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
+                {playlist!.map((_, i) => (
+                  <div
+                    key={i}
+                    className="rounded-full transition-all duration-200"
+                    style={{
+                      width: i === playlistIndex ? 16 : 6,
+                      height: 4,
+                      background: i === playlistIndex
+                        ? '#E8C547'
+                        : 'rgba(255,255,255,0.3)',
+                    }}
+                  />
+                ))}
+              </div>
             )}
 
-            {!isOnWatchlist && !isWatched && (
-              <button onClick={onAddToWatchlist}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border border-film-border bg-film-surface text-film-muted active:scale-95 transition-all">
-                <Bookmark size={14} />Watchlist
-              </button>
-            )}
-            {isOnWatchlist && !isWatched && (
-              <button onClick={onRemoveFromWatchlist}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border border-purple-500/40 bg-purple-900/20 text-purple-300 active:scale-95 transition-all">
-                <BookmarkCheck size={14} />In watchlist
-              </button>
-            )}
+            {/* Media badge */}
+            <div className="absolute bottom-8 left-4">
+              <span className={cn(
+                'flex items-center gap-1 text-xs px-2.5 py-1 rounded-xl font-medium backdrop-blur-sm border',
+                isTV
+                  ? 'bg-purple-900/80 border-purple-500/50 text-purple-200'
+                  : 'bg-film-black/70 border-white/10 text-white/70'
+              )}>
+                {isTV ? <Tv size={11} /> : <Film size={11} />}
+                {isTV ? 'Serie TV' : 'Film'}
+              </span>
+            </div>
           </div>
 
-          {/* Trama */}
-          {movie.overview && (
-            <Section label="Trama">
-              <p className="text-film-text/80 text-sm leading-relaxed">{movie.overview}</p>
-            </Section>
-          )}
-
-          {/* Dove guardarlo */}
-          {allProviders.length > 0 && (
-            <Section label="Dove guardarlo" icon={<MapPin size={13} className="text-film-accent" />}>
-              <div className="flex flex-wrap gap-2">
-                {allProviders.map(p => (
-                  <div key={p.provider_id}
-                    className="flex items-center gap-2 bg-film-surface border border-film-border rounded-xl px-2.5 py-1.5">
-                    <div className="w-6 h-6 rounded-md overflow-hidden shrink-0">
-                      <img src={getProviderLogoUrl(p.logo_path)} alt={p.provider_name} className="w-full h-full object-cover" />
+          {/* ── Content ── */}
+          <div className="px-4">
+            {/* Poster + title */}
+            <div className="flex gap-4 items-end mb-5">
+              <div className="shrink-0 -mt-16 relative z-10">
+                <div className="w-28 aspect-[2/3] rounded-2xl overflow-hidden border-2 border-film-black shadow-2xl bg-film-card">
+                  {poster ? (
+                    <img src={poster} alt={title} className="w-full h-full object-cover"
+                      onError={() => setPosterError(true)} />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-3xl">
+                      {isTV ? '📺' : '🎬'}
                     </div>
-                    <span className="text-film-text text-xs font-medium">{p.provider_name}</span>
-                  </div>
-                ))}
+                  )}
+                </div>
               </div>
-              {providers?.link && (
-                <a href={providers.link} target="_blank" rel="noopener noreferrer"
-                  className="inline-block mt-2 text-film-accent text-xs hover:underline">
-                  Vedi tutte le opzioni →
-                </a>
-              )}
-            </Section>
-          )}
 
-          {/* Cast */}
-          {cast.length > 0 && (
-            <Section label="Cast">
-              <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-                {cast.map(actor => <CastCard key={actor.id} actor={actor} />)}
-                {!showFullCast && (movie.credits?.cast?.length ?? 0) > 8 && (
-                  <button onClick={() => setShowFullCast(true)}
-                    className="shrink-0 flex flex-col items-center justify-center w-16 h-[90px] rounded-xl bg-film-surface border border-film-border text-film-muted">
-                    <ChevronDown size={16} />
-                    <span className="text-xs mt-1">+{(movie.credits?.cast?.length ?? 0) - 8}</span>
-                  </button>
+              <div className="flex-1 min-w-0 pb-1">
+                <h1 className="font-display text-2xl leading-tight tracking-wide text-film-text break-words">
+                  {title}
+                </h1>
+                {movie.tagline && (
+                  <p className="text-film-accent text-xs italic mt-1 leading-snug">"{movie.tagline}"</p>
                 )}
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2">
+                  <div className="flex items-center gap-1">
+                    <Star size={12} className={ratingColor} fill="currentColor" />
+                    <span className={cn('font-mono font-bold text-sm', ratingColor)}>{formatRating(rating)}</span>
+                    <span className="text-film-subtle text-xs">/10</span>
+                  </div>
+                  <span className="text-film-border text-xs">·</span>
+                  <span className="text-film-muted text-xs">{formatYear(releaseDate)}</span>
+                  {runtime && (
+                    <>
+                      <span className="text-film-border text-xs">·</span>
+                      <div className="flex items-center gap-1 text-film-muted">
+                        <Clock size={11} />
+                        <span className="text-xs">{typeof runtime === 'number' ? formatRuntime(runtime) : runtime}</span>
+                      </div>
+                    </>
+                  )}
+                  {isTV && movie.number_of_seasons && (
+                    <>
+                      <span className="text-film-border text-xs">·</span>
+                      <span className="text-film-muted text-xs">{movie.number_of_seasons} stagioni</span>
+                    </>
+                  )}
+                </div>
               </div>
-              {showFullCast && (
-                <button onClick={() => setShowFullCast(false)}
-                  className="flex items-center gap-1 text-film-muted text-xs mt-1">
-                  <ChevronUp size={13} />Mostra meno
+            </div>
+
+            {/* Generi */}
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {movie.genres?.map(g => (
+                <span key={g.id} className="px-2.5 py-1 rounded-xl bg-film-surface border border-film-border text-film-muted text-xs">
+                  {g.name}
+                </span>
+              ))}
+            </div>
+
+            {director && (
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-film-subtle text-xs uppercase tracking-wider">Regia</span>
+                <span className="text-film-text text-sm font-medium">{director.name}</span>
+              </div>
+            )}
+            {creator && (
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-film-subtle text-xs uppercase tracking-wider">Creato da</span>
+                <span className="text-film-text text-sm font-medium">{creator.name}</span>
+              </div>
+            )}
+
+            {isWatched && (
+              <div className="flex items-center gap-3 px-4 py-3 bg-film-surface rounded-2xl border border-film-border mb-4">
+                <span className="text-film-subtle text-xs uppercase tracking-wider shrink-0">Il tuo voto</span>
+                <StarRating value={personalRating ?? null} onChange={r => onUpdateRating?.(r)} size="sm" />
+              </div>
+            )}
+
+            {/* CTAs */}
+            <div className="flex flex-wrap gap-2 mb-6">
+              {showShuffleBtn && onShuffle && (
+                <button onClick={onShuffle} disabled={loading}
+                  className="flex items-center gap-2 bg-film-accent text-film-black font-semibold px-4 py-2.5 rounded-2xl text-sm active:scale-95 transition-all disabled:opacity-50">
+                  <Shuffle size={15} className={loading ? 'animate-spin-slow' : ''} />
+                  {loading ? 'Cercando...' : 'Altro'}
                 </button>
               )}
-            </Section>
-          )}
-
-          {/* Saga */}
-          {(collectionParts || loadingCollection) && (
-            <Section label={collectionName || 'Saga'}>
-              {loadingCollection ? (
-                <div className="flex gap-2">
-                  {[1, 2, 3].map(i => (
-                    <div key={i} className="shrink-0 w-20 aspect-[2/3] rounded-xl bg-film-surface animate-pulse" />
-                  ))}
-                </div>
-              ) : (
-                <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-                  {collectionParts?.map(part => (
-                    <RelatedCard key={part.id} item={part} isCurrent={part.id === movie.id}
-                      mediaType="movie" onClick={() => onOpenMovie?.(part.id, 'movie')} />
-                  ))}
-                </div>
+              {trailerUrl && (
+                <a href={trailerUrl} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border border-red-800/50 bg-red-950/30 text-red-400 active:scale-95 transition-all">
+                  <Play size={14} fill="currentColor" />Trailer
+                </a>
               )}
-            </Section>
-          )}
+              {!isWatched ? (
+                <button onClick={() => setShowRatingModal(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border border-film-border bg-film-surface text-film-muted active:scale-95 transition-all">
+                  <Eye size={14} />Già visto
+                </button>
+              ) : (
+                <button onClick={onUnmarkWatched}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border border-film-red/50 bg-film-red/10 text-film-red active:scale-95 transition-all">
+                  <EyeOff size={14} />Rimuovi
+                </button>
+              )}
+              {!isOnWatchlist && !isWatched && (
+                <button onClick={onAddToWatchlist}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border border-film-border bg-film-surface text-film-muted active:scale-95 transition-all">
+                  <Bookmark size={14} />Watchlist
+                </button>
+              )}
+              {isOnWatchlist && !isWatched && (
+                <button onClick={onRemoveFromWatchlist}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border border-purple-500/40 bg-purple-900/20 text-purple-300 active:scale-95 transition-all">
+                  <BookmarkCheck size={14} />In watchlist
+                </button>
+              )}
+            </div>
 
-          {/* Film simili */}
-          {similar.length > 0 && (
-            <Section label={isTV ? 'Serie simili' : 'Film simili'}>
-              <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-                {similar.map(item => (
-                  <RelatedCard key={item.id} item={item} isCurrent={false}
-                    mediaType={movie.media_type} onClick={() => onOpenMovie?.(item.id, movie.media_type)} />
-                ))}
-              </div>
-            </Section>
-          )}
+            {movie.overview && (
+              <Section label="Trama">
+                <p className="text-film-text/80 text-sm leading-relaxed">{movie.overview}</p>
+              </Section>
+            )}
 
-          <div className="h-8" />
-        </div>
-      </div>
+            {allProviders.length > 0 && (
+              <Section label="Dove guardarlo" icon={<MapPin size={13} className="text-film-accent" />}>
+                <div className="flex flex-wrap gap-2">
+                  {allProviders.map(p => (
+                    <div key={p.provider_id}
+                      className="flex items-center gap-2 bg-film-surface border border-film-border rounded-xl px-2.5 py-1.5">
+                      <div className="w-6 h-6 rounded-md overflow-hidden shrink-0">
+                        <img src={getProviderLogoUrl(p.logo_path)} alt={p.provider_name} className="w-full h-full object-cover" />
+                      </div>
+                      <span className="text-film-text text-xs font-medium">{p.provider_name}</span>
+                    </div>
+                  ))}
+                </div>
+                {providers?.link && (
+                  <a href={providers.link} target="_blank" rel="noopener noreferrer"
+                    className="inline-block mt-2 text-film-accent text-xs hover:underline">
+                    Vedi tutte le opzioni →
+                  </a>
+                )}
+              </Section>
+            )}
 
-      {/* ── Sticky header — appare quando scorri oltre il backdrop ── */}
+            {cast.length > 0 && (
+              <Section label="Cast">
+                <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+                  {cast.map(actor => <CastCard key={actor.id} actor={actor} />)}
+                  {!showFullCast && (movie.credits?.cast?.length ?? 0) > 8 && (
+                    <button onClick={() => setShowFullCast(true)}
+                      className="shrink-0 flex flex-col items-center justify-center w-16 h-[90px] rounded-xl bg-film-surface border border-film-border text-film-muted">
+                      <ChevronDown size={16} />
+                      <span className="text-xs mt-1">+{(movie.credits?.cast?.length ?? 0) - 8}</span>
+                    </button>
+                  )}
+                </div>
+                {showFullCast && (
+                  <button onClick={() => setShowFullCast(false)}
+                    className="flex items-center gap-1 text-film-muted text-xs mt-1">
+                    <ChevronUp size={13} />Mostra meno
+                  </button>
+                )}
+              </Section>
+            )}
+
+            {(collectionParts || loadingCollection) && (
+              <Section label={collectionName || 'Saga'}>
+                {loadingCollection ? (
+                  <div className="flex gap-2">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="shrink-0 w-20 aspect-[2/3] rounded-xl bg-film-surface animate-pulse" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+                    {collectionParts?.map(part => (
+                      <RelatedCard key={part.id} item={part} isCurrent={part.id === movie.id}
+                        mediaType="movie" onClick={() => onOpenMovie?.(part.id, 'movie')} />
+                    ))}
+                  </div>
+                )}
+              </Section>
+            )}
+
+            {similar.length > 0 && (
+              <Section label={isTV ? 'Serie simili' : 'Film simili'}>
+                <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+                  {similar.map(item => (
+                    <RelatedCard key={item.id} item={item} isCurrent={false}
+                      mediaType={movie.media_type} onClick={() => onOpenMovie?.(item.id, movie.media_type)} />
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            <div className="h-8" />
+          </div>
+        </div>{/* end animated inner div */}
+      </div>{/* end scrollable */}
+
+      {/* ── Sticky header (fuori dal div animato, sempre fisso) ── */}
       <div
         className={cn(
           'absolute top-0 left-0 right-0 z-20 border-b border-film-border/50 bg-film-black/90 backdrop-blur-md transition-all duration-200',
@@ -496,7 +540,7 @@ export function MovieDetailScreen({
             <p className="text-film-subtle text-xs">{formatYear(releaseDate)}</p>
           </div>
           {hasPlaylist && (
-            <span className="text-film-subtle text-xs shrink-0">
+            <span className="text-film-subtle text-xs shrink-0 font-mono">
               {playlistIndex + 1}/{playlist!.length}
             </span>
           )}
