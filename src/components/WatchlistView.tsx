@@ -1,5 +1,9 @@
 import { useState, useCallback } from 'react';
-import { Bookmark, Search, Trash2 } from 'lucide-react';
+import { Bookmark, Trash2 } from 'lucide-react';
+import { GridControls, DEFAULT_GRID_FILTERS } from './GridControls';
+import type { GridFilters, ViewMode } from './GridControls';
+import { CardView } from './CardView';
+import { useMemo } from 'react';
 import type { WatchlistItem, TMDBMovieDetail } from '../types';
 import { getImageUrl, getMovieDetail, getTitle, getReleaseDate } from '../services/tmdb';
 import { formatYear, formatRating, cn } from '../utils';
@@ -24,11 +28,24 @@ export function WatchlistView({
 }: WatchlistViewProps) {
   const [selectedMovie, setSelectedMovie] = useState<TMDBMovieDetail | null>(null);
   const [loadingId, setLoadingId] = useState<number | null>(null);
-  const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [filters, setFilters] = useState<GridFilters>(DEFAULT_GRID_FILTERS);
+  const [cardIndex, setCardIndex] = useState(0);
 
-  const filtered = watchlist.filter(m =>
-    getTitle(m).toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    let list = [...watchlist];
+    if (filters.search) list = list.filter(m => getTitle(m).toLowerCase().includes(filters.search.toLowerCase()));
+    if (filters.mediaType !== 'all') list = list.filter(m => m.media_type === filters.mediaType);
+    if (filters.minRating > 0) list = list.filter(m => m.vote_average >= filters.minRating);
+    switch (filters.sortBy) {
+      case 'title': list.sort((a, b) => getTitle(a).localeCompare(getTitle(b))); break;
+      case 'tmdb_rating': list.sort((a, b) => b.vote_average - a.vote_average); break;
+      default: break;
+    }
+    return list;
+  }, [watchlist, filters]);
+
+
 
   const handleSelect = useCallback(async (item: WatchlistItem) => {
     if (loadingId) return; // già in caricamento
@@ -92,35 +109,45 @@ export function WatchlistView({
         </div>
       ) : (
         <>
-          {/* Search */}
-          <div className="flex items-center gap-3 bg-film-surface border border-film-border rounded-xl px-3 py-2.5 focus-within:border-film-accent transition-colors">
-            <Search size={14} className="text-film-muted shrink-0" />
-            <input
-              type="text"
-              placeholder="Filtra..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="bg-transparent text-sm text-film-text placeholder:text-film-subtle focus:outline-none flex-1"
+          <GridControls
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            filters={filters}
+            onFiltersChange={setFilters}
+            totalCount={watchlist.length}
+            filteredCount={filtered.length}
+          />
+
+          {viewMode === 'card' ? (
+            <CardView
+              items={filtered}
+              watchedIds={watchedIds}
+              watchlistIds={watchlistIds}
+              getPersonalRating={getPersonalRating}
+              onMarkWatched={onMarkWatched}
+              onUnmarkWatched={onUnmarkWatched}
+              onUpdateRating={onUpdateRating}
+              onAddToWatchlist={onAddToWatchlist}
+              onRemoveFromWatchlist={onRemoveFromWatchlist}
+              onOpenFull={handleOpenRelated}
+              initialIndex={cardIndex}
             />
-          </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2.5">
+              {filtered.map((item, idx) => (
+                <WatchlistCard
+                  key={item.id}
+                  item={item}
+                  isLoading={loadingId === item.id}
+                  onSelect={() => { setCardIndex(idx); handleSelect(item); }}
+                  onRemove={() => onRemoveFromWatchlist(item.id)}
+                />
+              ))}
+            </div>
+          )}
 
-          {/* Poster grid */}
-          <div className="grid grid-cols-3 gap-2.5">
-            {filtered.map(item => (
-              <WatchlistCard
-                key={item.id}
-                item={item}
-                isLoading={loadingId === item.id}
-                onSelect={() => handleSelect(item)}
-                onRemove={() => onRemoveFromWatchlist(item.id)}
-              />
-            ))}
-          </div>
-
-          {filtered.length === 0 && search && (
-            <p className="text-center text-film-muted text-sm py-8">
-              Nessun risultato per "{search}"
-            </p>
+          {filtered.length === 0 && (
+            <p className="text-center text-film-muted text-sm py-8">Nessun risultato</p>
           )}
         </>
       )}

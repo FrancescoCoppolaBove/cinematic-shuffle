@@ -134,12 +134,12 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-film-black text-film-text">
+    <div className="min-h-screen bg-film-black text-film-text" style={{paddingTop: "env(safe-area-inset-top)"}}>
       <div className="fixed inset-0 pointer-events-none opacity-30 bg-grain z-50" />
 
       {/* PWA: update available banner */}
       {showUpdate && (
-        <div className="fixed top-4 left-4 right-4 z-[70] animate-slide-up">
+        <div className="fixed left-4 right-4 z-[70] animate-slide-up" style={{top: "calc(env(safe-area-inset-top) + 1rem)"}}>
           <div className="bg-film-surface border border-film-accent/40 rounded-2xl px-4 py-3 flex items-center gap-4 shadow-2xl">
             <div className="flex-1">
               <p className="text-film-text text-sm font-medium">Aggiornamento disponibile</p>
@@ -162,7 +162,7 @@ export default function App() {
       {user && <InstallPrompt />}
 
       {/* Toasts */}
-      <div className="fixed top-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none">
+      <div className="fixed right-4 z-[60] flex flex-col gap-2 pointer-events-none" style={{top: "calc(env(safe-area-inset-top) + 1rem)"}}>
         {toasts.map(t => (
           <div key={t.id} className={cn(
             'flex items-center gap-2 px-4 py-3 rounded-xl text-sm shadow-xl animate-slide-up pointer-events-auto',
@@ -176,7 +176,7 @@ export default function App() {
       </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-film-border bg-film-black/90 backdrop-blur-md" style={{paddingTop: "env(safe-area-inset-top)"}}>
+      <header className="sticky top-0 z-40 border-b border-film-border bg-film-black/90 backdrop-blur-md" >
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="font-display text-lg tracking-[0.2em] text-film-text">CINEMATIC</span>

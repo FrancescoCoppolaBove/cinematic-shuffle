@@ -6,6 +6,10 @@ import {
   getImageUrl, getTitle, getReleaseDate,
 } from '../services/tmdb';
 import { formatYear, formatRating, cn } from '../utils';
+import { GridControls, DEFAULT_GRID_FILTERS } from './GridControls';
+import type { GridFilters, ViewMode } from './GridControls';
+import { CardView } from './CardView';
+import { useMemo } from 'react';
 import { MovieCard } from './MovieCard';
 
 interface HomeViewProps {
@@ -199,6 +203,20 @@ function PopularFullPage({
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [filters, setFilters] = useState<GridFilters>(DEFAULT_GRID_FILTERS);
+
+  const filtered = useMemo(() => {
+    let list = [...items];
+    if (filters.search) list = list.filter(m => m.title.toLowerCase().includes(filters.search.toLowerCase()));
+    if (filters.minRating > 0) list = list.filter(m => m.vote_average >= filters.minRating);
+    switch (filters.sortBy) {
+      case 'title': list.sort((a, b) => a.title.localeCompare(b.title)); break;
+      case 'tmdb_rating': list.sort((a, b) => b.vote_average - a.vote_average); break;
+      default: break;
+    }
+    return list;
+  }, [items, filters]);
 
   useEffect(() => {
     setLoading(true);
@@ -249,20 +267,44 @@ function PopularFullPage({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-3 gap-2.5">
-            {items.map((item, idx) => (
-              <TrendingPosterCard
-                key={`${item.id}-${idx}`}
-                item={item}
-                rank={idx + 1}
-                isWatched={watchedIds.has(item.id)}
-                isOnWatchlist={watchlistIds.has(item.id)}
-                onClick={() => onSelect(item)}
-              />
-            ))}
-          </div>
+          <GridControls
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            filters={filters}
+            onFiltersChange={setFilters}
+            totalCount={items.length}
+            filteredCount={filtered.length}
+          />
 
-          {page < totalPages && (
+          {viewMode === 'card' ? (
+            <CardView
+              items={filtered.map(i => ({ ...i, personal_rating: null }))}
+              watchedIds={watchedIds}
+              watchlistIds={watchlistIds}
+              getPersonalRating={() => null}
+              onMarkWatched={async (_movie, _r) => {}}
+              onUnmarkWatched={async () => {}}
+              onUpdateRating={async () => {}}
+              onAddToWatchlist={async () => {}}
+              onRemoveFromWatchlist={async () => {}}
+              onOpenFull={(id, _mt) => { const item = items.find(i => i.id === id); if (item) onSelect(item); }}
+            />
+          ) : (
+            <div className="grid grid-cols-3 gap-2.5">
+              {filtered.map((item, idx) => (
+                <TrendingPosterCard
+                  key={`${item.id}-${idx}`}
+                  item={item}
+                  rank={idx + 1}
+                  isWatched={watchedIds.has(item.id)}
+                  isOnWatchlist={watchlistIds.has(item.id)}
+                  onClick={() => onSelect(item)}
+                />
+              ))}
+            </div>
+          )}
+
+          {page < totalPages && viewMode === 'grid' && (
             <button
               onClick={loadMore}
               disabled={loadingMore}
