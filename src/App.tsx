@@ -10,6 +10,8 @@ import { WatchedView } from './components/WatchedView';
 import { WatchlistView } from './components/WatchlistView';
 import { ProfileView } from './components/ProfileView';
 import { cn } from './utils';
+import { InstallPrompt } from './components/InstallPrompt';
+import { useUpdatePrompt } from './hooks/useUpdatePrompt';
 
 // ─── Login screen ────────────────────────────────────────────────────────────
 
@@ -101,6 +103,9 @@ export default function App() {
     watchedMovies.find(m => m.id === id)?.personal_rating ?? null, [watchedMovies]);
 
   // Shared props for all views
+  // PWA update prompt
+  const { showUpdate, applyUpdate, dismissUpdate } = useUpdatePrompt();
+
   const sharedProps = {
     watchedIds, watchlistIds, watchedMovies,
     getPersonalRating,
@@ -131,6 +136,30 @@ export default function App() {
   return (
     <div className="min-h-screen bg-film-black text-film-text">
       <div className="fixed inset-0 pointer-events-none opacity-30 bg-grain z-50" />
+
+      {/* PWA: update available banner */}
+      {showUpdate && (
+        <div className="fixed top-4 left-4 right-4 z-[70] animate-slide-up">
+          <div className="bg-film-surface border border-film-accent/40 rounded-2xl px-4 py-3 flex items-center gap-4 shadow-2xl">
+            <div className="flex-1">
+              <p className="text-film-text text-sm font-medium">Aggiornamento disponibile</p>
+              <p className="text-film-muted text-xs mt-0.5">Una nuova versione di Cinematic Shuffle è pronta</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={dismissUpdate} className="text-film-subtle text-xs hover:text-film-muted transition-colors px-2 py-1">
+                Dopo
+              </button>
+              <button onClick={applyUpdate}
+                className="bg-film-accent text-film-black text-xs font-bold px-3 py-1.5 rounded-xl hover:bg-film-accent-dim transition-all active:scale-95">
+                Aggiorna
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PWA: install prompt */}
+      {user && <InstallPrompt />}
 
       {/* Toasts */}
       <div className="fixed top-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none">

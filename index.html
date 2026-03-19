@@ -2,10 +2,45 @@
 <html lang="it">
   <head>
     <meta charset="UTF-8" />
+
+    <!-- PWA primary meta -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0A0A0F" />
+    <meta name="description" content="Cinematic Shuffle — scopri il tuo prossimo film o serie TV" />
+
+    <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Cinematic Shuffle — scopri il tuo prossimo film da vedere" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/icons/icon-96.png" />
+
+    <!-- PWA manifest -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- iOS PWA meta tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Cinematic" />
+    <link rel="apple-touch-icon" href="/icons/icon-180.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png" />
+    <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144.png" />
+    <link rel="apple-touch-icon" sizes="128x128" href="/icons/icon-128.png" />
+
+    <!-- iOS splash screen (optional but improves launch feel) -->
+    <meta name="apple-touch-startup-image" href="/icons/icon-512.png" />
+
+    <!-- Android / Windows extra -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="msapplication-TileColor" content="#0A0A0F" />
+    <meta name="msapplication-TileImage" content="/icons/icon-144.png" />
+
+    <!-- Open Graph (per condivisione link) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Cinematic Shuffle" />
+    <meta property="og:description" content="Scopri il tuo prossimo film o serie TV da vedere" />
+    <meta property="og:image" content="/icons/icon-512.png" />
+
     <title>Cinematic Shuffle</title>
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />

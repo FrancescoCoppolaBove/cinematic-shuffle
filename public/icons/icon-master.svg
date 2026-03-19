@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="#0A0A0F"/>
+
+  <!-- Film strip top -->
+  <rect x="56" y="56" width="400" height="72" rx="14" fill="#1A1A26"/>
+  <!-- Sprocket holes top -->
+  <rect x="80"  y="72" width="36" height="40" rx="8" fill="#0A0A0F"/>
+  <rect x="148" y="72" width="36" height="40" rx="8" fill="#0A0A0F"/>
+  <rect x="216" y="72" width="36" height="40" rx="8" fill="#0A0A0F"/>
+  <rect x="284" y="72" width="36" height="40" rx="8" fill="#0A0A0F"/>
+  <rect x="352" y="72" width="36" height="40" rx="8" fill="#0A0A0F"/>
+  <rect x="396" y="72" width="60" height="40" rx="8" fill="#0A0A0F"/>
+
+  <!-- Film strip bottom -->
+  <rect x="56" y="384" width="400" height="72" rx="14" fill="#1A1A26"/>
+  <!-- Sprocket holes bottom -->
+  <rect x="56"  y="400" width="60" height="40" rx="8" fill="#0A0A0F"/>
+  <rect x="148" y="400" width="36" height="40" rx="8" fill="#0A0A0F"/>
+  <rect x="216" y="400" width="36" height="40" rx="8" fill="#0A0A0F"/>
+  <rect x="284" y="400" width="36" height="40" rx="8" fill="#0A0A0F"/>
+  <rect x="352" y="400" width="36" height="40" rx="8" fill="#0A0A0F"/>
+  <rect x="396" y="400" width="60" height="40" rx="8" fill="#0A0A0F"/>
+
+  <!-- Center area background -->
+  <rect x="56" y="148" width="400" height="216" fill="#12121A"/>
+
+  <!-- Gold accent bar left -->
+  <rect x="56" y="148" width="8" height="216" fill="#E8C547"/>
+
+  <!-- Large C letterform -->
+  <text
+    x="256"
+    y="298"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-weight="700"
+    font-size="196"
+    text-anchor="middle"
+    dominant-baseline="middle"
+    fill="#E8C547"
+    letter-spacing="-4"
+  >C</text>
+
+  <!-- Shuffle arrows inside C -->
+  <!-- Arrow 1: curved right -->
+  <path d="M 218 232 Q 256 210 294 232" fill="none" stroke="#0A0A0F" stroke-width="14" stroke-linecap="round"/>
+  <polygon points="294,218 306,232 290,236" fill="#0A0A0F"/>
+  <!-- Arrow 2: curved left -->
+  <path d="M 294 280 Q 256 302 218 280" fill="none" stroke="#0A0A0F" stroke-width="14" stroke-linecap="round"/>
+  <polygon points="218,294 206,280 222,276" fill="#0A0A0F"/>
+
+  <!-- SHUFFLE text bottom -->
+  <text
+    x="256"
+    y="338"
+    font-family="'Arial Narrow', Arial, sans-serif"
+    font-weight="700"
+    font-size="28"
+    text-anchor="middle"
+    dominant-baseline="middle"
+    fill="#5A5A72"
+    letter-spacing="8"
+  >SHUFFLE</text>
+
+  <!-- Gold accent bar right -->
+  <rect x="448" y="148" width="8" height="216" fill="#E8C547"/>
+
+  <!-- Top strip accent line -->
+  <rect x="56" y="128" width="400" height="3" fill="#E8C547" opacity="0.3"/>
+  <!-- Bottom strip accent line -->
+  <rect x="56" y="381" width="400" height="3" fill="#E8C547" opacity="0.3"/>
+</svg>
