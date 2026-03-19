@@ -19,12 +19,14 @@ interface WatchlistViewProps {
   onUpdateRating: (id: number, rating: number | null) => Promise<void>;
   onAddToWatchlist: (movie: TMDBMovieDetail) => Promise<void>;
   onRemoveFromWatchlist: (id: number) => Promise<void>;
+  onOpenMovieGlobal?: (id: number, mediaType: 'movie' | 'tv') => void;
 }
 
 export function WatchlistView({
   watchlist, watchedIds, watchlistIds, getPersonalRating,
   onMarkWatched, onUnmarkWatched, onUpdateRating,
   onAddToWatchlist, onRemoveFromWatchlist,
+onOpenMovieGlobal,
 }: WatchlistViewProps) {
   const [selectedMovie, setSelectedMovie] = useState<TMDBMovieDetail | null>(null);
   const [loadingId, setLoadingId] = useState<number | null>(null);
@@ -57,10 +59,9 @@ export function WatchlistView({
     finally { setLoadingId(null); }
   }, [loadingId]);
 
-  const handleOpenRelated = useCallback(async (id: number, mediaType: 'movie' | 'tv') => {
-    const detail = await getMovieDetail(id, mediaType);
-    setSelectedMovie(detail);
-  }, []);
+  const handleOpenRelated = useCallback((id: number, mediaType: 'movie' | 'tv') => {
+    onOpenMovieGlobal?.(id, mediaType);
+  }, [onOpenMovieGlobal]);
 
   if (selectedMovie) {
     return (

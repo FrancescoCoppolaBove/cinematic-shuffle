@@ -1,21 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
 import { TrendingUp, Shuffle, Search, Eye, Bookmark, X, CheckCircle } from 'lucide-react';
-import type { AppView } from './types';
+import type { AppView, TMDBMovieDetail } from './types';
 import { useAuth } from './hooks/useAuth';
 import { useWatched } from './hooks/useWatched';
+import { useNavigationStack } from './hooks/useNavigationStack';
+import { getMovieDetail } from './services/tmdb';
 import { HomeView } from './components/HomeView';
 import { ShuffleView } from './components/ShuffleView';
 import { SearchView } from './components/SearchView';
 import { WatchedView } from './components/WatchedView';
 import { WatchlistView } from './components/WatchlistView';
 import { ProfileView } from './components/ProfileView';
-import { cn } from './utils';
 import { InstallPrompt } from './components/InstallPrompt';
+import { MovieDetailScreen } from './components/MovieDetailScreen';
 import { useUpdatePrompt } from './hooks/useUpdatePrompt';
+import { cn } from './utils';
+import { getTitle } from './services/tmdb';
 
-// ─── Login screen ────────────────────────────────────────────────────────────
-
-function LoginScreen({ onSignIn, loading, error }: { onSignIn: () => void; loading: boolean; error: string | null }) {
+// ─── Login screen ───────────────────────────────────────────────
+function LoginScreen({ onSignIn, loading, error }: {
+  onSignIn: () => void; loading: boolean; error: string | null
+}) {
   return (
     <div className="min-h-screen bg-film-black flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-sm space-y-8">
@@ -25,7 +30,6 @@ function LoginScreen({ onSignIn, loading, error }: { onSignIn: () => void; loadi
           <h2 className="font-display text-5xl text-film-accent tracking-[0.2em]">SHUFFLE</h2>
           <p className="text-film-muted text-sm pt-2">Scopri il tuo prossimo film o serie TV</p>
         </div>
-
         <div className="bg-film-surface border border-film-border rounded-2xl p-6 space-y-5">
           <div className="space-y-2 text-center">
             <p className="text-film-text text-sm font-medium">Accedi per continuare</p>
@@ -33,35 +37,30 @@ function LoginScreen({ onSignIn, loading, error }: { onSignIn: () => void; loadi
               Il tuo profilo, i film visti e la watchlist vengono sincronizzati su tutti i tuoi dispositivi
             </p>
           </div>
-
           <button onClick={onSignIn} disabled={loading}
-            className="w-full flex items-center justify-center gap-3 py-3.5 bg-white hover:bg-gray-100 text-gray-800 rounded-xl font-medium text-sm transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-60">
-            {loading ? (
-              <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-              </svg>
-            )}
+            className="w-full flex items-center justify-center gap-3 py-3.5 bg-white hover:bg-gray-100 text-gray-800 rounded-xl font-medium text-sm transition-all active:scale-95 disabled:opacity-60">
+            {loading
+              ? <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+              : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+              )
+            }
             {loading ? 'Accesso in corso...' : 'Accedi con Google'}
           </button>
-
           {error && <p className="text-film-red text-xs text-center">{error}</p>}
         </div>
-
-        <p className="text-film-subtle text-xs text-center">
-          I tuoi dati sono privati e accessibili solo a te
-        </p>
+        <p className="text-film-subtle text-xs text-center">I tuoi dati sono privati e accessibili solo a te</p>
       </div>
     </div>
   );
 }
 
-// ─── Nav items ───────────────────────────────────────────────────────────────
-
+// ─── Nav items ──────────────────────────────────────────────────
 const NAV: { view: AppView; icon: typeof Shuffle; label: string }[] = [
   { view: 'home',      icon: TrendingUp, label: 'Home'      },
   { view: 'shuffle',   icon: Shuffle,    label: 'Shuffle'   },
@@ -70,15 +69,27 @@ const NAV: { view: AppView; icon: typeof Shuffle; label: string }[] = [
   { view: 'watched',   icon: Eye,        label: 'Visti'     },
 ];
 
-// ─── Toast ───────────────────────────────────────────────────────────────────
+// Labels for back button per ogni tab
+const VIEW_LABELS: Record<AppView, string> = {
+  home: 'Home',
+  shuffle: 'Shuffle',
+  search: 'Cerca',
+  watchlist: 'Watchlist',
+  watched: 'Visti',
+  profile: 'Profilo',
+};
 
 interface Toast { id: number; message: string; type: 'success' | 'info' }
 
-// ─── App ─────────────────────────────────────────────────────────────────────
-
+// ─── App ────────────────────────────────────────────────────────
 export default function App() {
   const [view, setView] = useState<AppView>('home');
   const [toasts, setToasts] = useState<Toast[]>([]);
+
+  // Navigation stack for movie detail fullscreen
+  const navStack = useNavigationStack();
+  const [detailMovie, setDetailMovie] = useState<TMDBMovieDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   const { user, loading: authLoading, error: authError, signInWithGoogle, signOut } = useAuth();
   const {
@@ -86,6 +97,7 @@ export default function App() {
     markWatched, unmarkWatched, updateRating,
     addToWatchlist, removeFromWatchlist,
   } = useWatched(user);
+  const { showUpdate, applyUpdate, dismissUpdate } = useUpdatePrompt();
 
   const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
     const id = Date.now();
@@ -102,10 +114,62 @@ export default function App() {
   const getPersonalRating = useCallback((id: number) =>
     watchedMovies.find(m => m.id === id)?.personal_rating ?? null, [watchedMovies]);
 
-  // Shared props for all views
-  // PWA update prompt
-  const { showUpdate, applyUpdate, dismissUpdate } = useUpdatePrompt();
+  // ─── Open movie detail (fullscreen) ──────────────────────────
+  const openMovieDetail = useCallback(async (
+    id: number,
+    mediaType: 'movie' | 'tv',
+    fromLabel?: string
+  ) => {
+    setDetailLoading(true);
+    try {
+      const movie = await getMovieDetail(id, mediaType);
+      setDetailMovie(movie);
+      navStack.push({ type: 'movie', id, mediaType, fromLabel: fromLabel ?? VIEW_LABELS[view] });
+    } catch { /* silente */ }
+    finally { setDetailLoading(false); }
+  }, [view, navStack]);
 
+  // Navigate to a related movie from within the detail screen (push to stack)
+  const openRelatedMovie = useCallback(async (id: number, mediaType: 'movie' | 'tv') => {
+    setDetailLoading(true);
+    try {
+      const movie = await getMovieDetail(id, mediaType);
+      setDetailMovie(movie);
+      navStack.push({
+        type: 'movie', id, mediaType,
+        fromLabel: detailMovie ? getTitle(detailMovie) : 'Indietro',
+      });
+    } catch { /* silente */ }
+    finally { setDetailLoading(false); }
+  }, [navStack, detailMovie]);
+
+  // Back from detail — pop stack, if empty close detail
+  const handleDetailBack = useCallback(() => {
+    navStack.pop();
+    if (navStack.stack.length <= 1) {
+      // Last entry — close the detail screen
+      setDetailMovie(null);
+    } else {
+      // Go to previous movie in stack
+      const prev = navStack.stack[navStack.stack.length - 2];
+      if (prev) {
+        setDetailLoading(true);
+        getMovieDetail(prev.id, prev.mediaType)
+          .then(setDetailMovie)
+          .catch(() => {})
+          .finally(() => setDetailLoading(false));
+      }
+    }
+  }, [navStack]);
+
+  // Change main tab — clears the detail stack
+  const handleNavChange = useCallback((v: AppView) => {
+    setView(v);
+    navStack.clear();
+    setDetailMovie(null);
+  }, [navStack]);
+
+  // Shared props passed to all main views
   const sharedProps = {
     watchedIds, watchlistIds, watchedMovies,
     getPersonalRating,
@@ -114,9 +178,15 @@ export default function App() {
     onUpdateRating: updateRating,
     onAddToWatchlist: addToWatchlist,
     onRemoveFromWatchlist: removeFromWatchlist,
+    // All views open movies via the global fullscreen stack
+    onOpenMovie: (id: number, mt: 'movie' | 'tv') => openMovieDetail(id, mt),
   };
 
-  // Show loading screen while auth resolves
+  // Current back label for the detail screen
+  const backLabel = navStack.stack.length > 1
+    ? navStack.stack[navStack.stack.length - 2].fromLabel
+    : navStack.current?.fromLabel ?? 'Indietro';
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-film-black flex items-center justify-center">
@@ -128,29 +198,28 @@ export default function App() {
     );
   }
 
-  // Force login — no guest mode
   if (!user) {
     return <LoginScreen onSignIn={signInWithGoogle} loading={authLoading} error={authError} />;
   }
 
   return (
-    <div className="min-h-screen bg-film-black text-film-text" style={{paddingTop: "env(safe-area-inset-top)"}}>
+    <div className="min-h-screen bg-film-black text-film-text"
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       <div className="fixed inset-0 pointer-events-none opacity-30 bg-grain z-50" />
 
-      {/* PWA: update available banner */}
+      {/* PWA update banner */}
       {showUpdate && (
-        <div className="fixed left-4 right-4 z-[70] animate-slide-up" style={{top: "calc(env(safe-area-inset-top) + 1rem)"}}>
+        <div className="fixed left-4 right-4 z-[70] animate-slide-up"
+          style={{ top: 'calc(env(safe-area-inset-top) + 1rem)' }}>
           <div className="bg-film-surface border border-film-accent/40 rounded-2xl px-4 py-3 flex items-center gap-4 shadow-2xl">
             <div className="flex-1">
               <p className="text-film-text text-sm font-medium">Aggiornamento disponibile</p>
-              <p className="text-film-muted text-xs mt-0.5">Una nuova versione di Cinematic Shuffle è pronta</p>
+              <p className="text-film-muted text-xs mt-0.5">Una nuova versione è pronta</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <button onClick={dismissUpdate} className="text-film-subtle text-xs hover:text-film-muted transition-colors px-2 py-1">
-                Dopo
-              </button>
+              <button onClick={dismissUpdate} className="text-film-subtle text-xs px-2 py-1">Dopo</button>
               <button onClick={applyUpdate}
-                className="bg-film-accent text-film-black text-xs font-bold px-3 py-1.5 rounded-xl hover:bg-film-accent-dim transition-all active:scale-95">
+                className="bg-film-accent text-film-black text-xs font-bold px-3 py-1.5 rounded-xl active:scale-95">
                 Aggiorna
               </button>
             </div>
@@ -158,46 +227,50 @@ export default function App() {
         </div>
       )}
 
-      {/* PWA: install prompt */}
-      {user && <InstallPrompt />}
-
       {/* Toasts */}
-      <div className="fixed right-4 z-[60] flex flex-col gap-2 pointer-events-none" style={{top: "calc(env(safe-area-inset-top) + 1rem)"}}>
+      <div className="fixed right-4 z-[60] flex flex-col gap-2 pointer-events-none"
+        style={{ top: 'calc(env(safe-area-inset-top) + 1rem)' }}>
         {toasts.map(t => (
           <div key={t.id} className={cn(
             'flex items-center gap-2 px-4 py-3 rounded-xl text-sm shadow-xl animate-slide-up pointer-events-auto',
-            t.type === 'success' ? 'bg-film-surface border border-film-accent/40 text-film-text' : 'bg-film-surface border border-film-border text-film-muted'
+            t.type === 'success'
+              ? 'bg-film-surface border border-film-accent/40 text-film-text'
+              : 'bg-film-surface border border-film-border text-film-muted'
           )}>
             {t.type === 'success' && <CheckCircle size={14} className="text-film-accent shrink-0" />}
             <span>{t.message}</span>
-            <button onClick={() => setToasts(ts => ts.filter(x => x.id !== t.id))} className="ml-1 text-film-subtle hover:text-film-text"><X size={12} /></button>
+            <button onClick={() => setToasts(ts => ts.filter(x => x.id !== t.id))}
+              className="ml-1 text-film-subtle hover:text-film-text">
+              <X size={12} />
+            </button>
           </div>
         ))}
       </div>
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-film-border bg-film-black/90 backdrop-blur-md" >
+      {/* ── Header ── */}
+      <header className="sticky top-0 z-40 border-b border-film-border bg-film-black/90 backdrop-blur-md">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="font-display text-lg tracking-[0.2em] text-film-text">CINEMATIC</span>
             <span className="font-display text-lg tracking-[0.2em] text-film-accent">SHUFFLE</span>
           </div>
-          <button onClick={() => setView('profile')} className="flex items-center gap-2 group" title="Profilo">
+          <button onClick={() => { handleNavChange('profile' as AppView); }} className="group">
             <div className="w-7 h-7 rounded-full overflow-hidden border border-film-border group-hover:border-film-accent transition-colors">
               {user.photoURL
                 ? <img src={user.photoURL} alt={user.displayName || ''} className="w-full h-full object-cover" />
                 : <div className="w-full h-full bg-film-accent flex items-center justify-center text-film-black text-xs font-bold">
                     {(user.displayName || 'U')[0].toUpperCase()}
-                  </div>}
+                  </div>
+              }
             </div>
-            {watchedLoading && <div className="w-3 h-3 border border-film-subtle border-t-transparent rounded-full animate-spin" />}
           </button>
         </div>
       </header>
 
-      {/* Main */}
+      {/* ── Main content ── */}
       <main className="max-w-3xl mx-auto px-4 py-4 pb-28">
-        {view === 'home' && <HomeView
+        {view === 'home' && (
+          <HomeView
             watchedIds={watchedIds}
             watchlistIds={watchlistIds}
             getPersonalRating={getPersonalRating}
@@ -206,14 +279,34 @@ export default function App() {
             onUpdateRating={updateRating}
             onAddToWatchlist={addToWatchlist}
             onRemoveFromWatchlist={removeFromWatchlist}
-          />}
-        {view === 'shuffle' && <ShuffleView {...sharedProps} />}
-        {view === 'search' && <SearchView {...sharedProps} />}
+            onOpenMovieGlobal={(id, mt) => openMovieDetail(id, mt, 'Home')}
+          />
+        )}
+        {view === 'shuffle' && (
+          <ShuffleView
+            {...sharedProps}
+            onOpenMovieGlobal={(id, mt) => openMovieDetail(id, mt, 'Shuffle')}
+          />
+        )}
+        {view === 'search' && (
+          <SearchView
+            {...sharedProps}
+            onOpenMovieGlobal={(id, mt) => openMovieDetail(id, mt, 'Cerca')}
+          />
+        )}
         {view === 'watched' && (
-          <WatchedView {...sharedProps} loading={watchedLoading} />
+          <WatchedView
+            {...sharedProps}
+            loading={watchedLoading}
+            onOpenMovieGlobal={(id, mt) => openMovieDetail(id, mt, 'Visti')}
+          />
         )}
         {view === 'watchlist' && (
-          <WatchlistView watchlist={watchlist} {...sharedProps} />
+          <WatchlistView
+            watchlist={watchlist}
+            {...sharedProps}
+            onOpenMovieGlobal={(id, mt) => openMovieDetail(id, mt, 'Watchlist')}
+          />
         )}
         {view === 'profile' && (
           <ProfileView
@@ -226,26 +319,19 @@ export default function App() {
         )}
       </main>
 
-      {/* Bottom nav (hidden on profile) */}
+      {/* ── Bottom nav ── */}
       {view !== 'profile' && (
-        <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-film-border bg-film-black/95 backdrop-blur-md" style={{paddingBottom: "env(safe-area-inset-bottom)"}}>
+        <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-film-border bg-film-black/95 backdrop-blur-md"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <div className="max-w-3xl mx-auto px-4 flex">
             {NAV.map(({ view: v, icon: Icon, label }) => {
               const active = view === v;
-              const badge = 0; // badge rimossi per pulizia UI
               return (
-                <button key={v} onClick={() => setView(v)}
+                <button key={v} onClick={() => handleNavChange(v)}
                   className={cn('flex-1 flex flex-col items-center gap-1 py-3 transition-all relative',
                     active ? 'text-film-accent' : 'text-film-subtle hover:text-film-muted')}>
                   {active && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-film-accent rounded-full" />}
-                  <div className="relative">
-                    <Icon size={19} strokeWidth={active ? 2 : 1.5} />
-                    {badge > 0 && !active && (
-                      <span className="absolute -top-1.5 -right-2 bg-film-accent text-film-black text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                        {badge > 99 ? '99+' : badge}
-                      </span>
-                    )}
-                  </div>
+                  <Icon size={19} strokeWidth={active ? 2 : 1.5} />
                   <span className="text-[9px] uppercase tracking-widest font-medium">{label}</span>
                 </button>
               );
@@ -254,15 +340,44 @@ export default function App() {
         </nav>
       )}
 
-      {/* Back button on profile */}
+      {/* Profile back button */}
       {view === 'profile' && (
         <div className="fixed bottom-6 left-0 right-0 flex justify-center z-40">
-          <button onClick={() => setView('home')}
-            className="flex items-center gap-2 px-5 py-2.5 bg-film-surface border border-film-border rounded-full text-film-muted hover:text-film-text text-sm transition-all hover:scale-105">
+          <button onClick={() => handleNavChange('home')}
+            className="flex items-center gap-2 px-5 py-2.5 bg-film-surface border border-film-border rounded-full text-film-muted text-sm transition-all active:scale-95">
             ← Torna alla home
           </button>
         </div>
       )}
+
+      {/* ── Movie Detail Fullscreen Overlay ── */}
+      {navStack.isOpen && detailMovie && (
+        <MovieDetailScreen
+          movie={detailMovie}
+          isWatched={watchedIds.has(detailMovie.id)}
+          isOnWatchlist={watchlistIds.has(detailMovie.id)}
+          personalRating={getPersonalRating(detailMovie.id)}
+          showShuffleBtn={view === 'shuffle'}
+          backLabel={backLabel}
+          onBack={handleDetailBack}
+          onMarkWatched={r => markWatched(detailMovie, r)}
+          onUnmarkWatched={() => unmarkWatched(detailMovie.id)}
+          onUpdateRating={r => updateRating(detailMovie.id, r)}
+          onAddToWatchlist={() => addToWatchlist(detailMovie)}
+          onRemoveFromWatchlist={() => removeFromWatchlist(detailMovie.id)}
+          onOpenMovie={openRelatedMovie}
+          loading={detailLoading}
+        />
+      )}
+
+      {/* Loading overlay while fetching detail */}
+      {detailLoading && !navStack.isOpen && (
+        <div className="fixed inset-0 z-[75] bg-film-black/60 flex items-center justify-center backdrop-blur-sm">
+          <div className="w-12 h-12 border-2 border-film-accent border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+
+      {user && <InstallPrompt />}
     </div>
   );
 }

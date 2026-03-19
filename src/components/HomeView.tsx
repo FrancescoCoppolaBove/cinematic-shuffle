@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { TrendingUp, Tv, Film, ChevronRight, Eye as EyeIcon } from 'lucide-react';
 import type { TrendingItem, TMDBMovieDetail } from '../types';
 import {
-  getTrending, getTrendingPage, getMovieDetail,
+  getTrending, getTrendingPage,
   getImageUrl, getTitle, getReleaseDate,
 } from '../services/tmdb';
 import { formatYear, formatRating, cn } from '../utils';
@@ -10,7 +10,6 @@ import { GridControls, DEFAULT_GRID_FILTERS } from './GridControls';
 import type { GridFilters, ViewMode } from './GridControls';
 import { CardView } from './CardView';
 import { useMemo } from 'react';
-import { MovieCard } from './MovieCard';
 
 interface HomeViewProps {
   watchedIds: Set<number>;
@@ -21,44 +20,19 @@ interface HomeViewProps {
   onUpdateRating: (id: number, rating: number | null) => Promise<void>;
   onAddToWatchlist: (movie: TMDBMovieDetail) => Promise<void>;
   onRemoveFromWatchlist: (id: number) => Promise<void>;
+  onOpenMovieGlobal: (id: number, mediaType: 'movie' | 'tv') => void;
 }
 
 type HomeSubView =
   | { kind: 'home' }
-  | { kind: 'popular'; mediaType: 'movie' | 'tv' }
-  | { kind: 'detail'; movie: TMDBMovieDetail };
+  | { kind: 'popular'; mediaType: 'movie' | 'tv' };
 
 export function HomeView(props: HomeViewProps) {
   const [subView, setSubView] = useState<HomeSubView>({ kind: 'home' });
 
-  const handleOpenMovie = useCallback(async (id: number, mediaType: 'movie' | 'tv') => {
-    const detail = await getMovieDetail(id, mediaType);
-    setSubView({ kind: 'detail', movie: detail });
-  }, []);
-
-  if (subView.kind === 'detail') {
-    return (
-      <div className="space-y-4">
-        <button onClick={() => setSubView({ kind: 'home' })}
-          className="flex items-center gap-2 text-film-muted hover:text-film-text text-sm transition-colors">
-          ← Torna alla home
-        </button>
-        <MovieCard
-          movie={subView.movie}
-          isWatched={props.watchedIds.has(subView.movie.id)}
-          isOnWatchlist={props.watchlistIds.has(subView.movie.id)}
-          personalRating={props.getPersonalRating(subView.movie.id)}
-          showShuffleBtn={false}
-          onMarkWatched={r => props.onMarkWatched(subView.movie, r)}
-          onUnmarkWatched={() => props.onUnmarkWatched(subView.movie.id)}
-          onUpdateRating={r => props.onUpdateRating(subView.movie.id, r)}
-          onAddToWatchlist={() => props.onAddToWatchlist(subView.movie)}
-          onRemoveFromWatchlist={() => props.onRemoveFromWatchlist(subView.movie.id)}
-          onOpenMovie={handleOpenMovie}
-        />
-      </div>
-    );
-  }
+  const handleOpenMovie = useCallback((id: number, mediaType: 'movie' | 'tv') => {
+    props.onOpenMovieGlobal(id, mediaType);
+  }, [props]);
 
   if (subView.kind === 'popular') {
     return (
@@ -67,7 +41,7 @@ export function HomeView(props: HomeViewProps) {
         watchedIds={props.watchedIds}
         watchlistIds={props.watchlistIds}
         onBack={() => setSubView({ kind: 'home' })}
-        onSelect={item => handleOpenMovie(item.id, item.media_type)}
+        onSelect={item => props.onOpenMovieGlobal(item.id, item.media_type)}
       />
     );
   }

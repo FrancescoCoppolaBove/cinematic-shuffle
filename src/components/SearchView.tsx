@@ -15,12 +15,14 @@ interface SearchViewProps {
   onUpdateRating: (id: number, rating: number | null) => Promise<void>;
   onAddToWatchlist: (movie: TMDBMovieDetail) => Promise<void>;
   onRemoveFromWatchlist: (id: number) => Promise<void>;
+  onOpenMovieGlobal?: (id: number, mediaType: 'movie' | 'tv') => void;
 }
 
 export function SearchView({
   watchedIds, watchlistIds, getPersonalRating,
   onMarkWatched, onUnmarkWatched, onUpdateRating,
   onAddToWatchlist, onRemoveFromWatchlist,
+onOpenMovieGlobal,
 }: SearchViewProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -115,7 +117,7 @@ export function SearchView({
             onAddToWatchlist={() => onAddToWatchlist(selectedMovie)}
             onRemoveFromWatchlist={() => onRemoveFromWatchlist(selectedMovie.id)}
             onShuffle={() => { setSelectedMovie(null); setQuery(''); }}
-            onOpenMovie={async (id, mt) => { const d = await (await import('../services/tmdb')).getMovieDetail(id, mt); setSelectedMovie(d); }}
+            onOpenMovie={onOpenMovieGlobal}
           />
         </div>
       )}
