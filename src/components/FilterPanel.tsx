@@ -228,8 +228,8 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
         </div>
       </FilterSection>
 
-      {/* Attori */}
-      <FilterSection icon={<User size={14} />} label="Attori">
+      {/* Attori — solo per film */}
+      {filters.mediaType !== 'tv' ? <FilterSection icon={<User size={14} />} label="Attori">
         <div ref={actorRef} className="relative">
           <div className="flex items-center gap-2 bg-film-card border border-film-border rounded-lg px-3 py-2 focus-within:border-film-accent transition-colors">
             <Search size={13} className="text-film-muted shrink-0" />
@@ -276,10 +276,10 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
             ))}
           </div>
         )}
-      </FilterSection>
+      </FilterSection> : null}
 
-      {/* Regista */}
-      <FilterSection icon={<User size={14} />} label="Regista">
+      {/* Regista — solo per film */}
+      {filters.mediaType !== 'tv' ? <FilterSection icon={<User size={14} />} label="Regista">
         <input
           type="text"
           placeholder="es. Christopher Nolan"
@@ -290,7 +290,8 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
           }}
           className="w-full bg-film-card border border-film-border rounded-lg px-3 py-2 text-sm text-film-text placeholder:text-film-subtle focus:outline-none focus:border-film-accent transition-colors"
         />
-      </FilterSection>
+      </FilterSection> : null}
+
       {/* Piattaforme */}
       <FilterSection icon={<Film size={14} />} label="Piattaforma">
         <div className="flex flex-wrap gap-2">

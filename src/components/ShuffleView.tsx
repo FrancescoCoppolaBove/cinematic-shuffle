@@ -132,7 +132,7 @@ export function ShuffleView({
           isWatched={watchedIds.has(movie.id)}
           isOnWatchlist={watchlistIds.has(movie.id)}
           onShuffle={handleShuffle}
-          onMarkWatched={() => onMarkWatched(movie, null)}
+          onMarkWatched={(rating, _liked) => { onMarkWatched(movie, rating); }}
           onUnmarkWatched={() => onUnmarkWatched(movie.id)}
           onAddToWatchlist={() => onAddToWatchlist(movie)}
           onRemoveFromWatchlist={() => onRemoveFromWatchlist(movie.id)}

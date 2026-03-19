@@ -142,6 +142,7 @@ onOpenMovieGlobal,
               onAddToWatchlist={onAddToWatchlist}
               onRemoveFromWatchlist={onRemoveFromWatchlist}
               onOpenFull={handleOpenRelated}
+              onClose={() => setViewMode('grid')}
               initialIndex={cardIndex}
             />
           ) : (

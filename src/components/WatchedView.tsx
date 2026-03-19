@@ -18,6 +18,8 @@ interface WatchedViewProps {
   onUnmarkWatched: (id: number) => Promise<void>;
   onUpdateRating: (id: number, rating: number | null) => Promise<void>;
   onAddToWatchlist: (movie: TMDBMovieDetail) => Promise<void>;
+  likedIds?: Set<number>;
+  onToggleLiked?: (id: number) => Promise<void>;
   onRemoveFromWatchlist: (id: number) => Promise<void>;
   onOpenMovieGlobal?: (id: number, mediaType: 'movie' | 'tv', playlist?: import('../hooks/useNavigationStack').PlaylistItem[], index?: number) => void;
 }
@@ -25,6 +27,7 @@ interface WatchedViewProps {
 export function WatchedView({
   watchedMovies, watchedIds, watchlistIds, loading, getPersonalRating,
   onMarkWatched, onUnmarkWatched, onUpdateRating, onAddToWatchlist, onRemoveFromWatchlist,
+likedIds, onToggleLiked,
 onOpenMovieGlobal,
 }: WatchedViewProps) {
   const [selectedMovie, setSelectedMovie] = useState<TMDBMovieDetail | null>(null);
@@ -142,7 +145,10 @@ onOpenMovieGlobal,
               onUpdateRating={onUpdateRating}
               onAddToWatchlist={onAddToWatchlist}
               onRemoveFromWatchlist={onRemoveFromWatchlist}
+              likedIds={likedIds}
+              onToggleLiked={onToggleLiked}
               onOpenFull={(id, mt) => { onOpenMovieGlobal?.(id, mt); }}
+              onClose={() => setViewMode('grid')}
               initialIndex={cardIndex}
             />
           ) : (

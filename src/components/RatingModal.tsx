@@ -1,5 +1,10 @@
+/**
+ * RatingModal — fullscreen stile Letterboxd.
+ * Backdrop sfocato, poster grande, CTA Watched/Liked/Watchlist in alto,
+ * stelle XXL con swipe orizzontale al centro, Done in basso.
+ */
 import { useState } from 'react';
-import { X, Eye, Heart } from 'lucide-react';
+import { X, Eye, Heart, Bookmark } from 'lucide-react';
 import type { TMDBMovieDetail } from '../types';
 import { getImageUrl, getTitle, getReleaseDate } from '../services/tmdb';
 import { formatYear, cn } from '../utils';
@@ -7,72 +12,134 @@ import { StarRating } from './StarRating';
 
 interface RatingModalProps {
   movie: TMDBMovieDetail;
+  initialWatched?: boolean;
+  initialLiked?: boolean;
+  initialWatchlist?: boolean;
   onConfirm: (rating: number | null, liked: boolean) => void;
   onCancel: () => void;
 }
 
-export function RatingModal({ movie, onConfirm, onCancel }: RatingModalProps) {
+export function RatingModal({
+  movie,
+  initialWatched = true,
+  initialLiked = false,
+  initialWatchlist = false,
+  onConfirm,
+  onCancel,
+}: RatingModalProps) {
   const [rating, setRating] = useState<number | null>(null);
-  const [liked, setLiked] = useState(false);
-  const poster = getImageUrl(movie.poster_path, 'w185');
+  const [liked, setLiked] = useState(initialLiked);
+  const [watched, setWatched] = useState(initialWatched);
+
+  const poster = getImageUrl(movie.poster_path, 'w342');
+  const backdrop = getImageUrl(movie.backdrop_path, 'w780');
   const title = getTitle(movie);
-  const releaseDate = getReleaseDate(movie);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-film-black/80 backdrop-blur-sm"
-      onClick={e => { if (e.target === e.currentTarget) onCancel(); }}>
-      <div className="w-full max-w-sm bg-film-surface border border-film-border rounded-2xl overflow-hidden animate-slide-up shadow-2xl">
-        <div className="flex items-center justify-between px-5 pt-5 pb-3">
-          <div className="flex items-center gap-2 text-film-accent">
-            <Eye size={16} />
-            <span className="text-sm font-medium">Segna come visto</span>
+    <div className="fixed inset-0 z-[90]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      {/* Blurred backdrop */}
+      <div className="absolute inset-0">
+        {backdrop
+          ? <img src={backdrop} alt="" className="w-full h-full object-cover" />
+          : <div className="w-full h-full bg-film-deep" />
+        }
+        <div className="absolute inset-0 bg-film-black/75 backdrop-blur-xl" />
+      </div>
+
+      {/* Content */}
+      <div className="relative h-full flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-4 pb-2">
+          <div className="w-8" />
+          <div className="text-center">
+            <p className="text-white font-semibold text-base">{title}</p>
+            <p className="text-white/50 text-sm">{formatYear(getReleaseDate(movie))}</p>
           </div>
-          <button onClick={onCancel} className="text-film-muted hover:text-film-text transition-colors"><X size={18} /></button>
+          <button onClick={onCancel} className="w-8 h-8 flex items-center justify-center active:opacity-60">
+            <X size={20} className="text-white/70" />
+          </button>
         </div>
-        <div className="px-5 pb-4 flex items-center gap-3">
-          <div className="w-10 h-14 rounded-lg overflow-hidden bg-film-card border border-film-border shrink-0">
-            {poster ? <img src={poster} alt={title} className="w-full h-full object-cover" />
-              : <div className="w-full h-full flex items-center justify-center text-lg">🎬</div>}
-          </div>
-          <div className="min-w-0">
-            <p className="text-film-text text-sm font-medium truncate">{title}</p>
-            <p className="text-film-muted text-xs">{formatYear(releaseDate)}</p>
+
+        {/* Poster — takes remaining space */}
+        <div className="flex-1 flex items-center justify-center px-6 py-4 min-h-0">
+          <div className="relative w-full max-w-[280px] aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl border border-white/10">
+            {poster
+              ? <img src={poster} alt={title} className="w-full h-full object-cover" />
+              : <div className="w-full h-full bg-film-surface flex items-center justify-center text-5xl">🎬</div>
+            }
           </div>
         </div>
-        <div className="px-5 pb-5 space-y-3 border-t border-film-border pt-4">
-          <div>
-            <p className="text-film-text text-sm font-medium">Il tuo voto personale</p>
-            <p className="text-film-subtle text-xs mt-0.5">Opzionale — puoi modificarlo in seguito</p>
+
+        {/* Bottom panel */}
+        <div className="bg-film-deep/90 backdrop-blur-sm rounded-t-3xl border-t border-white/10 px-5 pt-5 pb-3">
+          {/* CTA row: Watched / Liked / Watchlist */}
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <CtaButton
+              label={watched ? 'Watched' : 'Watch'}
+              icon={<Eye size={26} strokeWidth={watched ? 2.5 : 1.5} />}
+              active={watched}
+              activeColor="text-green-400"
+              onClick={() => setWatched(!watched)}
+            />
+            <CtaButton
+              label="Liked"
+              icon={<Heart size={26} fill={liked ? 'currentColor' : 'none'} strokeWidth={liked ? 2 : 1.5} />}
+              active={liked}
+              activeColor="text-pink-400"
+              onClick={() => setLiked(!liked)}
+            />
+            <CtaButton
+              label="Watchlist"
+              icon={<Bookmark size={26} strokeWidth={1.5} />}
+              active={initialWatchlist}
+              activeColor="text-purple-400"
+              onClick={() => {/* handled externally */}}
+            />
           </div>
-          {/* Big stars for easy mobile tapping */}
-          <div className="py-2">
-            <StarRating value={rating} onChange={setRating} size="lg" />
+
+          {/* Stars — XXL, swipe to rate */}
+          <div className="mb-2 text-center">
+            <p className="text-white/40 text-xs uppercase tracking-widest mb-4">
+              {rating ? `${rating} / 5` : 'Rate'}
+            </p>
+            <div className="flex justify-center">
+              <StarRating value={rating} onChange={setRating} size="xl" />
+            </div>
           </div>
-          {/* Heart — ti è piaciuto? */}
+
+          {/* Done */}
           <button
-            onClick={() => setLiked(!liked)}
-            className={cn(
-              'flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all active:scale-95 w-full justify-center',
-              liked
-                ? 'border-pink-500/50 bg-pink-950/30 text-pink-400'
-                : 'border-film-border bg-film-surface text-film-muted'
-            )}
+            onClick={() => onConfirm(rating, liked)}
+            className="w-full py-4 mt-5 bg-white text-film-black font-bold text-base rounded-2xl active:scale-[0.98] transition-transform"
           >
-            <Heart size={16} fill={liked ? 'currentColor' : 'none'} />
-            {liked ? 'Ti è piaciuto ♥' : 'Ti è piaciuto?'}
-          </button>
-        </div>
-        <div className="px-5 pb-5 flex gap-3">
-          <button onClick={onCancel}
-            className="flex-1 py-2.5 rounded-xl border border-film-border text-film-muted hover:text-film-text text-sm transition-colors">
-            Annulla
-          </button>
-          <button onClick={() => onConfirm(rating, liked)}
-            className="flex-1 py-2.5 rounded-xl bg-film-accent hover:bg-film-accent-dim text-film-black text-sm font-semibold transition-all hover:scale-[1.02] active:scale-95">
-            {rating !== null ? `Salva (${rating}★)` : 'Salva senza voto'}
+            Done
           </button>
         </div>
       </div>
     </div>
+  );
+}
+
+function CtaButton({
+  label, icon, active, activeColor, onClick,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  active: boolean;
+  activeColor: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center gap-2 py-3 active:scale-95 transition-transform"
+    >
+      <span className={cn('transition-colors', active ? activeColor : 'text-white/40')}>
+        {icon}
+      </span>
+      <span className={cn('text-xs font-medium', active ? 'text-white' : 'text-white/40')}>
+        {label}
+      </span>
+    </button>
   );
 }
