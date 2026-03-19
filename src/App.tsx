@@ -4,6 +4,7 @@ import type { AppView, TMDBMovieDetail } from './types';
 import { useAuth } from './hooks/useAuth';
 import { useWatched } from './hooks/useWatched';
 import { useNavigationStack } from './hooks/useNavigationStack';
+import type { PlaylistItem } from './hooks/useNavigationStack';
 import { getMovieDetail } from './services/tmdb';
 import { HomeView } from './components/HomeView';
 import { ShuffleView } from './components/ShuffleView';
@@ -118,13 +119,20 @@ export default function App() {
   const openMovieDetail = useCallback(async (
     id: number,
     mediaType: 'movie' | 'tv',
-    fromLabel?: string
+    fromLabel?: string,
+    playlist?: PlaylistItem[],
+    playlistIndex?: number
   ) => {
     setDetailLoading(true);
     try {
       const movie = await getMovieDetail(id, mediaType);
       setDetailMovie(movie);
-      navStack.push({ type: 'movie', id, mediaType, fromLabel: fromLabel ?? VIEW_LABELS[view] });
+      navStack.push({
+        type: 'movie', id, mediaType,
+        fromLabel: fromLabel ?? VIEW_LABELS[view],
+        playlist,
+        playlistIndex: playlistIndex ?? 0,
+      });
     } catch { /* silente */ }
     finally { setDetailLoading(false); }
   }, [view, navStack]);
@@ -142,6 +150,21 @@ export default function App() {
     } catch { /* silente */ }
     finally { setDetailLoading(false); }
   }, [navStack, detailMovie]);
+
+  // Swipe to adjacent item in playlist
+  const handleSwipeToIndex = useCallback(async (newIndex: number) => {
+    const current = navStack.current;
+    if (!current?.playlist) return;
+    const item = current.playlist[newIndex];
+    if (!item) return;
+    setDetailLoading(true);
+    try {
+      const movie = await getMovieDetail(item.id, item.mediaType);
+      setDetailMovie(movie);
+      navStack.updatePlaylistIndex(newIndex);
+    } catch { /* silente */ }
+    finally { setDetailLoading(false); }
+  }, [navStack]);
 
   // Back from detail — pop stack, if empty close detail
   const handleDetailBack = useCallback(() => {
@@ -178,9 +201,17 @@ export default function App() {
     onUpdateRating: updateRating,
     onAddToWatchlist: addToWatchlist,
     onRemoveFromWatchlist: removeFromWatchlist,
-    // All views open movies via the global fullscreen stack
     onOpenMovie: (id: number, mt: 'movie' | 'tv') => openMovieDetail(id, mt),
   };
+
+  // Extended opener that supports playlist context (for grids)
+  const openWithPlaylist = useCallback((
+    id: number, mt: 'movie' | 'tv',
+    playlist?: PlaylistItem[], index?: number,
+    label?: string
+  ) => {
+    openMovieDetail(id, mt, label, playlist, index);
+  }, [openMovieDetail]);
 
   // Current back label for the detail screen
   const backLabel = navStack.stack.length > 1
@@ -279,33 +310,33 @@ export default function App() {
             onUpdateRating={updateRating}
             onAddToWatchlist={addToWatchlist}
             onRemoveFromWatchlist={removeFromWatchlist}
-            onOpenMovieGlobal={(id, mt) => openMovieDetail(id, mt, 'Home')}
+            onOpenMovieGlobal={(id: number, mt: 'movie' | 'tv', playlist?: PlaylistItem[], index?: number) => openWithPlaylist(id, mt, playlist, index, 'Home')}
           />
         )}
         {view === 'shuffle' && (
           <ShuffleView
             {...sharedProps}
-            onOpenMovieGlobal={(id, mt) => openMovieDetail(id, mt, 'Shuffle')}
+            onOpenMovieGlobal={(id: number, mt: 'movie' | 'tv', playlist?: PlaylistItem[], index?: number) => openWithPlaylist(id, mt, playlist, index, 'Shuffle')}
           />
         )}
         {view === 'search' && (
           <SearchView
             {...sharedProps}
-            onOpenMovieGlobal={(id, mt) => openMovieDetail(id, mt, 'Cerca')}
+            onOpenMovieGlobal={(id: number, mt: 'movie' | 'tv', playlist?: PlaylistItem[], index?: number) => openWithPlaylist(id, mt, playlist, index, 'Cerca')}
           />
         )}
         {view === 'watched' && (
           <WatchedView
             {...sharedProps}
             loading={watchedLoading}
-            onOpenMovieGlobal={(id, mt) => openMovieDetail(id, mt, 'Visti')}
+            onOpenMovieGlobal={(id: number, mt: 'movie' | 'tv', playlist?: PlaylistItem[], index?: number) => openWithPlaylist(id, mt, playlist, index, 'Visti')}
           />
         )}
         {view === 'watchlist' && (
           <WatchlistView
             watchlist={watchlist}
             {...sharedProps}
-            onOpenMovieGlobal={(id, mt) => openMovieDetail(id, mt, 'Watchlist')}
+            onOpenMovieGlobal={(id: number, mt: 'movie' | 'tv', playlist?: PlaylistItem[], index?: number) => openWithPlaylist(id, mt, playlist, index, 'Watchlist')}
           />
         )}
         {view === 'profile' && (
@@ -359,6 +390,9 @@ export default function App() {
           personalRating={getPersonalRating(detailMovie.id)}
           showShuffleBtn={view === 'shuffle'}
           backLabel={backLabel}
+          playlist={navStack.current?.playlist}
+          playlistIndex={navStack.current?.playlistIndex ?? 0}
+          onSwipeToIndex={navStack.current?.playlist ? handleSwipeToIndex : undefined}
           onBack={handleDetailBack}
           onMarkWatched={r => markWatched(detailMovie, r)}
           onUnmarkWatched={() => unmarkWatched(detailMovie.id)}

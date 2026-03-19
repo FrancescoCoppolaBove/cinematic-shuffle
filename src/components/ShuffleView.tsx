@@ -15,7 +15,7 @@ interface ShuffleViewProps {
   onUpdateRating: (id: number, rating: number | null) => Promise<void>;
   onAddToWatchlist: (movie: TMDBMovieDetail) => Promise<void>;
   onRemoveFromWatchlist: (id: number) => Promise<void>;
-  onOpenMovieGlobal?: (id: number, mediaType: 'movie' | 'tv') => void;
+  onOpenMovieGlobal?: (id: number, mediaType: 'movie' | 'tv', playlist?: import('../hooks/useNavigationStack').PlaylistItem[], index?: number) => void;
 }
 
 const DEFAULT_FILTERS: MovieFilters = { watchedStatus: 'all', mediaType: 'movie' };

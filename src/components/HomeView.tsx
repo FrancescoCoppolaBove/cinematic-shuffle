@@ -41,7 +41,7 @@ export function HomeView(props: HomeViewProps) {
         watchedIds={props.watchedIds}
         watchlistIds={props.watchlistIds}
         onBack={() => setSubView({ kind: 'home' })}
-        onSelect={item => props.onOpenMovieGlobal(item.id, item.media_type)}
+        onSelect={(item, playlist, idx) => (props.onOpenMovieGlobal as Function)(item.id, item.media_type, playlist?.map((i: TrendingItem) => ({ id: i.id, mediaType: i.media_type, title: i.title, poster_path: i.poster_path })), idx)}
       />
     );
   }
@@ -170,7 +170,7 @@ function PopularFullPage({
   watchedIds: Set<number>;
   watchlistIds: Set<number>;
   onBack: () => void;
-  onSelect: (item: TrendingItem) => void;
+  onSelect: (item: TrendingItem, playlist: TrendingItem[], index: number) => void;
 }) {
   const [items, setItems] = useState<TrendingItem[]>([]);
   const [page, setPage] = useState(1);
@@ -261,7 +261,7 @@ function PopularFullPage({
               onUpdateRating={async () => {}}
               onAddToWatchlist={async () => {}}
               onRemoveFromWatchlist={async () => {}}
-              onOpenFull={(id, _mt) => { const item = items.find(i => i.id === id); if (item) onSelect(item); }}
+              onOpenFull={(id, _mt) => { const item = items.find(i => i.id === id); const idx = items.findIndex(i => i.id === id); if (item) onSelect(item, filtered, idx); }}
             />
           ) : (
             <div className="grid grid-cols-3 gap-2.5">
@@ -272,7 +272,7 @@ function PopularFullPage({
                   rank={idx + 1}
                   isWatched={watchedIds.has(item.id)}
                   isOnWatchlist={watchlistIds.has(item.id)}
-                  onClick={() => onSelect(item)}
+                  onClick={() => onSelect(item, filtered, idx)}
                 />
               ))}
             </div>

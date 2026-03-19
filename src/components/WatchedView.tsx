@@ -19,7 +19,7 @@ interface WatchedViewProps {
   onUpdateRating: (id: number, rating: number | null) => Promise<void>;
   onAddToWatchlist: (movie: TMDBMovieDetail) => Promise<void>;
   onRemoveFromWatchlist: (id: number) => Promise<void>;
-  onOpenMovieGlobal?: (id: number, mediaType: 'movie' | 'tv') => void;
+  onOpenMovieGlobal?: (id: number, mediaType: 'movie' | 'tv', playlist?: import('../hooks/useNavigationStack').PlaylistItem[], index?: number) => void;
 }
 
 export function WatchedView({
@@ -48,12 +48,24 @@ onOpenMovieGlobal,
     return list;
   }, [watchedMovies, filters]);
 
-  const handleSelect = useCallback(async (movie: WatchedMovie) => {
+  const handleSelect = useCallback(async (movie: WatchedMovie, playlist?: WatchedMovie[], index?: number) => {
+    if (onOpenMovieGlobal) {
+      // Open via global fullscreen with playlist
+      const pl = (playlist ?? filtered).map(m => ({
+        id: m.id,
+        mediaType: m.media_type as 'movie' | 'tv',
+        title: m.title,
+        poster_path: m.poster_path,
+      }));
+      const idx = index ?? pl.findIndex(p => p.id === movie.id);
+      onOpenMovieGlobal(movie.id, movie.media_type, pl, idx);
+      return;
+    }
     setLoadingId(movie.id);
     try { setSelectedMovie(await getMovieDetail(movie.id, movie.media_type)); }
     catch { /* silente */ }
     finally { setLoadingId(null); }
-  }, []);
+  }, [onOpenMovieGlobal, filtered]);
 
   const handleSelectByIndex = useCallback((idx: number) => {
     setCardIndex(idx);
@@ -140,7 +152,7 @@ onOpenMovieGlobal,
                   key={movie.id}
                   movie={movie}
                   isLoading={loadingId === movie.id}
-                  onSelect={() => handleSelect(movie)}
+                  onSelect={() => handleSelect(movie, filtered, idx)}
                   onCardView={() => handleSelectByIndex(idx)}
                 />
               ))}
