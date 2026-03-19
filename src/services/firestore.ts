@@ -33,6 +33,7 @@ export async function fetchWatchedMovies(uid: string): Promise<WatchedMovie[]> {
         release_date: (data.release_date as string) || '',
         vote_average: data.vote_average as number,
         personal_rating: (data.personal_rating as number | null) ?? null,
+        liked: (data.liked as boolean) ?? false,
         media_type: (data.media_type as 'movie' | 'tv') ?? 'movie',
         addedAt: toISOString(data.addedAt),
       } satisfies WatchedMovie;
@@ -45,6 +46,10 @@ export async function addWatchedToFirestore(uid: string, movie: Omit<WatchedMovi
     ...movie,
     addedAt: serverTimestamp() as FieldValue,
   }, { merge: true });
+}
+
+export async function updateLiked(uid: string, movieId: number, liked: boolean) {
+  await setDoc(watchedRef(uid, movieId), { liked }, { merge: true });
 }
 
 export async function removeWatchedFromFirestore(uid: string, movieId: number) {

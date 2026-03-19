@@ -316,6 +316,7 @@ export default function App() {
         {view === 'shuffle' && (
           <ShuffleView
             {...sharedProps}
+            watchedMovies={watchedMovies}
             onOpenMovieGlobal={(id: number, mt: 'movie' | 'tv', playlist?: PlaylistItem[], index?: number) => openWithPlaylist(id, mt, playlist, index, 'Shuffle')}
           />
         )}

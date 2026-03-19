@@ -551,7 +551,7 @@ export function MovieDetailScreen({
       {showRatingModal && (
         <RatingModal
           movie={movie}
-          onConfirm={r => { setShowRatingModal(false); onMarkWatched(r); }}
+          onConfirm={(r, _liked) => { setShowRatingModal(false); onMarkWatched(r); }}
           onCancel={() => setShowRatingModal(false)}
         />
       )}

@@ -120,6 +120,8 @@ export interface MovieFilters {
   directorName?: string;
   minImdbRating?: number;
   mediaType: MediaType;
+  withProviders?: number[];    // TMDB watch provider IDs
+  withAwards?: boolean;        // candidature/vincite Oscar
 }
 
 export interface WatchedMovie {
@@ -129,6 +131,7 @@ export interface WatchedMovie {
   release_date: string;
   vote_average: number;
   personal_rating: number | null;
+  liked: boolean;
   addedAt: string;
   media_type: 'movie' | 'tv';
 }
@@ -205,6 +208,8 @@ export const TMDB_TV_GENRES: TMDBGenre[] = [
 export const TMDB_GENRES = TMDB_MOVIE_GENRES;
 
 export const DECADES = [
+  { label: "Anni '30", value: '1930s', start: 1930, end: 1939 },
+  { label: "Anni '40", value: '1940s', start: 1940, end: 1949 },
   { label: "Anni '50", value: '1950s', start: 1950, end: 1959 },
   { label: "Anni '60", value: '1960s', start: 1960, end: 1969 },
   { label: "Anni '70", value: '1970s', start: 1970, end: 1979 },

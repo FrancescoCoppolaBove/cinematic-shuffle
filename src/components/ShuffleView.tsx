@@ -2,13 +2,16 @@ import { useState } from 'react';
 import { Shuffle, SlidersHorizontal, X, Film, Tv } from 'lucide-react';
 import type { MovieFilters, MediaType, TMDBMovieDetail } from '../types';
 import { useShuffle } from '../hooks/useShuffle';
-import { MovieCard } from './MovieCard';
+import { ShuffleCard } from './ShuffleCard';
 import { FilterPanel } from './FilterPanel';
 import { cn } from '../utils';
+import type { WatchedMovie } from '../types';
+import { useUserTaste } from '../hooks/useUserTaste';
 
 interface ShuffleViewProps {
   watchedIds: Set<number>;
   watchlistIds: Set<number>;
+  watchedMovies: WatchedMovie[];
   getPersonalRating: (id: number) => number | null;
   onMarkWatched: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
   onUnmarkWatched: (id: number) => Promise<void>;
@@ -27,14 +30,15 @@ const MEDIA_TABS: { value: MediaType; label: string; icon: typeof Film }[] = [
 ];
 
 export function ShuffleView({
-  watchedIds, watchlistIds, getPersonalRating,
-  onMarkWatched, onUnmarkWatched, onUpdateRating,
+  watchedIds, watchlistIds, watchedMovies,
+  onMarkWatched, onUnmarkWatched,
   onAddToWatchlist, onRemoveFromWatchlist,
-onOpenMovieGlobal,
+  onOpenMovieGlobal,
 }: ShuffleViewProps) {
   const [filters, setFilters] = useState<MovieFilters>(DEFAULT_FILTERS);
   const [showFilters, setShowFilters] = useState(false);
   const { movie, loading, error, hasSearched, shuffle } = useShuffle();
+  const { profile, applyTasteToFilters } = useUserTaste(watchedMovies);
 
   const activeFilterCount = [
     filters.year, filters.decade,
@@ -43,14 +47,22 @@ onOpenMovieGlobal,
     (filters.actorIds?.length || 0) > 0,
     filters.directorName,
     filters.minImdbRating,
+    (filters.withProviders?.length || 0) > 0,
+    filters.withAwards,
   ].filter(Boolean).length;
 
   function handleMediaType(mt: MediaType) {
     setFilters(f => ({ ...f, mediaType: mt, genreIds: [], year: undefined, decade: undefined }));
   }
 
+  function handleShuffle() {
+    // Applica i gusti dell'utente ai filtri (se ci sono abbastanza dati)
+    const enrichedFilters = applyTasteToFilters(filters);
+    shuffle(enrichedFilters, watchedIds);
+  }
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Media type selector */}
       <div className="flex gap-2 bg-film-surface border border-film-border rounded-2xl p-1.5">
         {MEDIA_TABS.map(({ value, label, icon: Icon }) => (
@@ -64,14 +76,24 @@ onOpenMovieGlobal,
         ))}
       </div>
 
+      {/* Taste indicator */}
+      {profile.hasEnoughData && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-film-surface/50 rounded-xl border border-film-accent/20">
+          <span className="text-film-accent text-xs">✦</span>
+          <p className="text-film-subtle text-xs">
+            Shuffle calibrato sui tuoi gusti · {watchedMovies.length} film analizzati
+          </p>
+        </div>
+      )}
+
       {/* Shuffle + filters row */}
       <div className="flex gap-3">
-        <button onClick={() => shuffle(filters, watchedIds)} disabled={loading}
+        <button onClick={handleShuffle} disabled={loading}
           className={cn(
             'flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl font-display text-xl tracking-widest transition-all',
-            filters.mediaType === 'tv' ? 'bg-purple-500 hover:bg-purple-600 text-white' : 'bg-film-accent hover:bg-film-accent-dim text-film-black',
-            'active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed',
-            loading ? 'animate-pulse-gold' : 'hover:scale-[1.01]'
+            filters.mediaType === 'tv' ? 'bg-purple-500 text-white' : 'bg-film-accent text-film-black',
+            'active:scale-95 disabled:opacity-60',
+            loading ? 'animate-pulse-gold' : ''
           )}>
           <Shuffle size={22} className={loading ? 'animate-spin-slow' : ''} />
           {loading ? 'CERCANDO...' : hasSearched ? 'ALTRO' : 'SHUFFLE'}
@@ -79,7 +101,9 @@ onOpenMovieGlobal,
 
         <button onClick={() => setShowFilters(!showFilters)}
           className={cn('flex items-center gap-2 px-4 py-4 rounded-2xl border transition-all active:scale-95',
-            showFilters ? 'bg-film-accent/10 border-film-accent text-film-accent' : 'bg-film-surface border-film-border text-film-muted hover:text-film-text hover:border-film-accent/50')}>
+            showFilters || activeFilterCount > 0
+              ? 'bg-film-accent/10 border-film-accent text-film-accent'
+              : 'bg-film-surface border-film-border text-film-muted')}>
           {showFilters ? <X size={18} /> : <SlidersHorizontal size={18} />}
           {activeFilterCount > 0 && (
             <span className="bg-film-accent text-film-black text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
@@ -103,19 +127,16 @@ onOpenMovieGlobal,
       )}
 
       {movie && !loading && (
-        <MovieCard
+        <ShuffleCard
           movie={movie}
           isWatched={watchedIds.has(movie.id)}
           isOnWatchlist={watchlistIds.has(movie.id)}
-          personalRating={getPersonalRating(movie.id)}
-          showShuffleBtn={true}
-          onMarkWatched={r => onMarkWatched(movie, r)}
+          onShuffle={handleShuffle}
+          onMarkWatched={() => onMarkWatched(movie, null)}
           onUnmarkWatched={() => onUnmarkWatched(movie.id)}
-          onUpdateRating={r => onUpdateRating(movie.id, r)}
           onAddToWatchlist={() => onAddToWatchlist(movie)}
           onRemoveFromWatchlist={() => onRemoveFromWatchlist(movie.id)}
-          onShuffle={() => shuffle(filters, watchedIds)}
-          onOpenMovie={onOpenMovieGlobal}
+          onOpenDetail={() => onOpenMovieGlobal?.(movie.id, movie.media_type)}
           loading={loading}
         />
       )}
@@ -125,7 +146,9 @@ onOpenMovieGlobal,
           <div className="text-5xl opacity-30 select-none">
             {filters.mediaType === 'tv' ? '📺' : '🎬'}
           </div>
-          <p className="text-base">Premi Shuffle per scoprire {filters.mediaType === 'tv' ? 'una serie TV' : filters.mediaType === 'both' ? 'qualcosa' : 'un film'}</p>
+          <p className="text-base">Premi Shuffle per scoprire{' '}
+            {filters.mediaType === 'tv' ? 'una serie TV' : filters.mediaType === 'both' ? 'qualcosa' : 'un film'}
+          </p>
           <p className="text-sm text-film-subtle">Usa i filtri per personalizzare</p>
         </div>
       )}

@@ -87,7 +87,7 @@ export function CardView({
     onRemoveFromWatchlist(item.id);
   }
 
-  async function handleRatingConfirm(rating: number | null) {
+  async function handleRatingConfirm(rating: number | null, _liked: boolean) {
     setShowRatingModal(false);
     const d = await getDetail();
     if (d) onMarkWatched(d, rating);

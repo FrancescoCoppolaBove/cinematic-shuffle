@@ -142,7 +142,7 @@ onOpenMovieGlobal,
               onUpdateRating={onUpdateRating}
               onAddToWatchlist={onAddToWatchlist}
               onRemoveFromWatchlist={onRemoveFromWatchlist}
-              onOpenFull={(id, mt) => handleSelect({ id, title: '', poster_path: null, release_date: '', vote_average: 0, personal_rating: null, addedAt: '', media_type: mt })}
+              onOpenFull={(id, mt) => { onOpenMovieGlobal?.(id, mt); }}
               initialIndex={cardIndex}
             />
           ) : (

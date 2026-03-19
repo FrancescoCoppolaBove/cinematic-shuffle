@@ -177,6 +177,14 @@ export async function discoverContent(filters: MovieFilters, page = 1): Promise<
   if (filters.genreIds?.length) params['with_genres'] = filters.genreIds.join(',');
   if (filters.minImdbRating) params['vote_average.gte'] = String(filters.minImdbRating);
   if (filters.actorIds?.length) params['with_cast'] = filters.actorIds.join(',');
+  if (filters.withProviders?.length) {
+    params['with_watch_providers'] = filters.withProviders.join('|');
+    params['watch_region'] = 'IT';
+  }
+  // Awards: TMDB keyword IDs for Oscar winner (207317) and nominee (207317 + 210024)
+  if (filters.withAwards) {
+    params['with_keywords'] = '207317|210024';
+  }
 
   if (filters.directorName) {
     const id = await findPersonId(filters.directorName);
@@ -287,4 +295,29 @@ export async function getRandomContent(
   if (!fallback) return null;
   addToShuffleHistory(fallback.id);
   return getMovieDetail(fallback.id, mediaType);
+}
+
+// ─── Watch Providers list (for filter panel) ──────────────────────
+
+export interface ProviderInfo {
+  provider_id: number;
+  provider_name: string;
+  logo_path: string;
+}
+
+const POPULAR_PROVIDERS_IT: ProviderInfo[] = [
+  { provider_id: 8,    provider_name: 'Netflix',       logo_path: '/t2yyOv40HZeVlLjYsCsPHnWLk4W.jpg' },
+  { provider_id: 119,  provider_name: 'Amazon Prime',  logo_path: '/dQeAar5H991VYporEjUspolDarG.jpg' },
+  { provider_id: 337,  provider_name: 'Disney+',       logo_path: '/7rwgEs15tFwyR9NPQ5vpzxTj19d.jpg' },
+  { provider_id: 1899, provider_name: 'Max',           logo_path: '/Ajqyt5aNxNx8rDHQEhTHcPnNpjw.jpg' },
+  { provider_id: 35,   provider_name: 'Apple TV+',     logo_path: '/6uhKBfmtzFqOcLousHwZuzcrScK.jpg' },
+  { provider_id: 531,  provider_name: 'Paramount+',    logo_path: '/xbhHHa1YgtpwhC8lb1NQ3ACVcLd.jpg' },
+  { provider_id: 39,   provider_name: 'NOW',           logo_path: '/ixVmHmFEKhxCG07LMnLBMZMFGlO.jpg' },
+  { provider_id: 59,   provider_name: 'Rakuten TV',    logo_path: '/5oYxSbIKKCMQ4D5AqxRQKbLZfVQ.jpg' },
+  { provider_id: 222,  provider_name: 'Timvision',     logo_path: '/bZGFHCAPgdD44ByaHFLAlqJGvSl.jpg' },
+  { provider_id: 2,    provider_name: 'Apple TV Store', logo_path: '/peURlLlr8jggOwK53fJ5wdQl05y.jpg' },
+];
+
+export function getPopularProviders(): ProviderInfo[] {
+  return POPULAR_PROVIDERS_IT;
 }

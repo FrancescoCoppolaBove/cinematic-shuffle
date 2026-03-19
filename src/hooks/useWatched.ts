@@ -4,7 +4,7 @@ import type { WatchedMovie, WatchlistItem, TMDBMovieDetail } from '../types';
 import { getTitle, getReleaseDate } from '../services/tmdb';
 import {
   fetchWatchedMovies, addWatchedToFirestore, removeWatchedFromFirestore,
-  updatePersonalRating as updateRatingFs,
+  updatePersonalRating as updateRatingFs, updateLiked as updateLikedFs,
   fetchWatchlist, addToWatchlistFirestore, removeFromWatchlistFirestore,
 } from '../services/firestore';
 
@@ -55,6 +55,7 @@ export function useWatched(user: User | null) {
       release_date: getReleaseDate(movie),
       vote_average: movie.vote_average,
       personal_rating: personalRating,
+      liked: false,
       media_type: movie.media_type,
     };
     await addWatchedToFirestore(user.uid, entry);
@@ -76,6 +77,14 @@ export function useWatched(user: User | null) {
     await updateRatingFs(user.uid, movieId, rating);
     setWatchedMovies(prev => prev.map(m => m.id === movieId ? { ...m, personal_rating: rating } : m));
   }, [user]);
+
+  const toggleLiked = useCallback(async (movieId: number) => {
+    if (!user) return;
+    const current = watchedMovies.find(m => m.id === movieId);
+    const newLiked = !(current?.liked ?? false);
+    await updateLikedFs(user.uid, movieId, newLiked);
+    setWatchedMovies(prev => prev.map(m => m.id === movieId ? { ...m, liked: newLiked } : m));
+  }, [user, watchedMovies]);
 
   // ─── Watchlist ──────────────────────────────────────────────────
   const addToWatchlist = useCallback(async (movie: TMDBMovieDetail) => {
@@ -102,7 +111,7 @@ export function useWatched(user: User | null) {
   return {
     watchedMovies, watchedIds, watchlist, watchlistIds,
     loading, refresh,
-    markWatched, unmarkWatched, updateRating,
+    markWatched, unmarkWatched, updateRating, toggleLiked,
     addToWatchlist, removeFromWatchlist,
   };
 }

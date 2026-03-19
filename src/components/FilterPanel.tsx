@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { X, ChevronDown, Search, Star, Calendar, Clapperboard, User, Film } from 'lucide-react';
 import type { MovieFilters } from '../types';
 import { TMDB_MOVIE_GENRES, TMDB_TV_GENRES, DECADES } from '../types';
-import { searchPersons } from '../services/tmdb';
+import { searchPersons, getPopularProviders } from '../services/tmdb';
 import { cn } from '../utils';
 
 interface FilterPanelProps {
@@ -86,12 +86,14 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
     (filters.actorIds?.length || 0) > 0,
     filters.directorName,
     filters.minImdbRating,
+    (filters.withProviders?.length || 0) > 0,
+    filters.withAwards,
   ].filter(Boolean).length;
 
   function resetAll() {
     setDirectorQuery('');
     setActorQuery('');
-    onChange({ watchedStatus: 'all', mediaType: filters.mediaType });
+    onChange({ watchedStatus: 'all', mediaType: filters.mediaType, withProviders: [], withAwards: false });
   }
 
   return (
@@ -289,6 +291,56 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
           className="w-full bg-film-card border border-film-border rounded-lg px-3 py-2 text-sm text-film-text placeholder:text-film-subtle focus:outline-none focus:border-film-accent transition-colors"
         />
       </FilterSection>
+      {/* Piattaforme */}
+      <FilterSection icon={<Film size={14} />} label="Piattaforma">
+        <div className="flex flex-wrap gap-2">
+          {getPopularProviders().map(p => {
+            const active = (filters.withProviders ?? []).includes(p.provider_id);
+            return (
+              <button
+                key={p.provider_id}
+                onClick={() => {
+                  const current = filters.withProviders ?? [];
+                  onChange({
+                    ...filters,
+                    withProviders: active
+                      ? current.filter(id => id !== p.provider_id)
+                      : [...current, p.provider_id],
+                  });
+                }}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-medium transition-all',
+                  active ? 'bg-film-accent text-film-black border-film-accent' : 'bg-film-card text-film-muted border-film-border'
+                )}
+              >
+                <img
+                  src={`https://image.tmdb.org/t/p/w45${p.logo_path}`}
+                  alt={p.provider_name}
+                  className="w-4 h-4 rounded-sm"
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+                {p.provider_name}
+              </button>
+            );
+          })}
+        </div>
+      </FilterSection>
+
+      {/* Oscar */}
+      <FilterSection icon={<Star size={14} />} label="Premi">
+        <button
+          onClick={() => onChange({ ...filters, withAwards: !filters.withAwards })}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all w-full',
+            filters.withAwards
+              ? 'bg-film-accent text-film-black border-film-accent'
+              : 'bg-film-card text-film-muted border-film-border'
+          )}
+        >
+          🏆 Candidature / vittorie Oscar
+        </button>
+      </FilterSection>
+
     </div>
   );
 }

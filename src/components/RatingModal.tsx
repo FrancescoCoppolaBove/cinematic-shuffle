@@ -1,18 +1,19 @@
 import { useState } from 'react';
-import { X, Eye } from 'lucide-react';
+import { X, Eye, Heart } from 'lucide-react';
 import type { TMDBMovieDetail } from '../types';
 import { getImageUrl, getTitle, getReleaseDate } from '../services/tmdb';
-import { formatYear } from '../utils';
+import { formatYear, cn } from '../utils';
 import { StarRating } from './StarRating';
 
 interface RatingModalProps {
   movie: TMDBMovieDetail;
-  onConfirm: (rating: number | null) => void;
+  onConfirm: (rating: number | null, liked: boolean) => void;
   onCancel: () => void;
 }
 
 export function RatingModal({ movie, onConfirm, onCancel }: RatingModalProps) {
   const [rating, setRating] = useState<number | null>(null);
+  const [liked, setLiked] = useState(false);
   const poster = getImageUrl(movie.poster_path, 'w185');
   const title = getTitle(movie);
   const releaseDate = getReleaseDate(movie);
@@ -41,16 +42,32 @@ export function RatingModal({ movie, onConfirm, onCancel }: RatingModalProps) {
         <div className="px-5 pb-5 space-y-3 border-t border-film-border pt-4">
           <div>
             <p className="text-film-text text-sm font-medium">Il tuo voto personale</p>
-            <p className="text-film-subtle text-xs mt-0.5">Opzionale — puoi aggiungere o modificare il voto in seguito</p>
+            <p className="text-film-subtle text-xs mt-0.5">Opzionale — puoi modificarlo in seguito</p>
           </div>
-          <StarRating value={rating} onChange={setRating} size="lg" />
+          {/* Big stars for easy mobile tapping */}
+          <div className="py-2">
+            <StarRating value={rating} onChange={setRating} size="lg" />
+          </div>
+          {/* Heart — ti è piaciuto? */}
+          <button
+            onClick={() => setLiked(!liked)}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all active:scale-95 w-full justify-center',
+              liked
+                ? 'border-pink-500/50 bg-pink-950/30 text-pink-400'
+                : 'border-film-border bg-film-surface text-film-muted'
+            )}
+          >
+            <Heart size={16} fill={liked ? 'currentColor' : 'none'} />
+            {liked ? 'Ti è piaciuto ♥' : 'Ti è piaciuto?'}
+          </button>
         </div>
         <div className="px-5 pb-5 flex gap-3">
           <button onClick={onCancel}
             className="flex-1 py-2.5 rounded-xl border border-film-border text-film-muted hover:text-film-text text-sm transition-colors">
             Annulla
           </button>
-          <button onClick={() => onConfirm(rating)}
+          <button onClick={() => onConfirm(rating, liked)}
             className="flex-1 py-2.5 rounded-xl bg-film-accent hover:bg-film-accent-dim text-film-black text-sm font-semibold transition-all hover:scale-[1.02] active:scale-95">
             {rating !== null ? `Salva (${rating}★)` : 'Salva senza voto'}
           </button>
