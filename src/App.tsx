@@ -176,7 +176,7 @@ export default function App() {
       </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-film-border bg-film-black/90 backdrop-blur-md">
+      <header className="sticky top-0 z-40 border-b border-film-border bg-film-black/90 backdrop-blur-md" style={{paddingTop: "env(safe-area-inset-top)"}}>
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="font-display text-lg tracking-[0.2em] text-film-text">CINEMATIC</span>
@@ -232,7 +232,7 @@ export default function App() {
           <div className="max-w-3xl mx-auto px-4 flex">
             {NAV.map(({ view: v, icon: Icon, label }) => {
               const active = view === v;
-              const badge = v === 'watchlist' ? watchlist.length : v === 'watched' ? watchedMovies.length : 0;
+              const badge = 0; // badge rimossi per pulizia UI
               return (
                 <button key={v} onClick={() => setView(v)}
                   className={cn('flex-1 flex flex-col items-center gap-1 py-3 transition-all relative',

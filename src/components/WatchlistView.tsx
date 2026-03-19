@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Bookmark, Eye, Trash2, Search } from 'lucide-react';
+import { Bookmark, Search, Trash2 } from 'lucide-react';
 import type { WatchlistItem, TMDBMovieDetail } from '../types';
 import { getImageUrl, getMovieDetail, getTitle, getReleaseDate } from '../services/tmdb';
 import { formatYear, formatRating, cn } from '../utils';
@@ -26,23 +26,30 @@ export function WatchlistView({
   const [loadingId, setLoadingId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
 
-  const filtered = watchlist.filter(m => getTitle(m).toLowerCase().includes(search.toLowerCase()));
+  const filtered = watchlist.filter(m =>
+    getTitle(m).toLowerCase().includes(search.toLowerCase())
+  );
 
   const handleSelect = useCallback(async (item: WatchlistItem) => {
+    if (loadingId) return; // già in caricamento
     setLoadingId(item.id);
     try {
       const detail = await getMovieDetail(item.id, item.media_type);
       setSelectedMovie(detail);
-    } finally {
-      setLoadingId(null);
-    }
+    } catch { /* silente */ }
+    finally { setLoadingId(null); }
+  }, [loadingId]);
+
+  const handleOpenRelated = useCallback(async (id: number, mediaType: 'movie' | 'tv') => {
+    const detail = await getMovieDetail(id, mediaType);
+    setSelectedMovie(detail);
   }, []);
 
   if (selectedMovie) {
     return (
       <div className="space-y-4">
         <button onClick={() => setSelectedMovie(null)}
-          className="flex items-center gap-2 text-film-muted hover:text-film-text text-sm transition-colors">
+          className="flex items-center gap-2 text-film-muted hover:text-film-text text-sm transition-colors active:opacity-70">
           ← Torna alla watchlist
         </button>
         <MovieCard
@@ -56,15 +63,14 @@ export function WatchlistView({
           onUpdateRating={r => onUpdateRating(selectedMovie.id, r)}
           onAddToWatchlist={() => onAddToWatchlist(selectedMovie)}
           onRemoveFromWatchlist={() => { onRemoveFromWatchlist(selectedMovie.id); setSelectedMovie(null); }}
-          onShuffle={() => setSelectedMovie(null)}
-          onOpenMovie={async (id, mt) => { const { getMovieDetail } = await import('../services/tmdb'); setSelectedMovie(await getMovieDetail(id, mt)); }}
+          onOpenMovie={handleOpenRelated}
         />
       </div>
     );
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center gap-2">
         <Bookmark size={16} className="text-purple-400" />
@@ -80,7 +86,7 @@ export function WatchlistView({
           <div>
             <p className="text-sm">La tua watchlist è vuota</p>
             <p className="text-xs mt-1 text-film-subtle">
-              Aggiungi film e serie TV con il pulsante "Watchlist" durante lo Shuffle o la Ricerca
+              Aggiungi film e serie con il pulsante "Watchlist"
             </p>
           </div>
         </div>
@@ -88,13 +94,18 @@ export function WatchlistView({
         <>
           {/* Search */}
           <div className="flex items-center gap-3 bg-film-surface border border-film-border rounded-xl px-3 py-2.5 focus-within:border-film-accent transition-colors">
-            <Search size={14} className="text-film-muted" />
-            <input type="text" placeholder="Filtra..." value={search} onChange={e => setSearch(e.target.value)}
-              className="bg-transparent text-sm text-film-text placeholder:text-film-subtle focus:outline-none flex-1" />
+            <Search size={14} className="text-film-muted shrink-0" />
+            <input
+              type="text"
+              placeholder="Filtra..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="bg-transparent text-sm text-film-text placeholder:text-film-subtle focus:outline-none flex-1"
+            />
           </div>
 
           {/* Poster grid */}
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 gap-2.5">
             {filtered.map(item => (
               <WatchlistCard
                 key={item.id}
@@ -107,7 +118,9 @@ export function WatchlistView({
           </div>
 
           {filtered.length === 0 && search && (
-            <p className="text-center text-film-muted text-sm py-8">Nessun risultato per "{search}"</p>
+            <p className="text-center text-film-muted text-sm py-8">
+              Nessun risultato per "{search}"
+            </p>
           )}
         </>
       )}
@@ -128,11 +141,28 @@ function WatchlistCard({
   const title = getTitle(item);
 
   return (
-    <div className="group relative aspect-[2/3] rounded-xl overflow-hidden border border-film-border hover:border-purple-500/50 transition-all bg-film-card">
-      {/* Poster */}
-      <button onClick={onSelect} className="w-full h-full">
+    // L'intero contenitore è cliccabile — un solo tap apre la scheda
+    <div
+      className={cn(
+        'relative aspect-[2/3] rounded-xl overflow-hidden border border-film-border bg-film-card',
+        'transition-all active:scale-[0.97]',
+        isLoading && 'opacity-70'
+      )}
+    >
+      {/* Tap area — tutto il poster apre la scheda */}
+      <button
+        onClick={onSelect}
+        disabled={isLoading}
+        className="absolute inset-0 w-full h-full"
+        aria-label={`Apri ${title}`}
+      >
         {poster
-          ? <img src={poster} alt={title} className="w-full h-full object-cover" onError={() => setImgErr(true)} />
+          ? <img
+              src={poster}
+              alt={title}
+              className="w-full h-full object-cover"
+              onError={() => setImgErr(true)}
+            />
           : <div className="w-full h-full flex items-center justify-center text-3xl text-film-subtle">
               {item.media_type === 'tv' ? '📺' : '🎬'}
             </div>
@@ -141,23 +171,24 @@ function WatchlistCard({
 
       {/* Loading spinner */}
       {isLoading && (
-        <div className="absolute inset-0 bg-film-black/60 flex items-center justify-center">
+        <div className="absolute inset-0 bg-film-black/60 flex items-center justify-center pointer-events-none">
           <div className="w-6 h-6 border-2 border-film-accent border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
-      {/* Remove button - top right */}
+      {/* Cestino — sempre visibile, piccolo, angolo top-right */}
       <button
         onClick={e => { e.stopPropagation(); onRemove(); }}
-        className="absolute top-1.5 right-1.5 bg-film-black/70 backdrop-blur-sm text-film-subtle hover:text-film-red p-1 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-        title="Rimuovi dalla watchlist"
+        className="absolute top-1.5 right-1.5 bg-film-black/75 backdrop-blur-sm text-film-subtle active:text-film-red p-1.5 rounded-lg z-10"
+        aria-label="Rimuovi dalla watchlist"
       >
-        <Trash2 size={11} />
+        <Trash2 size={12} />
       </button>
 
-      {/* Bottom overlay with title + info */}
-      <button onClick={onSelect}
-        className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-film-black via-film-black/70 to-transparent px-2 pt-6 pb-2 text-left w-full">
+      {/* Gradient + titolo in basso — sempre visibile */}
+      <div
+        className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-film-black via-film-black/60 to-transparent px-2 pt-8 pb-2 pointer-events-none"
+      >
         <p className="text-film-text text-xs font-medium line-clamp-2 leading-tight">{title}</p>
         <div className="flex items-center justify-between mt-0.5">
           <span className="text-film-subtle text-xs">{formatYear(getReleaseDate(item))}</span>
@@ -165,18 +196,7 @@ function WatchlistCard({
             <span className="text-film-accent text-xs">★ {formatRating(item.vote_average)}</span>
           )}
         </div>
-      </button>
-
-      {/* Mark as watched button */}
-      <button
-        onClick={e => { e.stopPropagation(); onSelect(); }}
-        className={cn(
-          'absolute bottom-0 inset-x-0 bg-film-accent/90 text-film-black text-xs font-semibold py-1.5 flex items-center justify-center gap-1',
-          'translate-y-full group-hover:translate-y-0 transition-transform duration-200'
-        )}
-      >
-        <Eye size={11} /> Apri scheda
-      </button>
+      </div>
     </div>
   );
 }

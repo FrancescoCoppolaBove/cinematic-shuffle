@@ -1,4 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6" fill="#0A0A0F"/>
-  <text x="16" y="23" text-anchor="middle" font-size="20" fill="#E8C547">🎬</text>
+  <rect width="32" height="32" rx="7" fill="#0A0A0F"/>
+  <path d="M 7 12 C 7 12 10.5 8.5 16 8.5 C 21.5 8.5 25 12 25 12"
+    fill="none" stroke="#E8C547" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="22.5,9.5 25,12 22.5,14.5"
+    fill="none" stroke="#E8C547" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 25 20 C 25 20 21.5 23.5 16 23.5 C 10.5 23.5 7 20 7 20"
+    fill="none" stroke="#E8C547" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="9.5,17.5 7,20 9.5,22.5"
+    fill="none" stroke="#E8C547" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="12" y="13.5" width="8" height="5" rx="1" fill="none" stroke="#E8C547" stroke-width="1.5"/>
+  <rect x="12" y="12.5" width="8" height="2" rx="1" fill="#E8C547"/>
+  <polygon points="13.5,12.5 14.5,12.5 14,14.5" fill="#0A0A0F"/>
+  <polygon points="15.5,12.5 16.5,12.5 16,14.5" fill="#0A0A0F"/>
+  <polygon points="17.5,12.5 18.5,12.5 18,14.5" fill="#0A0A0F"/>
+  <line x1="12" y1="16" x2="20" y2="16" stroke="#E8C547" stroke-width="1" stroke-linecap="round"/>
 </svg>
