@@ -451,3 +451,87 @@ export async function getPersonalizedPick(
   const results = (data.results ?? []).map(m => ({ ...m, media_type: mediaType }));
   return results.filter(m => !excludeIds.includes(m.id));
 }
+
+// ─── Tonight: nuovi slot ──────────────────────────────────────────────
+
+// Film brevi e di qualità (runtime ≤ 95 min)
+export async function getShortQualityPick(
+  topGenreIds: number[] = [],
+  excludeIds: number[] = []
+): Promise<TMDBMovieBasic[]> {
+  const params: Record<string, string> = {
+    sort_by: 'vote_average.desc',
+    'vote_average.gte': '7.0',
+    'vote_count.gte': '300',
+    'with_runtime.lte': '95',
+    'with_runtime.gte': '60',
+    page: String(Math.floor(Math.random() * 5) + 1),
+  };
+  if (topGenreIds.length > 0) {
+    params['with_genres'] = topGenreIds.slice(0, 2).join(',');
+  }
+  const data = await apiFetch<{ results: TMDBMovieBasic[] }>('/discover/movie', params);
+  return (data.results ?? []).filter(m => !excludeIds.includes(m.id)).map(m => ({ ...m, media_type: 'movie' as const }));
+}
+
+// Keyword TMDB stagionali per mese
+const SEASONAL_KEYWORDS: Record<number, { keywordId: number; label: string; emoji: string }> = {
+  1:  { keywordId: 9672,  label: "Perfetto per l'inverno",   emoji: '❄️' },
+  2:  { keywordId: 9672,  label: 'San Valentino in arrivo',   emoji: '❤️' },
+  3:  { keywordId: 9951,  label: 'Aria di primavera',         emoji: '🌸' },
+  4:  { keywordId: 9951,  label: 'Atmosfera primaverile',     emoji: '🌷' },
+  5:  { keywordId: 10349, label: 'Spirito avventuroso',       emoji: '🌿' },
+  6:  { keywordId: 10349, label: 'Mood estivo',               emoji: '☀️' },
+  7:  { keywordId: 10349, label: 'Cinema estivo',             emoji: '🏖️' },
+  8:  { keywordId: 10349, label: 'Fine estate',               emoji: '🌅' },
+  9:  { keywordId: 9840,  label: 'Autunno alle porte',        emoji: '🍂' },
+  10: { keywordId: 210074, label: 'Atmosfera Halloween',      emoji: '🎃' },
+  11: { keywordId: 9840,  label: 'Serate autunnali',          emoji: '🍁' },
+  12: { keywordId: 207350, label: 'Spirito natalizio',        emoji: '🎄' },
+};
+
+export function getSeasonalKeyword(): { keywordId: number; label: string; emoji: string } | null {
+  const month = new Date().getMonth() + 1;
+  return SEASONAL_KEYWORDS[month] ?? null;
+}
+
+export async function getSeasonalPick(excludeIds: number[] = []): Promise<TMDBMovieBasic[]> {
+  const seasonal = getSeasonalKeyword();
+  if (!seasonal) return [];
+  const data = await apiFetch<{ results: TMDBMovieBasic[] }>('/discover/movie', {
+    with_keywords: String(seasonal.keywordId),
+    sort_by: 'vote_average.desc',
+    'vote_average.gte': '6.5',
+    'vote_count.gte': '200',
+    page: String(Math.floor(Math.random() * 3) + 1),
+  });
+  return (data.results ?? []).filter(m => !excludeIds.includes(m.id)).map(m => ({ ...m, media_type: 'movie' as const }));
+}
+
+// Film in watchlist disponibili sulle piattaforme dell'utente
+// Usa i dati watch/providers già in ogni film — ma qui dobbiamo fetcharli per i film watchlist
+// Che non hanno i provider nella risposta di base. Fetchiamo in batch.
+export async function getWatchlistProviders(
+  movieIds: { id: number; mediaType: 'movie' | 'tv' }[]
+): Promise<Record<number, number[]>> {
+  // Ritorna mappa movieId → array provider_ids disponibili in IT (flatrate + free)
+  const result: Record<number, number[]> = {};
+  const fetches = movieIds.slice(0, 20).map(async ({ id, mediaType }) => {
+    try {
+      const data = await apiFetch<{ results: Record<string, { flatrate?: { provider_id: number }[]; free?: { provider_id: number }[] }> }>(
+        `/${mediaType}/${id}/watch/providers`
+      );
+      const region = data.results?.['IT'] ?? data.results?.['US'] ?? null;
+      if (!region) { result[id] = []; return; }
+      const ids = [
+        ...(region.flatrate ?? []),
+        ...(region.free ?? []),
+      ].map(p => p.provider_id);
+      result[id] = [...new Set(ids)];
+    } catch {
+      result[id] = [];
+    }
+  });
+  await Promise.all(fetches);
+  return result;
+}

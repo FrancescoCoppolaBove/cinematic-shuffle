@@ -13,7 +13,9 @@ interface TonightViewProps {
   watchlist: WatchlistItem[];
   watchedMovies: WatchedMovie[];
   watchedIds: Set<number>;
+  favoriteProviderIds: number[];
   onOpenMovie: (id: number, mediaType: 'movie' | 'tv') => void;
+  onSetupProviders: () => void;
 }
 
 function getGreeting(hour: number): string {
@@ -38,16 +40,20 @@ function getContextLabel(isWeekend: boolean, hour: number): string {
 
 const SLOT_LABELS: Record<TonightPick['slot'], { label: string; color: string; bg: string }> = {
   tonight:   { label: 'Perfetto per stasera',   color: 'text-film-accent', bg: 'bg-film-accent/10 border-film-accent/30' },
+  streaming: { label: 'Disponibile adesso',      color: 'text-green-400',   bg: 'bg-green-400/10 border-green-400/30' },
   acclaimed: { label: 'Il più acclamato',        color: 'text-yellow-400',  bg: 'bg-yellow-400/10 border-yellow-400/30' },
   waiting:   { label: 'Aspetti da più tempo',    color: 'text-purple-400',  bg: 'bg-purple-400/10 border-purple-400/30' },
+  rewatch:   { label: 'Rivedilo stasera',        color: 'text-orange-400',  bg: 'bg-orange-400/10 border-orange-400/30' },
   trending:  { label: 'Il più chiacchierato',    color: 'text-red-400',     bg: 'bg-red-400/10 border-red-400/30' },
+  short:     { label: 'Breve e perfetto',        color: 'text-sky-400',     bg: 'bg-sky-400/10 border-sky-400/30' },
+  seasonal:  { label: 'Stagione giusta',         color: 'text-amber-400',   bg: 'bg-amber-400/10 border-amber-400/30' },
   cinephile: { label: 'Consiglio cinefilo',      color: 'text-cyan-400',    bg: 'bg-cyan-400/10 border-cyan-400/30' },
-  personal:  { label: 'Il mio consiglio',        color: 'text-green-400',   bg: 'bg-green-400/10 border-green-400/30' },
+  personal:  { label: 'Il mio consiglio',        color: 'text-pink-400',    bg: 'bg-pink-400/10 border-pink-400/30' },
 };
 
-export function TonightView({ watchlist, watchedMovies, watchedIds, onOpenMovie }: TonightViewProps) {
+export function TonightView({ watchlist, watchedMovies, watchedIds, favoriteProviderIds, onOpenMovie, onSetupProviders }: TonightViewProps) {
   const [seed, setSeed] = useState(0);
-  const { picks, ctx, taste, hasPicks, loading } = useTonightPick(watchlist, watchedMovies, watchedIds, seed);
+  const { picks, ctx, taste, hasPicks, loading } = useTonightPick(watchlist, watchedMovies, watchedIds, favoriteProviderIds, seed);
 
   const hour = ctx.hour;
   const greeting = getGreeting(hour);
@@ -108,6 +114,21 @@ export function TonightView({ watchlist, watchedMovies, watchedIds, onOpenMovie 
           </div>
         )}
       </div>
+
+      {/* Provider setup CTA — solo se l'utente non ha ancora scelto le piattaforme */}
+      {favoriteProviderIds.length === 0 && (
+        <button
+          onClick={onSetupProviders}
+          className="w-full flex items-center gap-3 p-4 rounded-2xl border border-film-accent/30 bg-film-accent/5 active:scale-[0.98] transition-transform text-left"
+        >
+          <span className="text-2xl">📺</span>
+          <div className="flex-1">
+            <p className="text-film-text text-sm font-medium">Imposta le tue piattaforme</p>
+            <p className="text-film-subtle text-xs mt-0.5">Scopri subito cosa puoi guardare stasera senza costi extra</p>
+          </div>
+          <span className="text-film-accent text-xs shrink-0">Imposta →</span>
+        </button>
+      )}
 
       {/* Loading skeleton per slot TMDB */}
       {loading && picks.length < 4 && (
@@ -232,6 +253,13 @@ function PickCard({ pick, onOpen, isFirst }: {
 
       {/* Info */}
       <div className="flex-1 min-w-0 space-y-1">
+        {/* Provider logo per slot streaming */}
+        {pick.slot === 'streaming' && pick.providerLogo && (
+          <div className="flex items-center gap-1.5 mb-1">
+            <img src={pick.providerLogo} alt={pick.providerName} className="w-4 h-4 rounded-sm" />
+            <span className="text-green-400 text-xs font-medium">Incluso in {pick.providerName}</span>
+          </div>
+        )}
         {/* Slot badge */}
         <div className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-xs', slotStyle.bg, slotStyle.color)}>
           <span>{reasonEmoji}</span>

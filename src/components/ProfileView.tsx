@@ -3,7 +3,7 @@
  * Le tab Visti e Watchlist montano i componenti originali completi.
  */
 import { useState } from 'react';
-import { LogOut, Star, Heart, RotateCcw, Film, Tv, Bookmark } from 'lucide-react';
+import { LogOut, Star, Heart, RotateCcw, Film, Tv, Bookmark, Check } from 'lucide-react';
 import type { User } from 'firebase/auth';
 import type { WatchedMovie, WatchlistItem, TMDBMovieDetail } from '../types';
 import type { PlaylistItem } from '../hooks/useNavigationStack';
@@ -20,6 +20,8 @@ interface ProfileViewProps {
   likedIds: Set<number>;
   getPersonalRating: (id: number) => number | null;
   onUpdateRating: (id: number, rating: number | null) => Promise<void>;
+  favoriteProviderIds: number[];
+  onUpdateProviders: (ids: number[]) => Promise<void>;
   onMarkWatched: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
   onUnmarkWatched: (id: number) => Promise<void>;
   onToggleLiked: (id: number) => Promise<void>;
@@ -35,6 +37,7 @@ export function ProfileView({
   user, watchedMovies, watchlist,
   watchedIds, watchlistIds, likedIds,
   getPersonalRating, onUpdateRating, onMarkWatched, onUnmarkWatched,
+  favoriteProviderIds, onUpdateProviders,
   onToggleLiked, onAddToWatchlist, onRemoveFromWatchlist,
   onOpenMovieGlobal, onSignOut,
 }: ProfileViewProps) {
@@ -122,6 +125,12 @@ export function ProfileView({
             </button>
           </div>
 
+          {/* Provider selector */}
+          <ProviderSelector
+            selected={favoriteProviderIds}
+            onChange={onUpdateProviders}
+          />
+
           {/* Stats grid 3×2 */}
           <div className="grid grid-cols-3 gap-2">
             <StatPill icon={<Film size={14} />}    label="Film"     value={films.length}    color="text-film-accent" />
@@ -181,6 +190,74 @@ function StatPill({ icon, label, value, color }: {
         {value}
       </span>
       <span className="text-film-subtle text-xs text-center leading-tight">{label}</span>
+    </div>
+  );
+}
+
+// ── Provider Selector ────────────────────────────────────────────────
+
+const PROVIDERS = [
+  { id: 8,    name: 'Netflix',    logo: '/t2yyOv40HZeVlLjYsCsPHnWLk4W.jpg' },
+  { id: 119,  name: 'Prime',      logo: '/dQeAar5H991VYporEjUspolDarG.jpg' },
+  { id: 337,  name: 'Disney+',    logo: '/7rwgEs15tFwyR9NPQ5vpzxTj19d.jpg' },
+  { id: 35,   name: 'Apple TV+',  logo: '/6uhKBfmtzFqOcLousHwZuzcrScK.jpg' },
+  { id: 1899, name: 'Max',        logo: '/Ajqyt5aNxNx8rDHQEhTHcPnNpjw.jpg' },
+  { id: 531,  name: 'Paramount+', logo: '/xbhHHa1YgtpwhC8lb1NQ3ACVcLd.jpg' },
+  { id: 39,   name: 'NOW',        logo: '/ixVmHmFEKhxCG07LMnLBMZMFGlO.jpg' },
+  { id: 222,  name: 'Timvision',  logo: '/bZGFHCAPgdD44ByaHFLAlqJGvSl.jpg' },
+];
+
+function ProviderSelector({ selected, onChange }: {
+  selected: number[];
+  onChange: (ids: number[]) => Promise<void>;
+}) {
+  function toggle(id: number) {
+    const next = selected.includes(id)
+      ? selected.filter(x => x !== id)
+      : [...selected, id];
+    onChange(next);
+  }
+
+  return (
+    <div className="bg-film-surface border border-film-border rounded-2xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-film-text text-sm font-medium">Le mie piattaforme</p>
+        <p className="text-film-subtle text-xs">{selected.length > 0 ? `${selected.length} selezionate` : 'Nessuna'}</p>
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        {PROVIDERS.map(p => {
+          const active = selected.includes(p.id);
+          return (
+            <button
+              key={p.id}
+              onClick={() => toggle(p.id)}
+              className={cn(
+                'relative flex flex-col items-center gap-1 p-2 rounded-xl border transition-all active:scale-90',
+                active ? 'border-film-accent bg-film-accent/10' : 'border-film-border bg-film-card'
+              )}
+            >
+              <img
+                src={`https://image.tmdb.org/t/p/w92${p.logo}`}
+                alt={p.name}
+                className={cn('w-10 h-10 rounded-lg', !active && 'opacity-40 grayscale')}
+              />
+              <span className={cn('text-xs leading-tight text-center', active ? 'text-film-text' : 'text-film-subtle')}>
+                {p.name}
+              </span>
+              {active && (
+                <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-film-accent flex items-center justify-center">
+                  <Check size={10} className="text-film-black" strokeWidth={3} />
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      {selected.length > 0 && (
+        <p className="text-film-subtle text-xs mt-3 text-center">
+          Nella sezione Stasera vedrai subito cosa puoi guardare gratis
+        </p>
+      )}
     </div>
   );
 }

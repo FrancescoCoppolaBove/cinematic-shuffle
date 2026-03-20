@@ -8,6 +8,7 @@ import type { PlaylistItem } from './hooks/useNavigationStack';
 import { getMovieDetail } from './services/tmdb';
 import { HomeView } from './components/HomeView';
 import { TonightView } from './components/TonightView';
+import { useUserPreferences } from './hooks/useUserPreferences';
 import { ShuffleView } from './components/ShuffleView';
 import { SearchView } from './components/SearchView';
 import { ProfileView } from './components/ProfileView';
@@ -91,6 +92,8 @@ export default function App() {
   const [detailLoading, setDetailLoading] = useState(false);
 
   const { user, loading: authLoading, error: authError, signInWithGoogle, signOut } = useAuth();
+  const { prefs, updateProviders } = useUserPreferences(user);
+
   const {
     watchedMovies, watchedIds, watchlist, watchlistIds,
     markWatched, unmarkWatched, updateRating, toggleLiked, incrementRewatch,
@@ -305,7 +308,9 @@ export default function App() {
             watchlist={watchlist}
             watchedMovies={watchedMovies}
             watchedIds={watchedIds}
+            favoriteProviderIds={prefs.favoriteProviderIds}
             onOpenMovie={(id, mt) => openWithPlaylist(id, mt, undefined, undefined, 'Stasera')}
+            onSetupProviders={() => handleNavChange('profile')}
           />
         )}
         {view === 'home' && (
@@ -348,6 +353,8 @@ export default function App() {
             onMarkWatched={markWatched}
             onUnmarkWatched={unmarkWatched}
             onToggleLiked={toggleLiked}
+            favoriteProviderIds={prefs.favoriteProviderIds}
+            onUpdateProviders={updateProviders}
             onAddToWatchlist={addToWatchlist}
             onRemoveFromWatchlist={removeFromWatchlist}
             onOpenMovieGlobal={(id, mt, playlist, index) => openWithPlaylist(id, mt, playlist, index, 'Profilo')}

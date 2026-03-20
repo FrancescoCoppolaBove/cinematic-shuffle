@@ -1,5 +1,5 @@
 import {
-  doc, setDoc, deleteDoc, collection, getDocs,
+  doc, setDoc, deleteDoc, collection, getDocs, getDoc,
   serverTimestamp, Timestamp, type FieldValue,
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -98,4 +98,26 @@ export async function addToWatchlistFirestore(uid: string, item: Omit<WatchlistI
 
 export async function removeFromWatchlistFirestore(uid: string, itemId: number) {
   await deleteDoc(watchlistRef(uid, itemId));
+}
+
+// ─── User Preferences ──────────────────────────────────────────────
+
+
+export interface UserPreferences {
+  favoriteProviderIds: number[];   // provider IDs selezionati dall'utente
+}
+
+const prefsRef = (uid: string) => doc(db, 'users', uid, 'settings', 'preferences');
+
+export async function fetchUserPreferences(uid: string): Promise<UserPreferences> {
+  try {
+    const snap = await getDoc(prefsRef(uid));
+    if (!snap.exists()) return { favoriteProviderIds: [] };
+    const data = snap.data();
+    return { favoriteProviderIds: (data.favoriteProviderIds as number[]) ?? [] };
+  } catch { return { favoriteProviderIds: [] }; }
+}
+
+export async function saveUserPreferences(uid: string, prefs: UserPreferences): Promise<void> {
+  await setDoc(prefsRef(uid), prefs, { merge: true });
 }
