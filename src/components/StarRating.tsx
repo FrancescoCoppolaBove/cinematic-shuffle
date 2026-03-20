@@ -1,10 +1,13 @@
 /**
- * StarRating — doppia modalità input:
- * 1. Click/tap diretto su ogni stella → voto intero o mezzo voto
- * 2. Swipe orizzontale touch → scorrimento fluido con mezzo voto
+ * StarRating — tap diretto su stella + swipe orizzontale.
  *
- * Ogni stella è divisa in due zone cliccabili (sinistra = N-0.5, destra = N).
- * Lo swipe usa lo stesso calcolo con ratingFromX.
+ * ARCHITETTURA:
+ * - touchstart sul container: inizia tracking, mostra preview
+ * - touchmove sul container: aggiorna preview (swipe)
+ * - touchend sul container: se hasMoved → conferma swipe; se tap → ignora (gestito dagli span)
+ * - onTouchEnd sugli span invisibili: gestisce il tap preciso (sinistra = N-0.5, destra = N)
+ *
+ * I due path si escludono via hasMoved.current.
  */
 import { useState, useRef, useCallback } from 'react';
 import { cn } from '../utils';
@@ -23,81 +26,59 @@ export function StarRating({ value, onChange, readonly = false, size = 'md' }: S
   const px = SIZE_MAP[size];
   const gap = GAP_MAP[size];
   const containerRef = useRef<HTMLDivElement>(null);
-  const [hoverValue, setHoverValue] = useState<number | null>(null);
-  const isDragging = useRef(false);
-  // Track if the touch was a swipe (moved more than threshold) vs a tap
-  const touchStartX = useRef<number>(0);
+  const [preview, setPreview] = useState<number | null>(null);
   const hasMoved = useRef(false);
+  const startX = useRef(0);
 
-  const displayed = hoverValue ?? value ?? 0;
+  const displayed = preview ?? value ?? 0;
 
-  // Calcola rating dalla posizione X assoluta rispetto al container
   const ratingFromX = useCallback((clientX: number): number => {
-    const container = containerRef.current;
-    if (!container) return 0;
-    const rect = container.getBoundingClientRect();
+    const el = containerRef.current;
+    if (!el) return 1;
+    const rect = el.getBoundingClientRect();
     const totalW = 5 * px + 4 * gap;
     const x = Math.max(0, Math.min(clientX - rect.left, totalW));
     const starW = px + gap;
     const starIdx = Math.min(4, Math.floor(x / starW));
     const offset = x - starIdx * starW;
-    const isHalf = offset < px * 0.5;
-    const raw = isHalf ? starIdx + 0.5 : starIdx + 1;
-    return Math.max(0.5, Math.min(5, raw));
+    const half = offset < px * 0.5;
+    return Math.max(0.5, Math.min(5, half ? starIdx + 0.5 : starIdx + 1));
   }, [px, gap]);
 
-  // ── Touch: swipe ────────────────────────────────────────────────
+  // ── SWIPE path ────────────────────────────────────────────────
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     if (readonly) return;
-    isDragging.current = true;
     hasMoved.current = false;
-    touchStartX.current = e.touches[0].clientX;
-    const r = ratingFromX(e.touches[0].clientX);
-    setHoverValue(r);
+    startX.current = e.touches[0].clientX;
+    setPreview(ratingFromX(e.touches[0].clientX));
   }, [readonly, ratingFromX]);
 
   const onTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isDragging.current || readonly) return;
-    const dx = Math.abs(e.touches[0].clientX - touchStartX.current);
-    if (dx > 4) {
+    if (readonly) return;
+    if (Math.abs(e.touches[0].clientX - startX.current) > 6) {
       hasMoved.current = true;
-      e.preventDefault(); // blocca scroll solo se è uno swipe sulle stelle
+      e.preventDefault();
     }
-    const r = ratingFromX(e.touches[0].clientX);
-    setHoverValue(r);
+    setPreview(ratingFromX(e.touches[0].clientX));
   }, [readonly, ratingFromX]);
 
+  // touchend sul container: solo per lo swipe
   const onTouchEnd = useCallback(() => {
-    if (!isDragging.current || readonly) return;
-    isDragging.current = false;
-    const current = hoverValue;
-    setHoverValue(null);
-    if (current !== null) {
-      // Tap (no movement) → se stessa stella già selezionata, deseleziona
-      onChange(current === value ? null : current);
+    if (readonly) return;
+    if (hasMoved.current) {
+      // Era uno swipe → conferma il valore mostrato
+      const r = preview;
+      setPreview(null);
+      if (r !== null) onChange(r === value ? null : r);
+    } else {
+      // Era un tap → lo gestiscono gli span, qui resettiamo solo il preview
+      setPreview(null);
     }
-  }, [readonly, hoverValue, value, onChange]);
+    hasMoved.current = false;
+  }, [readonly, preview, value, onChange]);
 
-  // ── Mouse hover + click (desktop) ──────────────────────────────
-  const onMouseMove = useCallback((e: React.MouseEvent) => {
-    if (readonly) return;
-    setHoverValue(ratingFromX(e.clientX));
-  }, [readonly, ratingFromX]);
-
-  const onMouseLeave = useCallback(() => {
-    if (!readonly) setHoverValue(null);
-  }, [readonly]);
-
-  const onMouseClick = useCallback((e: React.MouseEvent) => {
-    if (readonly) return;
-    const r = ratingFromX(e.clientX);
-    onChange(r === value ? null : r);
-    setHoverValue(null);
-  }, [readonly, ratingFromX, value, onChange]);
-
-  // ── Direct tap on star half (mobile backup) ────────────────────
-  // Ogni stella ha due bottoni: metà sinistra (N-0.5) e metà destra (N)
-  const onStarHalfTap = useCallback((rating: number, e: React.TouchEvent) => {
+  // ── TAP path: span invisibili su ogni metà stella ─────────────
+  const onHalfTap = useCallback((rating: number) => (e: React.TouchEvent) => {
     if (readonly) return;
     e.stopPropagation();
     // Solo se non era uno swipe
@@ -106,10 +87,27 @@ export function StarRating({ value, onChange, readonly = false, size = 'md' }: S
     }
   }, [readonly, value, onChange]);
 
+  // ── MOUSE (desktop) ───────────────────────────────────────────
+  const onMouseMove = useCallback((e: React.MouseEvent) => {
+    if (readonly) return;
+    setPreview(ratingFromX(e.clientX));
+  }, [readonly, ratingFromX]);
+
+  const onMouseLeave = useCallback(() => {
+    if (!readonly) setPreview(null);
+  }, [readonly]);
+
+  const onMouseClick = useCallback((e: React.MouseEvent) => {
+    if (readonly) return;
+    const r = ratingFromX(e.clientX);
+    onChange(r === value ? null : r);
+    setPreview(null);
+  }, [readonly, ratingFromX, value, onChange]);
+
   return (
     <div
       ref={containerRef}
-      className={cn('flex items-center select-none', !readonly && 'touch-none')}
+      className={cn('flex items-center select-none', !readonly && 'cursor-pointer touch-none')}
       style={{ gap }}
       onMouseMove={onMouseMove}
       onMouseLeave={onMouseLeave}
@@ -119,32 +117,27 @@ export function StarRating({ value, onChange, readonly = false, size = 'md' }: S
       onTouchEnd={onTouchEnd}
     >
       {[1, 2, 3, 4, 5].map(star => {
-        const fullVal = star;
-        const halfVal = star - 0.5;
         const isFull = displayed >= star;
         const isHalf = !isFull && displayed >= star - 0.5;
-
         return (
           <div
             key={star}
-            className={cn('relative', !readonly && 'cursor-pointer')}
+            className="relative"
             style={{ width: px, height: px, flexShrink: 0 }}
           >
-            {/* Star SVG */}
             <StarShape size={px} fill={isFull ? 'full' : isHalf ? 'half' : 'none'} />
-
-            {/* Invisible touch targets: left half = N-0.5, right half = N */}
+            {/* Touch targets: sinistra = mezzo voto, destra = voto intero */}
             {!readonly && (
               <>
                 <span
                   className="absolute inset-y-0 left-0 w-1/2"
                   style={{ WebkitTapHighlightColor: 'transparent' }}
-                  onTouchEnd={(e) => onStarHalfTap(halfVal, e)}
+                  onTouchEnd={onHalfTap(star - 0.5)}
                 />
                 <span
                   className="absolute inset-y-0 right-0 w-1/2"
                   style={{ WebkitTapHighlightColor: 'transparent' }}
-                  onTouchEnd={(e) => onStarHalfTap(fullVal, e)}
+                  onTouchEnd={onHalfTap(star)}
                 />
               </>
             )}
@@ -156,19 +149,10 @@ export function StarRating({ value, onChange, readonly = false, size = 'md' }: S
 }
 
 function StarShape({ size, fill }: { size: number; fill: 'none' | 'half' | 'full' }) {
-  // Usiamo un id stabile basato su size+fill per evitare flicker
-  const id = `sg-${size}-${fill}`;
+  const id = `sgr-${size}-${fill}`;
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      style={{
-        flexShrink: 0,
-        transition: 'transform 0.08s ease',
-        transform: fill !== 'none' ? 'scale(1.08)' : 'scale(1)',
-      }}
-    >
+    <svg width={size} height={size} viewBox="0 0 24 24"
+      style={{ flexShrink: 0, transition: 'transform 0.07s', transform: fill !== 'none' ? 'scale(1.08)' : 'scale(1)' }}>
       {fill === 'half' && (
         <defs>
           <linearGradient id={id} x1="0" x2="1" y1="0" y2="0">
@@ -182,11 +166,7 @@ function StarShape({ size, fill }: { size: number; fill: 'none' | 'half' | 'full
         stroke={fill !== 'none' ? '#E8C547' : '#3A3A52'}
         strokeWidth="1.5"
         strokeLinejoin="round"
-        fill={
-          fill === 'full' ? '#E8C547' :
-          fill === 'half' ? `url(#${id})` :
-          'none'
-        }
+        fill={fill === 'full' ? '#E8C547' : fill === 'half' ? `url(#${id})` : 'none'}
       />
     </svg>
   );

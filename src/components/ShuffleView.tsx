@@ -300,7 +300,6 @@ function ShuffleMovieCard({
   onOpenPerson, onOpenGenre, onIncrementRewatch,
 }: ShuffleMovieCardProps) {
   const [posterErr, setPosterErr] = useState(false);
-  const [showFullCast, setShowFullCast] = useState(false);
   const [expandOverview, setExpandOverview] = useState(false);
   const title = getTitle(movie);
   const backdrop = getImageUrl(movie.backdrop_path, 'w780');
@@ -319,7 +318,6 @@ function ShuffleMovieCard({
     ...(providers?.flatrate ?? []), ...(providers?.free ?? []),
     ...(providers?.ads ?? []), ...(providers?.rent ?? []),
   ].filter((p, i, a) => a.findIndex(x => x.provider_id === p.provider_id) === i).slice(0, 6);
-  const cast = movie.credits?.cast?.slice(0, showFullCast ? 20 : 8) || [];
   const similar = (movie.recommendations?.results?.length
     ? movie.recommendations.results : movie.similar?.results ?? []).slice(0, 10);
 
@@ -389,17 +387,15 @@ function ShuffleMovieCard({
       {/* Trama — collassabile */}
       {movie.overview && (
         <div>
-          <p className={cn('text-film-text/75 text-sm leading-relaxed', !expandOverview && 'line-clamp-4')}>
+          <p className={cn('text-film-text/75 text-sm leading-relaxed', !expandOverview && 'line-clamp-2')}>
             {movie.overview}
           </p>
-          {movie.overview.length > 200 && (
-            <button
-              onClick={() => setExpandOverview(!expandOverview)}
-              className="text-film-accent text-xs mt-1 active:opacity-70"
-            >
-              {expandOverview ? '↑ Mostra meno' : '↓ Leggi tutto'}
-            </button>
-          )}
+          <button
+            onClick={() => setExpandOverview(!expandOverview)}
+            className="text-film-accent text-xs mt-1 active:opacity-70"
+          >
+            {expandOverview ? '↑ Mostra meno' : '↓ Leggi tutto'}
+          </button>
         </div>
       )}
 
@@ -444,35 +440,7 @@ function ShuffleMovieCard({
         </div>
       )}
 
-      {/* Cast — cliccabile */}
-      {cast.length > 0 && (
-        <div>
-          <p className="text-film-subtle text-xs uppercase tracking-wider mb-2">Cast</p>
-          <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4">
-            {cast.map(actor => (
-              <button key={actor.id} onClick={() => onOpenPerson(actor.id, actor.name)}
-                className="shrink-0 w-14 text-center active:opacity-70 transition-opacity">
-                <div className="w-14 h-14 rounded-full overflow-hidden bg-film-surface border border-film-border mx-auto">
-                  {actor.profile_path
-                    ? <img src={getImageUrl(actor.profile_path, 'w92') || ''} alt={actor.name} className="w-full h-full object-cover" />
-                    : <div className="w-full h-full flex items-center justify-center text-film-subtle text-lg">{actor.name[0]}</div>
-                  }
-                </div>
-                <p className="text-film-text text-xs mt-1 line-clamp-2 leading-tight">{actor.name}</p>
-                <p className="text-film-subtle text-xs line-clamp-1 italic">{actor.character}</p>
-              </button>
-            ))}
-            {!showFullCast && (movie.credits?.cast?.length ?? 0) > 8 && (
-              <button onClick={() => setShowFullCast(true)}
-                className="shrink-0 w-14 flex flex-col items-center justify-center text-film-muted">
-                <div className="w-14 h-14 rounded-full bg-film-surface border border-film-border flex items-center justify-center text-xs">
-                  +{(movie.credits?.cast?.length ?? 0) - 8}
-                </div>
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+
 
       {/* Film simili */}
       {similar.length > 0 && (
