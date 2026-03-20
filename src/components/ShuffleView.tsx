@@ -4,6 +4,9 @@ import type { MovieFilters, MediaType, TMDBMovieDetail } from '../types';
 import { useShuffle } from '../hooks/useShuffle';
 import { FilterPanel } from './FilterPanel';
 import { RatingModal } from './RatingModal';
+import { PersonDetailScreen } from './PersonDetailScreen';
+import { GenreMoviesScreen } from './GenreMoviesScreen';
+import { MovieDetailTabs } from './MovieDetailTabs';
 import type { RatingResult } from './RatingModal';
 import { cn } from '../utils';
 import type { WatchedMovie } from '../types';
@@ -32,7 +35,7 @@ const DEFAULT_FILTERS: MovieFilters = { watchedStatus: 'all', mediaType: 'movie'
 
 export function ShuffleView({
   watchedIds, watchlistIds, watchedMovies,
-  onMarkWatched, onUnmarkWatched,
+  onMarkWatched, onUnmarkWatched, onUpdateRating,
   onAddToWatchlist, onRemoveFromWatchlist,
   likedIds, getPersonalRating,
   onToggleLiked, onIncrementRewatch,
@@ -41,6 +44,8 @@ export function ShuffleView({
   const [filters, setFilters] = useState<MovieFilters>(DEFAULT_FILTERS);
   const [showFilters, setShowFilters] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [openPerson, setOpenPerson] = useState<{id: number; name: string} | null>(null);
+  const [openGenre, setOpenGenre] = useState<{id: number; name: string; type: 'genre'|'keyword'; mediaType: 'movie'|'tv'} | null>(null);
   const { movie, loading, error, hasSearched, shuffle } = useShuffle();
   const { applyTasteToFilters } = useUserTaste(watchedMovies);
 
@@ -211,11 +216,46 @@ export function ShuffleView({
               : () => onAddToWatchlist(movie)
             }
             onOpenDetail={() => onOpenMovieGlobal?.(movie.id, movie.media_type)}
+            onOpenPerson={(id, name) => setOpenPerson({ id, name })}
+            onOpenGenre={(id, name, type, mt) => setOpenGenre({ id, name, type, mediaType: mt })}
             onIncrementRewatch={onIncrementRewatch ? (delta) => onIncrementRewatch(movie.id, delta) : undefined}
             loading={loading}
           />
         )}
       </div>
+
+      {/* Person detail overlay */}
+      {openPerson && movie && (
+        <PersonDetailScreen
+          personId={openPerson.id}
+          personName={openPerson.name}
+          watchedIds={watchedIds}
+          onBack={() => setOpenPerson(null)}
+          onOpenMovie={(id, mt) => { setOpenPerson(null); onOpenMovieGlobal?.(id, mt); }}
+        />
+      )}
+
+      {/* Genre/keyword overlay */}
+      {openGenre && movie && (
+        <GenreMoviesScreen
+          id={openGenre.id}
+          name={openGenre.name}
+          type={openGenre.type}
+          mediaType={openGenre.mediaType}
+          watchedIds={watchedIds}
+          watchlistIds={watchlistIds}
+          likedIds={likedIds}
+          getPersonalRating={getPersonalRating}
+          onMarkWatched={onMarkWatched}
+          onUnmarkWatched={onUnmarkWatched}
+          onUpdateRating={onUpdateRating}
+          onToggleLiked={onToggleLiked}
+          onAddToWatchlist={onAddToWatchlist}
+          onRemoveFromWatchlist={onRemoveFromWatchlist}
+          onBack={() => setOpenGenre(null)}
+          onOpenMovie={(id: number, mt: 'movie'|'tv') => { setOpenGenre(null); onOpenMovieGlobal?.(id, mt); }}
+        />
+      )}
 
       {/* Rating modal */}
       {showRatingModal && movie && (
@@ -248,13 +288,16 @@ interface ShuffleMovieCardProps {
   onOpenRating: () => void;
   onWatchlistToggle: () => void;
   onOpenDetail: () => void;
+  onOpenPerson: (id: number, name: string) => void;
+  onOpenGenre: (id: number, name: string, type: 'genre'|'keyword', mt: 'movie'|'tv') => void;
   onIncrementRewatch?: (delta: number) => void;
   loading?: boolean;
 }
 
 function ShuffleMovieCard({
   movie, isWatched, isOnWatchlist, rewatchCount,
-  onShuffle, onOpenRating, onWatchlistToggle, onOpenDetail, onIncrementRewatch,
+  onShuffle, onOpenRating, onWatchlistToggle, onOpenDetail,
+  onOpenPerson, onOpenGenre, onIncrementRewatch,
 }: ShuffleMovieCardProps) {
   const [posterErr, setPosterErr] = useState(false);
   const [showFullCast, setShowFullCast] = useState(false);
@@ -401,13 +444,14 @@ function ShuffleMovieCard({
         </div>
       )}
 
-      {/* Cast */}
+      {/* Cast — cliccabile */}
       {cast.length > 0 && (
         <div>
           <p className="text-film-subtle text-xs uppercase tracking-wider mb-2">Cast</p>
           <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4">
             {cast.map(actor => (
-              <div key={actor.id} className="shrink-0 w-14 text-center">
+              <button key={actor.id} onClick={() => onOpenPerson(actor.id, actor.name)}
+                className="shrink-0 w-14 text-center active:opacity-70 transition-opacity">
                 <div className="w-14 h-14 rounded-full overflow-hidden bg-film-surface border border-film-border mx-auto">
                   {actor.profile_path
                     ? <img src={getImageUrl(actor.profile_path, 'w92') || ''} alt={actor.name} className="w-full h-full object-cover" />
@@ -416,7 +460,7 @@ function ShuffleMovieCard({
                 </div>
                 <p className="text-film-text text-xs mt-1 line-clamp-2 leading-tight">{actor.name}</p>
                 <p className="text-film-subtle text-xs line-clamp-1 italic">{actor.character}</p>
-              </div>
+              </button>
             ))}
             {!showFullCast && (movie.credits?.cast?.length ?? 0) > 8 && (
               <button onClick={() => setShowFullCast(true)}
@@ -471,11 +515,15 @@ function ShuffleMovieCard({
         </div>
       )}
 
-      {/* Scheda completa (link discreto) */}
-      <button onClick={onOpenDetail}
-        className="w-full py-2 text-film-subtle text-xs text-center active:opacity-60 transition-opacity border-t border-film-border/30 pt-3">
-        Scheda completa (saga, cast completo, altro) →
-      </button>
+      {/* Tabs Cast / Crew / Generi — inline */}
+      <div className="border-t border-film-border/30 pt-4">
+        <MovieDetailTabs
+          movie={movie}
+          onOpenPerson={onOpenPerson}
+          onOpenGenre={(id, name, mt) => onOpenGenre(id, name, 'genre', mt)}
+          onOpenKeyword={(id, name, mt) => onOpenGenre(id, name, 'keyword', mt)}
+        />
+      </div>
     </div>
   );
 }

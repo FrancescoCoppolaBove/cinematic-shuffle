@@ -140,6 +140,14 @@ export function PersonDetailScreen({
           {/* Cast list */}
           {tab === 'cast' && credits && (
             <div className="space-y-1">
+              {castCount > 0 && (
+                <div className="flex items-center justify-between py-2 px-1 mb-1">
+                  <span className="text-film-subtle text-xs uppercase tracking-wider">Film come attore</span>
+                  <span className={cn('text-xs font-medium', watchedCastCount > 0 ? 'text-green-400' : 'text-film-subtle')}>
+                    {watchedCastCount > 0 ? `${watchedCastCount} visti su ${castCount}` : `${castCount} in totale`}
+                  </span>
+                </div>
+              )}
               {credits.cast.length === 0 ? (
                 <p className="text-film-muted text-sm py-4 text-center">Nessun credito come attore</p>
               ) : (
@@ -209,22 +217,32 @@ function TabBtn({ active, onClick, label, badge, watchedBadge }: {
   active: boolean; onClick: () => void;
   label: string; badge: number; watchedBadge: number;
 }) {
+  const pct = badge > 0 ? Math.round((watchedBadge / badge) * 100) : 0;
   return (
     <button
       onClick={onClick}
       className={cn(
-        'flex-1 py-2.5 rounded-2xl text-sm font-medium border transition-all',
+        'flex-1 py-2.5 px-3 rounded-2xl text-sm font-medium border transition-all text-left',
         active ? 'bg-film-accent text-film-black border-film-accent' : 'bg-film-surface border-film-border text-film-muted'
       )}
     >
-      <span>{label}</span>
-      <span className={cn('ml-1.5 text-xs', active ? 'text-film-black/60' : 'text-film-subtle')}>
-        {badge}
-      </span>
-      {watchedBadge > 0 && (
-        <span className={cn('ml-1 text-xs', active ? 'text-green-700' : 'text-green-500')}>
-          ({watchedBadge} ✓)
-        </span>
+      <div className="flex items-center justify-between">
+        <span>{label}</span>
+        <span className={cn('text-xs font-mono', active ? 'text-film-black/60' : 'text-film-subtle')}>{badge}</span>
+      </div>
+      {badge > 0 && (
+        <div className="flex items-center gap-1.5 mt-1">
+          {/* Progress bar */}
+          <div className={cn('flex-1 h-1 rounded-full overflow-hidden', active ? 'bg-film-black/20' : 'bg-film-border')}>
+            <div
+              className={cn('h-full rounded-full', active ? 'bg-green-700' : 'bg-green-500')}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <span className={cn('text-xs shrink-0', active ? 'text-green-700' : 'text-green-500')}>
+            {watchedBadge}/{badge}
+          </span>
+        </div>
       )}
     </button>
   );

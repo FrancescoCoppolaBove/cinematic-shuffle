@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ChevronLeft, Star, Clock, Play,
   Eye, Bookmark, BookmarkCheck, Heart,
-  Tv, Film, MapPin, ChevronDown, ChevronUp, Shuffle,
+  Tv, Film, MapPin, Shuffle,
 } from 'lucide-react';
 import type { TMDBMovieDetail, TMDBMovieBasic } from '../types';
 import {
@@ -41,6 +41,15 @@ interface MovieDetailScreenProps {
   isLiked?: boolean;
   rewatchCount?: number;
   watchedIds?: Set<number>;
+  watchlistIds?: Set<number>;
+  likedIds?: Set<number>;
+  getPersonalRatingFull?: (id: number) => number | null;
+  onMarkWatchedFull?: (movie: import('../types').TMDBMovieDetail, rating: number | null) => Promise<void>;
+  onUnmarkWatchedFull?: (id: number) => Promise<void>;
+  onUpdateRatingFull?: (id: number, rating: number | null) => Promise<void>;
+  onToggleLikedFull?: (id: number) => Promise<void>;
+  onAddToWatchlistFull?: (movie: import('../types').TMDBMovieDetail) => Promise<void>;
+  onRemoveFromWatchlistFull?: (id: number) => Promise<void>;
   loading?: boolean;
 }
 
@@ -50,9 +59,11 @@ export function MovieDetailScreen({
   playlist, playlistIndex = 0, onSwipeToIndex,
   onBack, onMarkWatched, onUnmarkWatched, onUpdateRating: _onUpdateRating,
   onAddToWatchlist, onRemoveFromWatchlist,
-  onShuffle, onOpenMovie, onIncrementRewatch, onToggleLiked, isLiked = false, rewatchCount = 0, watchedIds: propWatchedIds, loading,
+  onShuffle, onOpenMovie, onIncrementRewatch, onToggleLiked, isLiked = false, rewatchCount = 0,
+  watchedIds: propWatchedIds, watchlistIds: propWatchlistIds, likedIds: propLikedIds,
+  getPersonalRatingFull, onMarkWatchedFull, onUnmarkWatchedFull, onUpdateRatingFull,
+  onToggleLikedFull, onAddToWatchlistFull, onRemoveFromWatchlistFull, loading,
 }: MovieDetailScreenProps) {
-  const [showFullCast, setShowFullCast] = useState(false);
   const [posterError, setPosterError] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [openPerson, setOpenPerson] = useState<{id: number; name: string} | null>(null);
@@ -86,7 +97,6 @@ export function MovieDetailScreen({
   const director = !isTV ? movie.credits?.crew?.find(c => c.job === 'Director') : null;
   const creator = isTV ? movie.credits?.crew?.find(c =>
     c.job === 'Creator' || c.job === 'Executive Producer') : null;
-  const cast = movie.credits?.cast?.slice(0, showFullCast ? 30 : 8) || [];
   const rating = movie.vote_average;
   const ratingColor = rating >= 7.5 ? 'text-green-400' : rating >= 6 ? 'text-film-accent' : 'text-film-muted';
   const trailerUrl = getBestTrailer(movie);
@@ -114,7 +124,6 @@ export function MovieDetailScreen({
   // Reset content on movie change (after swipe animation completes)
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
-    setShowFullCast(false);
     setPosterError(false);
     setCollectionParts(null);
     setShowStickyHeader(false);
@@ -521,26 +530,7 @@ export function MovieDetailScreen({
               </Section>
             )}
 
-            {cast.length > 0 && (
-              <Section label="Cast">
-                <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-                  {cast.map(actor => <CastCard key={actor.id} actor={actor} />)}
-                  {!showFullCast && (movie.credits?.cast?.length ?? 0) > 8 && (
-                    <button onClick={() => setShowFullCast(true)}
-                      className="shrink-0 flex flex-col items-center justify-center w-16 h-[90px] rounded-xl bg-film-surface border border-film-border text-film-muted">
-                      <ChevronDown size={16} />
-                      <span className="text-xs mt-1">+{(movie.credits?.cast?.length ?? 0) - 8}</span>
-                    </button>
-                  )}
-                </div>
-                {showFullCast && (
-                  <button onClick={() => setShowFullCast(false)}
-                    className="flex items-center gap-1 text-film-muted text-xs mt-1">
-                    <ChevronUp size={13} />Mostra meno
-                  </button>
-                )}
-              </Section>
-            )}
+            {/* Cast section moved to MovieDetailTabs below */}
 
             {(collectionParts || loadingCollection) && (
               <Section label={collectionName || 'Saga'}>
@@ -636,8 +626,16 @@ export function MovieDetailScreen({
           name={openGenre.name}
           type={openGenre.type}
           mediaType={openGenre.mediaType}
-          backLabel={title}
           watchedIds={propWatchedIds ?? new Set()}
+          watchlistIds={propWatchlistIds}
+          likedIds={propLikedIds}
+          getPersonalRating={getPersonalRatingFull}
+          onMarkWatched={onMarkWatchedFull}
+          onUnmarkWatched={onUnmarkWatchedFull}
+          onUpdateRating={onUpdateRatingFull}
+          onToggleLiked={onToggleLikedFull}
+          onAddToWatchlist={onAddToWatchlistFull}
+          onRemoveFromWatchlist={onRemoveFromWatchlistFull}
           onBack={() => setOpenGenre(null)}
           onOpenMovie={(id, mt) => { setOpenGenre(null); onOpenMovie?.(id, mt); }}
         />
@@ -682,27 +680,6 @@ function Section({ label, icon, children }: {
         <h3 className="text-xs uppercase tracking-widest text-film-subtle font-medium">{label}</h3>
       </div>
       {children}
-    </div>
-  );
-}
-
-function CastCard({ actor }: {
-  actor: { id: number; name: string; character: string; profile_path: string | null }
-}) {
-  const [err, setErr] = useState(false);
-  const photo = !err ? getImageUrl(actor.profile_path, 'w185') : null;
-  return (
-    <div className="shrink-0 w-16 text-center">
-      <div className="w-16 h-16 rounded-full overflow-hidden bg-film-surface border border-film-border mx-auto">
-        {photo
-          ? <img src={photo} alt={actor.name} className="w-full h-full object-cover" onError={() => setErr(true)} />
-          : <div className="w-full h-full flex items-center justify-center text-film-subtle text-xl font-display">
-              {actor.name.charAt(0)}
-            </div>
-        }
-      </div>
-      <p className="text-film-text text-xs font-medium mt-1.5 line-clamp-2 leading-tight">{actor.name}</p>
-      <p className="text-film-subtle text-xs line-clamp-1 italic">{actor.character}</p>
     </div>
   );
 }
