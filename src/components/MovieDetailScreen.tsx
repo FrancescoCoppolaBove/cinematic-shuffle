@@ -12,6 +12,9 @@ import {
 import { formatRuntime, formatYear, formatRating, cn } from '../utils';
 import { RatingModal } from './RatingModal';
 import type { RatingResult } from './RatingModal';
+import { MovieDetailTabs } from './MovieDetailTabs';
+import { PersonDetailScreen } from './PersonDetailScreen';
+import { GenreMoviesScreen } from './GenreMoviesScreen';
 import { StarRating } from './StarRating';
 import type { PlaylistItem } from '../hooks/useNavigationStack';
 
@@ -37,6 +40,7 @@ interface MovieDetailScreenProps {
   onOpenMovie?: (id: number, mediaType: 'movie' | 'tv') => void;
   isLiked?: boolean;
   rewatchCount?: number;
+  watchedIds?: Set<number>;
   loading?: boolean;
 }
 
@@ -46,11 +50,13 @@ export function MovieDetailScreen({
   playlist, playlistIndex = 0, onSwipeToIndex,
   onBack, onMarkWatched, onUnmarkWatched, onUpdateRating: _onUpdateRating,
   onAddToWatchlist, onRemoveFromWatchlist,
-  onShuffle, onOpenMovie, onIncrementRewatch, onToggleLiked, isLiked = false, rewatchCount = 0, loading,
+  onShuffle, onOpenMovie, onIncrementRewatch, onToggleLiked, isLiked = false, rewatchCount = 0, watchedIds: propWatchedIds, loading,
 }: MovieDetailScreenProps) {
   const [showFullCast, setShowFullCast] = useState(false);
   const [posterError, setPosterError] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [openPerson, setOpenPerson] = useState<{id: number; name: string} | null>(null);
+  const [openGenre, setOpenGenre] = useState<{id: number; name: string; type: 'genre'|'keyword'; mediaType: 'movie'|'tv'} | null>(null);
   const [collectionParts, setCollectionParts] = useState<TMDBMovieBasic[] | null>(null);
   const [collectionName, setCollectionName] = useState('');
   const [loadingCollection, setLoadingCollection] = useState(false);
@@ -566,6 +572,20 @@ export function MovieDetailScreen({
               </Section>
             )}
 
+
+          {/* ── Tabs: Cast / Crew / Generi ── */}
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="text-xs uppercase tracking-widest text-film-subtle font-medium">Cast & Approfondimenti</h3>
+            </div>
+            <MovieDetailTabs
+              movie={movie}
+              onOpenPerson={(id, name) => setOpenPerson({ id, name })}
+              onOpenGenre={(id, name, mt) => setOpenGenre({ id, name, type: 'genre', mediaType: mt })}
+              onOpenKeyword={(id, name, mt) => setOpenGenre({ id, name, type: 'keyword', mediaType: mt })}
+            />
+          </div>
+
             <div className="h-8" />
           </div>
         </div>{/* end animated inner div */}
@@ -596,6 +616,32 @@ export function MovieDetailScreen({
           )}
         </div>
       </div>
+
+      {/* Person detail overlay */}
+      {openPerson && (
+        <PersonDetailScreen
+          personId={openPerson.id}
+          personName={openPerson.name}
+          backLabel={title}
+          watchedIds={propWatchedIds ?? new Set()}
+          onBack={() => setOpenPerson(null)}
+          onOpenMovie={(id, mt) => { setOpenPerson(null); onOpenMovie?.(id, mt); }}
+        />
+      )}
+
+      {/* Genre/Keyword overlay */}
+      {openGenre && (
+        <GenreMoviesScreen
+          id={openGenre.id}
+          name={openGenre.name}
+          type={openGenre.type}
+          mediaType={openGenre.mediaType}
+          backLabel={title}
+          watchedIds={propWatchedIds ?? new Set()}
+          onBack={() => setOpenGenre(null)}
+          onOpenMovie={(id, mt) => { setOpenGenre(null); onOpenMovie?.(id, mt); }}
+        />
+      )}
 
       {/* Rating modal */}
       {showRatingModal && (

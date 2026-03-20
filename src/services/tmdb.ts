@@ -321,3 +321,91 @@ const POPULAR_PROVIDERS_IT: ProviderInfo[] = [
 export function getPopularProviders(): ProviderInfo[] {
   return POPULAR_PROVIDERS_IT;
 }
+
+// ─── Person detail ─────────────────────────────────────────────────
+
+export interface TMDBPerson {
+  id: number;
+  name: string;
+  biography: string;
+  birthday: string | null;
+  place_of_birth: string | null;
+  profile_path: string | null;
+  known_for_department: string;
+  popularity: number;
+}
+
+export interface TMDBPersonCreditMovie {
+  id: number;
+  title: string;
+  name?: string;
+  poster_path: string | null;
+  release_date?: string;
+  first_air_date?: string;
+  vote_average: number;
+  character?: string;       // cast
+  job?: string;             // crew
+  department?: string;      // crew
+  media_type: 'movie' | 'tv';
+}
+
+export interface TMDBPersonCredits {
+  cast: TMDBPersonCreditMovie[];
+  crew: TMDBPersonCreditMovie[];
+}
+
+export async function getPersonDetail(personId: number): Promise<TMDBPerson> {
+  return apiFetch<TMDBPerson>(`/person/${personId}`);
+}
+
+export async function getPersonCredits(personId: number): Promise<TMDBPersonCredits> {
+  // combined_credits gives both movie and TV in one call
+  const data = await apiFetch<{ cast: (TMDBPersonCreditMovie & { media_type: string })[]; crew: (TMDBPersonCreditMovie & { media_type: string })[] }>(
+    `/person/${personId}/combined_credits`
+  );
+  const toItem = (m: TMDBPersonCreditMovie & { media_type: string }): TMDBPersonCreditMovie => ({
+    ...m,
+    media_type: m.media_type === 'tv' ? 'tv' : 'movie',
+  });
+  return {
+    cast: data.cast.map(toItem).sort((a, b) => (b.vote_average ?? 0) - (a.vote_average ?? 0)),
+    crew: data.crew.map(toItem).sort((a, b) => (b.vote_average ?? 0) - (a.vote_average ?? 0)),
+  };
+}
+
+// ─── Keywords ──────────────────────────────────────────────────────
+
+export interface TMDBKeyword { id: number; name: string; }
+
+export async function getMovieKeywords(movieId: number, mediaType: 'movie' | 'tv' = 'movie'): Promise<TMDBKeyword[]> {
+  if (mediaType === 'tv') {
+    const data = await apiFetch<{ results: TMDBKeyword[] }>(`/tv/${movieId}/keywords`);
+    return data.results ?? [];
+  }
+  const data = await apiFetch<{ keywords: TMDBKeyword[] }>(`/movie/${movieId}/keywords`);
+  return data.keywords ?? [];
+}
+
+// ─── Discover by keyword ────────────────────────────────────────────
+
+export async function discoverByKeyword(keywordId: number, mediaType: 'movie' | 'tv' = 'movie'): Promise<TMDBMovieBasic[]> {
+  const data = await apiFetch<{ results: TMDBMovieBasic[] }>(`/discover/${mediaType}`, {
+    with_keywords: String(keywordId),
+    sort_by: 'vote_average.desc',
+    'vote_count.gte': '50',
+    page: '1',
+  });
+  return (data.results ?? []).map(m => ({ ...m, media_type: mediaType }));
+}
+
+// ─── Discover by genre ─────────────────────────────────────────────
+
+export async function discoverByGenre(genreId: number, mediaType: 'movie' | 'tv' = 'movie'): Promise<TMDBMovieBasic[]> {
+  const data = await apiFetch<{ results: TMDBMovieBasic[] }>(`/discover/${mediaType}`, {
+    with_genres: String(genreId),
+    sort_by: 'vote_average.desc',
+    'vote_count.gte': '100',
+    page: '1',
+  });
+  return (data.results ?? []).map(m => ({ ...m, media_type: mediaType }));
+}

@@ -258,6 +258,7 @@ function ShuffleMovieCard({
 }: ShuffleMovieCardProps) {
   const [posterErr, setPosterErr] = useState(false);
   const [showFullCast, setShowFullCast] = useState(false);
+  const [expandOverview, setExpandOverview] = useState(false);
   const title = getTitle(movie);
   const backdrop = getImageUrl(movie.backdrop_path, 'w780');
   const poster = !posterErr ? getImageUrl(movie.poster_path, 'w342') : null;
@@ -342,9 +343,21 @@ function ShuffleMovieCard({
         </div>
       </div>
 
-      {/* Trama */}
+      {/* Trama — collassabile */}
       {movie.overview && (
-        <p className="text-film-text/75 text-sm leading-relaxed">{movie.overview}</p>
+        <div>
+          <p className={cn('text-film-text/75 text-sm leading-relaxed', !expandOverview && 'line-clamp-4')}>
+            {movie.overview}
+          </p>
+          {movie.overview.length > 200 && (
+            <button
+              onClick={() => setExpandOverview(!expandOverview)}
+              className="text-film-accent text-xs mt-1 active:opacity-70"
+            >
+              {expandOverview ? '↑ Mostra meno' : '↓ Leggi tutto'}
+            </button>
+          )}
+        </div>
       )}
 
       {/* CTA row */}
