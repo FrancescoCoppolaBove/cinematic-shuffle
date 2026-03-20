@@ -10,7 +10,7 @@ import type { WatchedMovie } from '../types';
 import { useUserTaste } from '../hooks/useUserTaste';
 import { getImageUrl, getTitle, getReleaseDate, getBestTrailer, getWatchProviders, getProviderLogoUrl } from '../services/tmdb';
 import { formatYear, formatRating, formatRuntime } from '../utils';
-import { Star, Clock, MapPin, ChevronRight } from 'lucide-react';
+import { Star, Clock, MapPin } from 'lucide-react';
 
 interface ShuffleViewProps {
   watchedIds: Set<number>;
@@ -86,12 +86,12 @@ export function ShuffleView({
   const textColor = filters.mediaType === 'tv' ? 'text-white' : 'text-film-black';
 
   return (
-    // Full viewport height, fixed layout — no scroll needed
+    // Full remaining height between header and nav
     <div
-      className="fixed inset-x-0 z-10 flex flex-col bg-film-black"
+      className="flex flex-col bg-film-black"
       style={{
-        top: 'var(--header-height, 56px)',
-        bottom: 'var(--nav-height, 72px)',
+        height: 'calc(100dvh - 57px - 56px - env(safe-area-inset-top) - env(safe-area-inset-bottom))',
+        minHeight: 0,
       }}
     >
       {/* ── Top bar: media type + shuffle + filters ── */}
@@ -365,7 +365,7 @@ function ShuffleMovieCard({
 
       {/* Trama (2 righe) */}
       {movie.overview && (
-        <p className="text-film-text/70 text-sm leading-relaxed line-clamp-2">{movie.overview}</p>
+        <p className="text-film-text/70 text-sm leading-relaxed line-clamp-4">{movie.overview}</p>
       )}
 
       {/* ── CTA row ── */}
@@ -421,11 +421,10 @@ function ShuffleMovieCard({
         </div>
       )}
 
-      {/* Scheda completa */}
+      {/* Link scheda completa — discreto, solo testo */}
       <button onClick={onOpenDetail}
-        className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-film-surface border border-film-border text-film-muted active:opacity-70">
-        <span className="text-sm">Scheda completa</span>
-        <ChevronRight size={16} />
+        className="w-full py-1.5 text-film-subtle text-xs text-center active:opacity-60 transition-opacity">
+        Cast, saghe e altro → scheda completa
       </button>
     </div>
   );

@@ -243,13 +243,13 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-film-black text-film-text" style={{ "--header-height": "57px", "--nav-height": "calc(56px + env(safe-area-inset-bottom))", paddingTop: "env(safe-area-inset-top)" } as React.CSSProperties}>
+    <div className="min-h-screen bg-film-black text-film-text" style={{ "--header-height": "57px", "--nav-height": "calc(56px + env(safe-area-inset-bottom))" } as React.CSSProperties}>
       <div className="fixed inset-0 pointer-events-none opacity-30 bg-grain z-50" />
 
       {/* PWA update banner */}
       {showUpdate && (
         <div className="fixed left-4 right-4 z-[70] animate-slide-up"
-          style={{ top: 'calc(env(safe-area-inset-top) + 1rem)' }}>
+          style={{ top: '1rem' }}>
           <div className="bg-film-surface border border-film-accent/40 rounded-2xl px-4 py-3 flex items-center gap-4 shadow-2xl">
             <div className="flex-1">
               <p className="text-film-text text-sm font-medium">Aggiornamento disponibile</p>
@@ -268,7 +268,7 @@ export default function App() {
 
       {/* Toasts */}
       <div className="fixed right-4 z-[60] flex flex-col gap-2 pointer-events-none"
-        style={{ top: 'calc(env(safe-area-inset-top) + 1rem)' }}>
+        style={{ top: '1rem' }}>
         {toasts.map(t => (
           <div key={t.id} className={cn(
             'flex items-center gap-2 px-4 py-3 rounded-xl text-sm shadow-xl animate-slide-up pointer-events-auto',
@@ -297,7 +297,7 @@ export default function App() {
       </header>
 
       {/* ── Main content ── */}
-      <main className="max-w-3xl mx-auto px-4 py-4 pb-28">
+      <main className={view === 'shuffle' ? "max-w-3xl mx-auto" : "max-w-3xl mx-auto px-4 py-4 pb-28"}>
         {view === 'home' && (
           <HomeView
             watchedIds={watchedIds}
