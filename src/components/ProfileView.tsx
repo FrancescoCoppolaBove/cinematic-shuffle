@@ -3,7 +3,7 @@
  * Le tab Visti e Watchlist montano i componenti originali completi.
  */
 import { useState } from 'react';
-import { LogOut, Star, Heart, RotateCcw, Film, Tv, Eye, Bookmark } from 'lucide-react';
+import { LogOut, Star, Heart, RotateCcw, Film, Tv, Bookmark } from 'lucide-react';
 import type { User } from 'firebase/auth';
 import type { WatchedMovie, WatchlistItem, TMDBMovieDetail } from '../types';
 import type { PlaylistItem } from '../hooks/useNavigationStack';
@@ -137,23 +137,7 @@ export function ProfileView({
             <StatPill icon={<RotateCcw size={14} />} label="Rewatch" value={rewatched.length} color="text-orange-400" />
           </div>
 
-          {/* Quick nav to tabs */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setTab('visti')}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-film-surface border border-film-border text-film-muted active:scale-95 transition-transform"
-            >
-              <Eye size={16} className="text-film-accent" />
-              <span className="text-sm">Visti ({watchedMovies.length})</span>
-            </button>
-            <button
-              onClick={() => setTab('watchlist')}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-film-surface border border-film-border text-film-muted active:scale-95 transition-transform"
-            >
-              <Bookmark size={16} className="text-blue-400" />
-              <span className="text-sm">Watchlist ({watchlist.length})</span>
-            </button>
-          </div>
+
         </div>
       )}
 

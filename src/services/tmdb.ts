@@ -410,3 +410,44 @@ export async function discoverByGenre(genreId: number, mediaType: 'movie' | 'tv'
   });
   return (data.results ?? []).map(m => ({ ...m, media_type: mediaType }));
 }
+
+// ─── Tonight: fetch trending + cinephile picks ─────────────────────
+
+export async function getTrendingThisWeek(mediaType: 'movie' | 'tv' = 'movie'): Promise<TMDBMovieBasic[]> {
+  const data = await apiFetch<{ results: TMDBMovieBasic[] }>(`/trending/${mediaType}/week`);
+  return (data.results ?? []).map(m => ({ ...m, media_type: mediaType }));
+}
+
+// "Film da cinefilo" — alta valutazione ma basso vote_count (cult, underrated, ricercato)
+export async function getCinephilePick(mediaType: 'movie' | 'tv' = 'movie'): Promise<TMDBMovieBasic[]> {
+  const data = await apiFetch<{ results: TMDBMovieBasic[] }>(`/discover/${mediaType}`, {
+    sort_by: 'vote_average.desc',
+    'vote_average.gte': '7.5',
+    'vote_count.gte': '200',
+    'vote_count.lte': '3000',  // molto votato in qualità ma non mainstream
+    'with_original_language': 'en|fr|it|ja|ko|de|es',
+    page: String(Math.floor(Math.random() * 5) + 1),
+  });
+  return (data.results ?? []).map(m => ({ ...m, media_type: mediaType }));
+}
+
+// "Il mio consiglio" — da gusti utente, ignora watchlist, scoperta pura
+export async function getPersonalizedPick(
+  topGenreIds: number[],
+  mediaType: 'movie' | 'tv' = 'movie',
+  minRating: number = 6.5,
+  excludeIds: number[] = []
+): Promise<TMDBMovieBasic[]> {
+  const params: Record<string, string> = {
+    sort_by: 'vote_average.desc',
+    'vote_average.gte': String(minRating),
+    'vote_count.gte': '500',
+    page: String(Math.floor(Math.random() * 8) + 1),
+  };
+  if (topGenreIds.length > 0) {
+    params['with_genres'] = topGenreIds.slice(0, 2).join(',');
+  }
+  const data = await apiFetch<{ results: TMDBMovieBasic[] }>(`/discover/${mediaType}`, params);
+  const results = (data.results ?? []).map(m => ({ ...m, media_type: mediaType }));
+  return results.filter(m => !excludeIds.includes(m.id));
+}

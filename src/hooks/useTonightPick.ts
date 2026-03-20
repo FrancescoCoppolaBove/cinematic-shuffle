@@ -1,62 +1,58 @@
 /**
  * useTonightPick — "Stasera cosa guardo?"
  *
- * Algoritmo di scoring multi-dimensionale applicato alla watchlist.
- * Restituisce 3 pick con motivazioni diverse, non ripetibili nella stessa sessione.
- *
- * ═══ SEGNALI USATI ═══
- *
- * Dal profilo utente (watchedMovies):
- *   - Generi preferiti: genre_ids dei film liked o votati ≥ 4★
- *   - Decennio preferito: da film liked/votati bene
- *   - Soglia qualità personale: voto medio che l'utente assegna
- *   - Mood recente: generi degli ultimi 5 film visti (trend a breve termine)
- *
- * Dal contesto temporale:
- *   - Ora del giorno: tarda notte → horror/thriller; pomeriggio → commedia/animazione
- *   - Giorno settimana: weekend → film lunghi/impegnativi; infrasettimanale → < 110 min
- *
- * Dal film in watchlist:
- *   - Voto TMDB: qualità oggettiva
- *   - Età in watchlist: film salvati da >30gg ricevono un bonus "priorità"
- *   - Durata: confrontata con il contesto temporale
- *   - Genere match: quanto il film si allinea ai gusti profilati
- *   - Affinità voto TMDB / aspettativa utente
- *
- * ═══ TRE SLOT CON RUOLI DIVERSI ═══
- *
- *   SLOT 1 "Perfetto per stasera" — massimo score composito considerando TUTTO
- *   SLOT 2 "Il più acclamato"     — massimo voto TMDB, ignora contesto temporale
- *   SLOT 3 "Aspetti da più tempo" — il più vecchio in watchlist non già nei pick 1/2
- *
- * ═══ MOTIVAZIONI TESTUALI ═══
- *   Ogni pick genera un testo spiegando perché è stato scelto.
+ * CINQUE SLOT:
+ *   1. "Perfetto per stasera"  — dalla watchlist, score composito (gusti + contesto)
+ *   2. "Il più acclamato"      — dalla watchlist, massimo voto TMDB
+ *   3. "Aspetti da più tempo"  — dalla watchlist, il più vecchio non visto
+ *   4. "Il più chiacchierato"  — TMDB trending settimana, non già visto
+ *   5. "Consiglio cinefilo"    — TMDB cult/underrated (alto voto, bassa popolarità)
+ *   6. "Il mio consiglio"      — fuori watchlist, calibrato sui gusti personali
  */
 
-import { useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { WatchedMovie, WatchlistItem } from '../types';
+import type { TMDBMovieBasic } from '../types';
+import {
+  getTrendingThisWeek,
+  getCinephilePick,
+  getPersonalizedPick,
+  getTitle,
+  getReleaseDate,
+} from '../services/tmdb';
 
 export interface TonightPick {
-  item: WatchlistItem;
+  item: WatchlistItem | TMDBMovieBasic;
   score: number;
-  slot: 'tonight' | 'acclaimed' | 'waiting';
-  reason: string;        // spiegazione in italiano
+  slot: 'tonight' | 'acclaimed' | 'waiting' | 'trending' | 'cinephile' | 'personal';
+  reason: string;
   reasonEmoji: string;
+  fromWatchlist: boolean;
 }
 
 interface TimeContext {
   hour: number;
   isWeekend: boolean;
-  isLateNight: boolean;   // 22:00+
-  isAfternoon: boolean;   // 14:00–18:00
-  isEvening: boolean;     // 18:00–22:00
-  suggestedMaxRuntime: number; // minuti
+  isLateNight: boolean;
+  isAfternoon: boolean;
+  isEvening: boolean;
+  suggestedMaxRuntime: number;
+}
+
+export interface TasteProfile {
+  genreWeights: Record<number, number>;
+  recentGenreIds: number[];
+  preferredRuntime: number | null;
+  avgPersonalRating: number;
+  qualityThreshold: number;
+  topGenreIds: number[];
+  hasData: boolean;
 }
 
 function getTimeContext(): TimeContext {
   const now = new Date();
   const hour = now.getHours();
-  const day = now.getDay(); // 0=domenica, 6=sabato
+  const day = now.getDay();
   const isWeekend = day === 0 || day === 5 || day === 6;
   return {
     hour,
@@ -64,31 +60,20 @@ function getTimeContext(): TimeContext {
     isLateNight: hour >= 22 || hour < 2,
     isAfternoon: hour >= 14 && hour < 18,
     isEvening: hour >= 18 && hour < 22,
-    suggestedMaxRuntime: isWeekend ? 180 : (hour >= 22 ? 100 : 130),
+    suggestedMaxRuntime: isWeekend ? 180 : hour >= 22 ? 100 : 130,
   };
 }
 
-// ── Calcola il profilo gusti dell'utente ──────────────────────────
-
-interface TasteProfile {
-  genreWeights: Record<number, number>; // genreId → peso (0–1)
-  recentGenreIds: number[];             // generi ultimi 5 film visti
-  preferredRuntime: number | null;      // durata media dei film liked
-  avgPersonalRating: number;            // voto medio che l'utente dà
-  qualityThreshold: number;             // voto TMDB minimo basato su gusti
-  hasData: boolean;
-}
-
-function buildTasteProfile(watched: WatchedMovie[]): TasteProfile {
+export function buildTasteProfile(watched: WatchedMovie[]): TasteProfile {
   if (watched.length === 0) {
-    return { genreWeights: {}, recentGenreIds: [], preferredRuntime: null, avgPersonalRating: 3, qualityThreshold: 5, hasData: false };
+    return { genreWeights: {}, recentGenreIds: [], preferredRuntime: null,
+      avgPersonalRating: 3, qualityThreshold: 5, topGenreIds: [], hasData: false };
   }
 
-  // Film "buoni" per l'utente = liked oppure voto personale ≥ 4
   const goodMovies = watched.filter(m => m.liked || (m.personal_rating !== null && m.personal_rating >= 4));
   const rated = watched.filter(m => m.personal_rating !== null);
 
-  // Genre weights: ogni genere riceve punti dalla qualità del film
+  // Genre weights from all watched, weighted by quality
   const genreRaw: Record<number, { sum: number; count: number }> = {};
   for (const m of watched) {
     const score = m.liked ? 5 : (m.personal_rating ?? m.vote_average / 2);
@@ -98,32 +83,36 @@ function buildTasteProfile(watched: WatchedMovie[]): TasteProfile {
       genreRaw[gid].count += 1;
     }
   }
-  // Normalizza a 0–1 rispetto al max
-  const entries = Object.entries(genreRaw).map(([id, { sum, count }]) => [Number(id), sum / count] as [number, number]);
+  const entries = Object.entries(genreRaw)
+    .map(([id, { sum, count }]) => [Number(id), sum / count] as [number, number]);
   const maxW = Math.max(...entries.map(([, w]) => w), 1);
   const genreWeights: Record<number, number> = {};
   for (const [id, w] of entries) genreWeights[id] = w / maxW;
 
-  // Generi recenti (ultimi 5 film visti, ordine temporale)
-  const recent = [...watched].sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()).slice(0, 5);
+  // Top 3 genre IDs for external queries
+  const topGenreIds = entries
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 3)
+    .map(([id]) => id);
+
+  // Recent mood
+  const recent = [...watched]
+    .sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime())
+    .slice(0, 5);
   const recentGenreIds = [...new Set(recent.flatMap(m => m.genre_ids ?? []))];
 
-  // Runtime preferito: media dei film liked con runtime disponibile
+  // Preferred runtime
   const runtimes = goodMovies.filter(m => m.runtime && m.runtime > 0).map(m => m.runtime!);
-  const preferredRuntime = runtimes.length > 0 ? runtimes.reduce((a, b) => a + b, 0) / runtimes.length : null;
+  const preferredRuntime = runtimes.length > 0
+    ? runtimes.reduce((a, b) => a + b, 0) / runtimes.length : null;
 
-  // Voto medio personale
   const avgPersonalRating = rated.length > 0
-    ? rated.reduce((s, m) => s + (m.personal_rating ?? 0), 0) / rated.length
-    : 3;
+    ? rated.reduce((s, m) => s + (m.personal_rating ?? 0), 0) / rated.length : 3;
 
-  // Soglia qualità TMDB
   const qualityThreshold = avgPersonalRating >= 4 ? 6.5 : avgPersonalRating >= 3 ? 5.5 : 4.5;
 
-  return { genreWeights, recentGenreIds, preferredRuntime, avgPersonalRating, qualityThreshold, hasData: watched.length >= 3 };
+  return { genreWeights, recentGenreIds, preferredRuntime, avgPersonalRating, qualityThreshold, topGenreIds, hasData: watched.length >= 3 };
 }
-
-// ── Scoring di un singolo film in watchlist ───────────────────────
 
 function scoreItem(
   item: WatchlistItem,
@@ -131,204 +120,203 @@ function scoreItem(
   ctx: TimeContext,
   watchedIds: Set<number>
 ): number {
-  if (watchedIds.has(item.id)) return -1; // già visto, escludi
-
+  if (watchedIds.has(item.id)) return -1;
   let score = 0;
 
-  // 1. Genere match con gusti profilati (peso 35%)
   const genreIds = item.genre_ids ?? [];
   if (genreIds.length > 0 && taste.hasData) {
     const genreScore = genreIds.reduce((s, gid) => s + (taste.genreWeights[gid] ?? 0), 0) / genreIds.length;
     score += genreScore * 35;
   }
-
-  // 2. Voto TMDB (peso 25%) — normalizzato 0–10
   score += (item.vote_average / 10) * 25;
 
-  // 3. Affinità temporale — durata vs contesto (peso 20%)
-  const runtime = item.runtime ?? 90; // default 90 min se non disponibile
+  const runtime = item.runtime ?? 90;
   const maxRt = ctx.suggestedMaxRuntime;
-  if (runtime <= maxRt) {
-    // Film nella finestra temporale: più si avvicina al max, meglio
-    score += (runtime / maxRt) * 20;
-  } else {
-    // Film troppo lungo per il contesto: penalità proporzionale
-    score += Math.max(0, 20 - ((runtime - maxRt) / 10) * 5);
-  }
+  score += runtime <= maxRt ? (runtime / maxRt) * 20 : Math.max(0, 20 - ((runtime - maxRt) / 10) * 5);
 
-  // 4. Anzianità in watchlist — bonus per film salvati da >2 settimane (peso 10%)
   const daysInWatchlist = (Date.now() - new Date(item.addedAt).getTime()) / (1000 * 60 * 60 * 24);
-  if (daysInWatchlist > 30) score += 10;
-  else if (daysInWatchlist > 14) score += 6;
-  else if (daysInWatchlist > 7) score += 3;
+  score += daysInWatchlist > 30 ? 10 : daysInWatchlist > 14 ? 6 : daysInWatchlist > 7 ? 3 : 0;
 
-  // 5. Allineamento generi recenti (mood a breve termine) (peso 10%)
   if (taste.recentGenreIds.length > 0) {
     const recentMatch = genreIds.filter(g => taste.recentGenreIds.includes(g)).length;
     score += (recentMatch / Math.max(1, genreIds.length)) * 10;
   }
 
-  // 6. Bonus context-aware per ora/giorno (bonus flat)
-  const HORROR_THRILLER = [27, 53, 9648]; // horror, thriller, mystery
-  const COMEDY_FAMILY   = [35, 10751, 16]; // commedia, family, animazione
-  const DRAMA_SERIOUS   = [18, 36, 10752]; // drama, history, war
-  const isHorrorThriller = genreIds.some(g => HORROR_THRILLER.includes(g));
-  const isLightWatch     = genreIds.some(g => COMEDY_FAMILY.includes(g));
-  const isDramaSerious   = genreIds.some(g => DRAMA_SERIOUS.includes(g));
-
-  if (ctx.isLateNight && isHorrorThriller) score += 8;
-  if (ctx.isAfternoon && isLightWatch) score += 6;
-  if (ctx.isWeekend && isDramaSerious) score += 5;
-  if (!ctx.isWeekend && ctx.isEvening && isLightWatch) score += 4;
+  const HORROR = [27, 53, 9648], COMEDY = [35, 10751, 16], DRAMA = [18, 36, 10752], ACTION = [28, 12];
+  if (ctx.isLateNight && genreIds.some(g => HORROR.includes(g))) score += 8;
+  if (ctx.isAfternoon && genreIds.some(g => COMEDY.includes(g))) score += 6;
+  if (ctx.isWeekend && genreIds.some(g => DRAMA.includes(g))) score += 5;
+  if (!ctx.isWeekend && ctx.isEvening && genreIds.some(g => ACTION.includes(g))) score += 4;
 
   return score;
 }
 
-// ── Genera il testo motivazionale ─────────────────────────────────
-
-function buildReason(
-  item: WatchlistItem,
-  slot: TonightPick['slot'],
-  ctx: TimeContext,
-  taste: TasteProfile
-): { reason: string; reasonEmoji: string } {
+function buildWatchlistReason(item: WatchlistItem, slot: TonightPick['slot'], ctx: TimeContext, taste: TasteProfile) {
   const runtime = item.runtime;
   const daysWaiting = Math.floor((Date.now() - new Date(item.addedAt).getTime()) / (1000 * 60 * 60 * 24));
-  const genreIds = item.genre_ids ?? [];
+  const gids = item.genre_ids ?? [];
+  const HORROR = [27, 53, 9648], COMEDY = [35, 10751, 16], ACTION = [28, 12], DRAMA = [18, 36];
 
-  const HORROR_THRILLER = [27, 53, 9648];
-  const COMEDY_FAMILY   = [35, 10751, 16];
-  const ACTION_ADV      = [28, 12];
-  const DRAMA           = [18, 36];
-  const isHorror = genreIds.some(g => HORROR_THRILLER.includes(g));
-  const isComedy = genreIds.some(g => COMEDY_FAMILY.includes(g));
-  const isAction = genreIds.some(g => ACTION_ADV.includes(g));
-  const isDrama  = genreIds.some(g => DRAMA.includes(g));
-
-  if (slot === 'acclaimed') {
-    return {
-      reason: `Il più acclamato della tua lista con ${item.vote_average.toFixed(1)}/10 su TMDB`,
-      reasonEmoji: '⭐',
-    };
-  }
-
+  if (slot === 'acclaimed') return { reason: `Il più acclamato della tua lista · ${item.vote_average.toFixed(1)}/10 TMDB`, reasonEmoji: '⭐' };
   if (slot === 'waiting') {
-    if (daysWaiting >= 30) {
-      return {
-        reason: `In lista da ${daysWaiting} giorni — è ora di vederlo`,
-        reasonEmoji: '⏳',
-      };
-    }
-    return {
-      reason: `Salvato ${daysWaiting > 7 ? `${Math.floor(daysWaiting/7)} settimane` : `${daysWaiting} giorni`} fa`,
-      reasonEmoji: '📌',
-    };
+    return daysWaiting >= 30
+      ? { reason: `In watchlist da ${daysWaiting} giorni — è ora`, reasonEmoji: '⏳' }
+      : { reason: `Salvato ${daysWaiting > 7 ? `${Math.floor(daysWaiting / 7)} sett.` : `${daysWaiting} gg`} fa`, reasonEmoji: '📌' };
   }
-
-  // Slot "tonight" — motivo contestuale
-  const reasons: { reason: string; emoji: string }[] = [];
-
-  if (ctx.isWeekend && runtime && runtime > 120) {
-    reasons.push({ reason: `Weekend perfetto per ${runtime} minuti di cinema`, emoji: '🎬' });
-  }
-  if (!ctx.isWeekend && runtime && runtime <= 100) {
-    reasons.push({ reason: `${runtime} min, ideale per una serata infrasettimanale`, emoji: '🌙' });
-  }
-  if (ctx.isLateNight && isHorror) {
-    reasons.push({ reason: 'Perfetto per la notte — se ti fidi', emoji: '👻' });
-  }
-  if (ctx.isAfternoon && isComedy) {
-    reasons.push({ reason: 'Qualcosa di leggero per il pomeriggio', emoji: '☀️' });
-  }
-  if (isAction && ctx.isEvening) {
-    reasons.push({ reason: 'Adrenalina per la serata', emoji: '⚡' });
-  }
-  if (isDrama && taste.hasData && taste.avgPersonalRating >= 4) {
-    reasons.push({ reason: 'In linea con i film che hai amato di più', emoji: '❤️' });
-  }
-  if (item.vote_average >= 8) {
-    reasons.push({ reason: `Straordinario: ${item.vote_average.toFixed(1)}/10 su TMDB`, emoji: '🏆' });
-  }
+  // slot === 'tonight'
+  const candidates: { reason: string; emoji: string }[] = [];
+  if (ctx.isWeekend && runtime && runtime > 120) candidates.push({ reason: `Weekend ideale per ${runtime} min`, emoji: '🎬' });
+  if (!ctx.isWeekend && runtime && runtime <= 100) candidates.push({ reason: `${runtime} min perfetti per questa sera`, emoji: '🌙' });
+  if (ctx.isLateNight && gids.some(g => HORROR.includes(g))) candidates.push({ reason: 'Perfetto per la notte — se ti fidi', emoji: '👻' });
+  if (ctx.isAfternoon && gids.some(g => COMEDY.includes(g))) candidates.push({ reason: 'Leggero e perfetto per il pomeriggio', emoji: '☀️' });
+  if (gids.some(g => ACTION.includes(g)) && ctx.isEvening) candidates.push({ reason: 'Adrenalina per la serata', emoji: '⚡' });
+  if (gids.some(g => DRAMA.includes(g)) && taste.hasData && taste.avgPersonalRating >= 4) candidates.push({ reason: 'In linea con i film che hai amato', emoji: '❤️' });
+  if (item.vote_average >= 8) candidates.push({ reason: `Eccellente: ${item.vote_average.toFixed(1)}/10 su TMDB`, emoji: '🏆' });
   if (taste.hasData) {
-    const genreMatch = (item.genre_ids ?? []).filter(g => taste.genreWeights[g] > 0.7).length;
-    if (genreMatch > 0) {
-      reasons.push({ reason: 'Genere che adori in base alla tua storia', emoji: '🎯' });
-    }
+    const match = gids.filter(g => taste.genreWeights[g] > 0.7).length;
+    if (match > 0) candidates.push({ reason: 'Genere che apprezzi particolarmente', emoji: '🎯' });
   }
-  if (daysWaiting > 14) {
-    reasons.push({ reason: `In lista da ${daysWaiting} giorni`, emoji: '📅' });
-  }
-
-  const chosen = reasons[0] ?? { reason: 'Scelto per te questa sera', emoji: '✨' };
+  if (daysWaiting > 14) candidates.push({ reason: `In lista da ${daysWaiting} giorni`, emoji: '📅' });
+  const chosen = candidates[0] ?? { reason: 'Scelto per te questa sera', emoji: '✨' };
   return { reason: chosen.reason, reasonEmoji: chosen.emoji };
 }
 
-// ── Hook principale ───────────────────────────────────────────────
+function toWatchlistLike(m: TMDBMovieBasic): WatchlistItem {
+  return {
+    id: m.id,
+    title: getTitle(m),
+    poster_path: m.poster_path,
+    release_date: getReleaseDate(m),
+    vote_average: m.vote_average,
+    genre_ids: m.genre_ids ?? [],
+    runtime: null,
+    addedAt: new Date().toISOString(),
+    media_type: (m.media_type as 'movie' | 'tv') ?? 'movie',
+  };
+}
 
 export function useTonightPick(
   watchlist: WatchlistItem[],
   watchedMovies: WatchedMovie[],
   watchedIds: Set<number>,
   seed: number = 0
-): {
-  picks: TonightPick[];
-  ctx: TimeContext;
-  taste: TasteProfile;
-  hasPicks: boolean;
-} {
+) {
   const ctx = useMemo(() => getTimeContext(), []);
   const taste = useMemo(() => buildTasteProfile(watchedMovies), [watchedMovies]);
 
+  // External picks fetched from TMDB
+  const [trendingItems, setTrendingItems] = useState<TMDBMovieBasic[]>([]);
+  const [cinephileItems, setCinephileItems] = useState<TMDBMovieBasic[]>([]);
+  const [personalItems, setPersonalItems] = useState<TMDBMovieBasic[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const allKnownIds = useMemo(() => {
+    const ids = new Set(watchedIds);
+    watchlist.forEach(i => ids.add(i.id));
+    return ids;
+  }, [watchedIds, watchlist]);
+
+  useEffect(() => {
+    setLoading(true);
+    const mediaType = 'movie';
+    const excludeIds = [...allKnownIds];
+
+    Promise.all([
+      getTrendingThisWeek(mediaType),
+      getCinephilePick(mediaType),
+      getPersonalizedPick(taste.topGenreIds, mediaType, taste.qualityThreshold, excludeIds),
+    ]).then(([trending, cinephile, personal]) => {
+      setTrendingItems(trending);
+      setCinephileItems(cinephile);
+      setPersonalItems(personal);
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, [seed]); // refetch when user refreshes
+
   const picks = useMemo<TonightPick[]>(() => {
-    // Filtra film già visti dalla watchlist
-    const available = watchlist.filter(item => !watchedIds.has(item.id));
-    if (available.length === 0) return [];
-
-    // Calcola score per ogni film
-    const scored = available.map(item => ({
-      item,
-      score: scoreItem(item, taste, ctx, watchedIds),
-    })).sort((a, b) => b.score - a.score);
-
+    const available = watchlist.filter(i => !watchedIds.has(i.id));
     const result: TonightPick[] = [];
     const usedIds = new Set<number>();
 
-    // Rotation: quando seed > 0, ruota la lista per mostrare pick diversi
+    const scored = available.map(item => ({
+      item, score: scoreItem(item, taste, ctx, watchedIds),
+    })).sort((a, b) => b.score - a.score);
+
     if (seed > 0) {
       const offset = (seed * 3) % Math.max(1, scored.length);
       scored.push(...scored.splice(0, offset));
     }
 
-    // SLOT 1: "Perfetto per stasera" — massimo score composito
+    // SLOT 1: Perfetto per stasera (watchlist)
     const best = scored[0];
     if (best) {
-      const { reason, reasonEmoji } = buildReason(best.item, 'tonight', ctx, taste);
-      result.push({ item: best.item, score: best.score, slot: 'tonight', reason, reasonEmoji });
+      const { reason, reasonEmoji } = buildWatchlistReason(best.item, 'tonight', ctx, taste);
+      result.push({ item: best.item, score: best.score, slot: 'tonight', reason, reasonEmoji, fromWatchlist: true });
       usedIds.add(best.item.id);
     }
 
-    // SLOT 2: "Il più acclamato" — massimo voto TMDB tra i non già scelti
-    const acclaimed = available
-      .filter(i => !usedIds.has(i.id))
+    // SLOT 2: Il più acclamato (watchlist)
+    const acclaimed = available.filter(i => !usedIds.has(i.id))
       .sort((a, b) => b.vote_average - a.vote_average)[0];
-    if (acclaimed) {
-      const { reason, reasonEmoji } = buildReason(acclaimed, 'acclaimed', ctx, taste);
-      result.push({ item: acclaimed, score: acclaimed.vote_average, slot: 'acclaimed', reason, reasonEmoji });
+    if (acclaimed && acclaimed.id !== best?.item.id) {
+      const { reason, reasonEmoji } = buildWatchlistReason(acclaimed, 'acclaimed', ctx, taste);
+      result.push({ item: acclaimed, score: acclaimed.vote_average, slot: 'acclaimed', reason, reasonEmoji, fromWatchlist: true });
       usedIds.add(acclaimed.id);
     }
 
-    // SLOT 3: "Aspetti da più tempo" — il più vecchio in watchlist
-    const oldest = available
-      .filter(i => !usedIds.has(i.id))
+    // SLOT 3: Aspetti da più tempo (watchlist)
+    const oldest = available.filter(i => !usedIds.has(i.id))
       .sort((a, b) => new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime())[0];
     if (oldest) {
-      const { reason, reasonEmoji } = buildReason(oldest, 'waiting', ctx, taste);
-      result.push({ item: oldest, score: 0, slot: 'waiting', reason, reasonEmoji });
+      const { reason, reasonEmoji } = buildWatchlistReason(oldest, 'waiting', ctx, taste);
+      result.push({ item: oldest, score: 0, slot: 'waiting', reason, reasonEmoji, fromWatchlist: true });
       usedIds.add(oldest.id);
     }
 
-    return result;
-  }, [watchlist, watchedIds, taste, ctx, seed]);
+    // SLOT 4: Il più chiacchierato (TMDB trending)
+    const trending = trendingItems.filter(m => !usedIds.has(m.id) && !watchedIds.has(m.id))[0];
+    if (trending) {
+      result.push({
+        item: toWatchlistLike(trending),
+        score: trending.vote_count ?? 0,
+        slot: 'trending',
+        reason: 'Sta facendo parlare di sé questa settimana',
+        reasonEmoji: '🔥',
+        fromWatchlist: false,
+      });
+      usedIds.add(trending.id);
+    }
 
-  return { picks, ctx, taste, hasPicks: picks.length > 0 };
+    // SLOT 5: Consiglio cinefilo (cult/underrated)
+    const cinephile = cinephileItems.filter(m => !usedIds.has(m.id) && !watchedIds.has(m.id))[0];
+    if (cinephile) {
+      result.push({
+        item: toWatchlistLike(cinephile),
+        score: cinephile.vote_average,
+        slot: 'cinephile',
+        reason: `${cinephile.vote_average.toFixed(1)}/10 · Un gioiello poco conosciuto`,
+        reasonEmoji: '🎞️',
+        fromWatchlist: false,
+      });
+      usedIds.add(cinephile.id);
+    }
+
+    // SLOT 6: Il mio consiglio (personalizzato da gusti, fuori watchlist)
+    const personal = personalItems.filter(m => !usedIds.has(m.id) && !watchedIds.has(m.id))[0];
+    if (personal) {
+      result.push({
+        item: toWatchlistLike(personal),
+        score: personal.vote_average,
+        slot: 'personal',
+        reason: taste.hasData
+          ? 'Scelto per te in base ai tuoi gusti'
+          : `${personal.vote_average.toFixed(1)}/10 · Vale la pena`,
+        reasonEmoji: '💡',
+        fromWatchlist: false,
+      });
+    }
+
+    return result;
+  }, [watchlist, watchedIds, taste, ctx, seed, trendingItems, cinephileItems, personalItems]);
+
+  return { picks, ctx, taste, hasPicks: picks.length > 0, loading };
 }

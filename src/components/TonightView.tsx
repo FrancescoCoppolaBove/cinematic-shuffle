@@ -37,14 +37,17 @@ function getContextLabel(isWeekend: boolean, hour: number): string {
 }
 
 const SLOT_LABELS: Record<TonightPick['slot'], { label: string; color: string; bg: string }> = {
-  tonight:  { label: 'Perfetto per stasera', color: 'text-film-accent',  bg: 'bg-film-accent/10 border-film-accent/30' },
-  acclaimed: { label: 'Il più acclamato',    color: 'text-yellow-400',   bg: 'bg-yellow-400/10 border-yellow-400/30' },
-  waiting:  { label: 'Aspetti da più tempo', color: 'text-purple-400',  bg: 'bg-purple-400/10 border-purple-400/30' },
+  tonight:   { label: 'Perfetto per stasera',   color: 'text-film-accent', bg: 'bg-film-accent/10 border-film-accent/30' },
+  acclaimed: { label: 'Il più acclamato',        color: 'text-yellow-400',  bg: 'bg-yellow-400/10 border-yellow-400/30' },
+  waiting:   { label: 'Aspetti da più tempo',    color: 'text-purple-400',  bg: 'bg-purple-400/10 border-purple-400/30' },
+  trending:  { label: 'Il più chiacchierato',    color: 'text-red-400',     bg: 'bg-red-400/10 border-red-400/30' },
+  cinephile: { label: 'Consiglio cinefilo',      color: 'text-cyan-400',    bg: 'bg-cyan-400/10 border-cyan-400/30' },
+  personal:  { label: 'Il mio consiglio',        color: 'text-green-400',   bg: 'bg-green-400/10 border-green-400/30' },
 };
 
 export function TonightView({ watchlist, watchedMovies, watchedIds, onOpenMovie }: TonightViewProps) {
   const [seed, setSeed] = useState(0);
-  const { picks, ctx, taste, hasPicks } = useTonightPick(watchlist, watchedMovies, watchedIds, seed);
+  const { picks, ctx, taste, hasPicks, loading } = useTonightPick(watchlist, watchedMovies, watchedIds, seed);
 
   const hour = ctx.hour;
   const greeting = getGreeting(hour);
@@ -106,12 +109,21 @@ export function TonightView({ watchlist, watchedMovies, watchedIds, onOpenMovie 
         )}
       </div>
 
-      {/* I tre pick */}
+      {/* Loading skeleton per slot TMDB */}
+      {loading && picks.length < 4 && (
+        <div className="space-y-3">
+          {[1, 2].map(i => (
+            <div key={i} className="w-full h-24 rounded-2xl bg-film-surface border border-film-border animate-pulse" />
+          ))}
+        </div>
+      )}
+
+      {/* I pick */}
       {picks.map((pick, i) => (
         <PickCard
           key={`${pick.item.id}-${i}`}
           pick={pick}
-          onOpen={() => onOpenMovie(pick.item.id, pick.item.media_type)}
+          onOpen={() => onOpenMovie(pick.item.id, (pick.item.media_type ?? 'movie') as 'movie' | 'tv')}
           isFirst={i === 0}
         />
       ))}
@@ -187,12 +199,12 @@ function PickCard({ pick, onOpen, isFirst }: {
                 </div>
               </>
             )}
-            {item.runtime && (
+            {(item as import('../types').WatchlistItem).runtime && (
               <>
                 <span className="text-film-border text-xs">·</span>
                 <div className="flex items-center gap-1 text-film-subtle">
                   <Clock size={11} />
-                  <span className="text-sm">{item.runtime} min</span>
+                  <span className="text-sm">{(item as import('../types').WatchlistItem).runtime} min</span>
                 </div>
               </>
             )}
@@ -236,10 +248,10 @@ function PickCard({ pick, onOpen, isFirst }: {
               <span className="text-film-accent text-xs font-mono">{formatRating(item.vote_average)}</span>
             </div>
           )}
-          {item.runtime && (
+          {(item as import('../types').WatchlistItem).runtime && (
             <div className="flex items-center gap-1 text-film-subtle">
               <Clock size={10} />
-              <span className="text-xs">{item.runtime} min</span>
+              <span className="text-xs">{(item as import('../types').WatchlistItem).runtime} min</span>
             </div>
           )}
         </div>
