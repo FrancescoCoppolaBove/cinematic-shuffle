@@ -86,11 +86,12 @@ export function ShuffleView({
   const textColor = filters.mediaType === 'tv' ? 'text-white' : 'text-film-black';
 
   return (
-    // Full remaining height between header and nav
+    // Occupa tutto lo spazio tra header fixed e nav fixed
     <div
       className="flex flex-col bg-film-black"
       style={{
-        height: 'calc(100dvh - 57px - 56px - env(safe-area-inset-top) - env(safe-area-inset-bottom))',
+        marginTop: 'calc(env(safe-area-inset-top) + 57px)',
+        height: 'calc(100dvh - env(safe-area-inset-top) - 57px - 56px - env(safe-area-inset-bottom))',
         minHeight: 0,
       }}
     >
@@ -256,6 +257,7 @@ function ShuffleMovieCard({
   onShuffle, onOpenRating, onWatchlistToggle, onOpenDetail, onIncrementRewatch,
 }: ShuffleMovieCardProps) {
   const [posterErr, setPosterErr] = useState(false);
+  const [showFullCast, setShowFullCast] = useState(false);
   const title = getTitle(movie);
   const backdrop = getImageUrl(movie.backdrop_path, 'w780');
   const poster = !posterErr ? getImageUrl(movie.poster_path, 'w342') : null;
@@ -269,13 +271,17 @@ function ShuffleMovieCard({
     ? (movie.episode_run_time?.[0] ? `${movie.episode_run_time[0]}min/ep` : null)
     : movie.runtime;
   const providers = getWatchProviders(movie);
-  const streaming = [...(providers?.flatrate ?? []), ...(providers?.free ?? [])]
-    .filter((p, i, a) => a.findIndex(x => x.provider_id === p.provider_id) === i)
-    .slice(0, 3);
+  const allProviders = [
+    ...(providers?.flatrate ?? []), ...(providers?.free ?? []),
+    ...(providers?.ads ?? []), ...(providers?.rent ?? []),
+  ].filter((p, i, a) => a.findIndex(x => x.provider_id === p.provider_id) === i).slice(0, 6);
+  const cast = movie.credits?.cast?.slice(0, showFullCast ? 20 : 8) || [];
+  const similar = (movie.recommendations?.results?.length
+    ? movie.recommendations.results : movie.similar?.results ?? []).slice(0, 10);
 
   return (
-    <div className="px-4 pb-4 pt-1 space-y-3 animate-scale-in">
-      {/* Backdrop hero */}
+    <div className="px-4 pb-6 pt-2 space-y-3 animate-scale-in">
+      {/* Backdrop */}
       {backdrop && (
         <div className="relative w-full rounded-2xl overflow-hidden" style={{ aspectRatio: '16/9' }}>
           <img src={backdrop} alt="" className="w-full h-full object-cover" />
@@ -291,120 +297,151 @@ function ShuffleMovieCard({
         </div>
       )}
 
-      {/* Title — full width */}
-      <div>
-        <h2 className="font-display text-2xl leading-tight tracking-wide text-film-text break-words">
-          {title}
-        </h2>
-        {movie.tagline && (
-          <p className="text-film-accent text-xs italic mt-0.5">"{movie.tagline}"</p>
-        )}
-      </div>
+      {/* Title */}
+      <h2 className="font-display text-2xl leading-tight tracking-wide text-film-text break-words">
+        {title}
+      </h2>
+      {movie.tagline && <p className="text-film-accent text-xs italic -mt-1">"{movie.tagline}"</p>}
 
-      {/* Meta + poster row */}
+      {/* Poster + meta */}
       <div className="flex gap-3">
-        {/* Poster small */}
         <div className="shrink-0 w-16 aspect-[2/3] rounded-xl overflow-hidden border border-film-border bg-film-card">
           {poster
             ? <img src={poster} alt={title} className="w-full h-full object-cover" onError={() => setPosterErr(true)} />
             : <div className="w-full h-full flex items-center justify-center text-xl">{isTV ? '📺' : '🎬'}</div>
           }
         </div>
-
         <div className="flex-1 min-w-0 space-y-1.5">
-          {/* Rating + year + runtime */}
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <div className="flex items-center gap-1">
               <Star size={11} className={ratingColor} fill="currentColor" />
               <span className={cn('font-mono font-bold text-sm', ratingColor)}>{formatRating(rating)}</span>
+              <span className="text-film-subtle text-xs">/10</span>
             </div>
             <span className="text-film-border text-xs">·</span>
             <span className="text-film-muted text-xs">{formatYear(getReleaseDate(movie))}</span>
             {runtime && (
-              <>
-                <span className="text-film-border text-xs">·</span>
-                <div className="flex items-center gap-1 text-film-muted">
-                  <Clock size={10} />
-                  <span className="text-xs">{typeof runtime === 'number' ? formatRuntime(runtime) : runtime}</span>
-                </div>
-              </>
+              <><span className="text-film-border text-xs">·</span>
+              <div className="flex items-center gap-1 text-film-muted">
+                <Clock size={10} />
+                <span className="text-xs">{typeof runtime === 'number' ? formatRuntime(runtime) : runtime}</span>
+              </div></>
+            )}
+            {isTV && movie.number_of_seasons && (
+              <><span className="text-film-border text-xs">·</span>
+              <span className="text-film-muted text-xs">{movie.number_of_seasons} stag.</span></>
             )}
           </div>
-
-          {/* Genres */}
           <div className="flex flex-wrap gap-1">
             {movie.genres?.slice(0, 3).map(g => (
               <span key={g.id} className="px-1.5 py-0.5 rounded-md bg-film-card border border-film-border text-film-muted text-xs">{g.name}</span>
             ))}
           </div>
-
-          {/* Director/creator */}
-          {director && (
-            <p className="text-film-subtle text-xs">Regia <span className="text-film-muted font-medium">{director.name}</span></p>
-          )}
-          {creator && (
-            <p className="text-film-subtle text-xs">Creato da <span className="text-film-muted font-medium">{creator.name}</span></p>
-          )}
-
-          {/* Streaming providers */}
-          {streaming.length > 0 && (
-            <div className="flex items-center gap-1.5">
-              <MapPin size={10} className="text-film-subtle shrink-0" />
-              {streaming.map(p => (
-                <img key={p.provider_id}
-                  src={getProviderLogoUrl(p.logo_path)}
-                  alt={p.provider_name}
-                  className="w-5 h-5 rounded-md"
-                  title={p.provider_name}
-                />
-              ))}
-            </div>
-          )}
+          {director && <p className="text-film-subtle text-xs">Regia <span className="text-film-muted font-medium">{director.name}</span></p>}
+          {creator && <p className="text-film-subtle text-xs">Creato da <span className="text-film-muted font-medium">{creator.name}</span></p>}
         </div>
       </div>
 
-      {/* Trama (2 righe) */}
+      {/* Trama */}
       {movie.overview && (
-        <p className="text-film-text/70 text-sm leading-relaxed line-clamp-4">{movie.overview}</p>
+        <p className="text-film-text/75 text-sm leading-relaxed">{movie.overview}</p>
       )}
 
-      {/* ── CTA row ── */}
+      {/* CTA row */}
       <div className="grid grid-cols-3 gap-2">
-        {/* Già visto — apre modal */}
-        <button
-          onClick={onOpenRating}
-          className={cn(
-            'flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl border transition-all active:scale-95 text-xs font-medium',
-            isWatched ? 'border-green-600/50 bg-green-950/30 text-green-400' : 'border-film-border bg-film-surface text-film-muted'
-          )}
-        >
-          <Eye size={20} />
-          <span>{isWatched ? 'Visto ✓' : 'Già visto'}</span>
+        <button onClick={onOpenRating}
+          className={cn('flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl border transition-all active:scale-95 text-xs font-medium',
+            isWatched ? 'border-green-600/50 bg-green-950/30 text-green-400' : 'border-film-border bg-film-surface text-film-muted')}>
+          <Eye size={20} /><span>{isWatched ? 'Visto ✓' : 'Già visto'}</span>
         </button>
-
-        {/* Watchlist */}
-        <button
-          onClick={onWatchlistToggle}
-          className={cn(
-            'flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl border transition-all active:scale-95 text-xs font-medium',
-            isOnWatchlist ? 'border-purple-500/40 bg-purple-900/20 text-purple-300' : 'border-film-border bg-film-surface text-film-muted'
-          )}
-        >
+        <button onClick={onWatchlistToggle}
+          className={cn('flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl border transition-all active:scale-95 text-xs font-medium',
+            isOnWatchlist ? 'border-purple-500/40 bg-purple-900/20 text-purple-300' : 'border-film-border bg-film-surface text-film-muted')}>
           {isOnWatchlist ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
           <span>{isOnWatchlist ? 'Salvato' : 'Watchlist'}</span>
         </button>
-
-        {/* Altro shuffle */}
-        <button
-          onClick={onShuffle}
-          className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl bg-film-accent text-film-black font-semibold active:scale-95 transition-all"
-        >
-          <Shuffle size={20} />
-          <span className="text-xs font-bold">Altro</span>
+        <button onClick={onShuffle}
+          className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl bg-film-accent text-film-black font-semibold active:scale-95 transition-all">
+          <Shuffle size={20} /><span className="text-xs font-bold">Altro</span>
         </button>
       </div>
 
-      {/* Rewatch counter (solo se visto) */}
+      {/* Dove guardarlo */}
+      {allProviders.length > 0 && (
+        <div>
+          <p className="text-film-subtle text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <MapPin size={11} />Dove guardarlo
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {allProviders.map(p => (
+              <div key={p.provider_id} className="flex items-center gap-1.5 bg-film-surface border border-film-border rounded-xl px-2 py-1.5">
+                <img src={getProviderLogoUrl(p.logo_path)} alt={p.provider_name}
+                  className="w-5 h-5 rounded-md" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+                <span className="text-film-text text-xs">{p.provider_name}</span>
+              </div>
+            ))}
+          </div>
+          {providers?.link && (
+            <a href={providers.link} target="_blank" rel="noopener noreferrer"
+              className="inline-block mt-1.5 text-film-accent text-xs">Vedi tutte →</a>
+          )}
+        </div>
+      )}
+
+      {/* Cast */}
+      {cast.length > 0 && (
+        <div>
+          <p className="text-film-subtle text-xs uppercase tracking-wider mb-2">Cast</p>
+          <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4">
+            {cast.map(actor => (
+              <div key={actor.id} className="shrink-0 w-14 text-center">
+                <div className="w-14 h-14 rounded-full overflow-hidden bg-film-surface border border-film-border mx-auto">
+                  {actor.profile_path
+                    ? <img src={getImageUrl(actor.profile_path, 'w92') || ''} alt={actor.name} className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center text-film-subtle text-lg">{actor.name[0]}</div>
+                  }
+                </div>
+                <p className="text-film-text text-xs mt-1 line-clamp-2 leading-tight">{actor.name}</p>
+                <p className="text-film-subtle text-xs line-clamp-1 italic">{actor.character}</p>
+              </div>
+            ))}
+            {!showFullCast && (movie.credits?.cast?.length ?? 0) > 8 && (
+              <button onClick={() => setShowFullCast(true)}
+                className="shrink-0 w-14 flex flex-col items-center justify-center text-film-muted">
+                <div className="w-14 h-14 rounded-full bg-film-surface border border-film-border flex items-center justify-center text-xs">
+                  +{(movie.credits?.cast?.length ?? 0) - 8}
+                </div>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Film simili */}
+      {similar.length > 0 && (
+        <div>
+          <p className="text-film-subtle text-xs uppercase tracking-wider mb-2">
+            {isTV ? 'Serie simili' : 'Film simili'}
+          </p>
+          <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-4 px-4">
+            {similar.map(item => (
+              <button key={item.id} onClick={() => onOpenDetail()}
+                className="shrink-0 w-20 text-left active:scale-95 transition-all">
+                <div className="w-20 aspect-[2/3] rounded-xl overflow-hidden bg-film-surface border border-film-border">
+                  {item.poster_path
+                    ? <img src={getImageUrl(item.poster_path, 'w185') || ''} alt={getTitle(item)} className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center text-lg">{isTV ? '📺' : '🎬'}</div>
+                  }
+                </div>
+                <p className="text-film-text text-xs mt-1 line-clamp-2 leading-tight">{getTitle(item)}</p>
+                {item.vote_average > 0 && <p className="text-film-accent text-xs">★ {item.vote_average.toFixed(1)}</p>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Rewatch */}
       {isWatched && onIncrementRewatch && (
         <div className="flex items-center justify-between px-3 py-2 bg-film-surface rounded-xl border border-film-border">
           <div>
@@ -421,10 +458,10 @@ function ShuffleMovieCard({
         </div>
       )}
 
-      {/* Link scheda completa — discreto, solo testo */}
+      {/* Scheda completa (link discreto) */}
       <button onClick={onOpenDetail}
-        className="w-full py-1.5 text-film-subtle text-xs text-center active:opacity-60 transition-opacity">
-        Cast, saghe e altro → scheda completa
+        className="w-full py-2 text-film-subtle text-xs text-center active:opacity-60 transition-opacity border-t border-film-border/30 pt-3">
+        Scheda completa (saga, cast completo, altro) →
       </button>
     </div>
   );

@@ -243,7 +243,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-film-black text-film-text" style={{ "--header-height": "57px", "--nav-height": "calc(56px + env(safe-area-inset-bottom))" } as React.CSSProperties}>
+    <div className="min-h-screen bg-film-black text-film-text" >
       <div className="fixed inset-0 pointer-events-none opacity-30 bg-grain z-50" />
 
       {/* PWA update banner */}
@@ -286,8 +286,11 @@ export default function App() {
         ))}
       </div>
 
-      {/* ── Header — minimal, no profile avatar ── */}
-      <header className="sticky top-0 z-40 border-b border-film-border bg-film-black/90 backdrop-blur-md">
+      {/* ── Header: FIXED con padding-top safe-area — pattern corretto per iOS PWA ── */}
+      <header
+        className="fixed top-0 left-0 right-0 z-40 border-b border-film-border bg-film-black/95 backdrop-blur-md"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-center">
           <div className="flex items-center gap-2">
             <span className="font-display text-lg tracking-[0.2em] text-film-text">CINEMATIC</span>
@@ -296,8 +299,11 @@ export default function App() {
         </div>
       </header>
 
-      {/* ── Main content ── */}
-      <main className={view === 'shuffle' ? "max-w-3xl mx-auto" : "max-w-3xl mx-auto px-4 py-4 pb-28"}>
+      {/* ── Main content — padding-top compensa l'header fixed ── */}
+      <main
+        className={view === 'shuffle' ? "max-w-3xl mx-auto" : "max-w-3xl mx-auto px-4 py-4 pb-28"}
+        style={{ paddingTop: view === 'shuffle' ? 0 : 'calc(env(safe-area-inset-top) + 57px)' }}
+      >
         {view === 'home' && (
           <HomeView
             watchedIds={watchedIds}

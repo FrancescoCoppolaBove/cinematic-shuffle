@@ -16,8 +16,7 @@
   body {
     @apply bg-film-black text-film-text font-body;
     margin: 0;
-    /* Safe area — TOP on body so sticky header anchors below status bar correctly */
-    padding-top: env(safe-area-inset-top);
+    /* Safe area bottom — top gestito dall'header fixed */
     padding-bottom: env(safe-area-inset-bottom);
   }
 
@@ -50,12 +49,25 @@
 }
 
 @layer utilities {
+  /* Nascondi scrollbar ovunque su mobile */
+  html, body {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    overscroll-behavior: none;
+  }
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar { display: none; }
+
   /* Hide scrollbar but keep scroll functionality */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
   .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+  /* Prevent double scrollbars on nested scroll containers */
+  * { scrollbar-width: none; }
+  *::-webkit-scrollbar { display: none; }
 
   /* Safe area padding for fixed bottom nav */
   .pb-safe { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
