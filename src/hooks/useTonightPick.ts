@@ -268,7 +268,8 @@ function buildReason(
 export function useTonightPick(
   watchlist: WatchlistItem[],
   watchedMovies: WatchedMovie[],
-  watchedIds: Set<number>
+  watchedIds: Set<number>,
+  seed: number = 0
 ): {
   picks: TonightPick[];
   ctx: TimeContext;
@@ -291,6 +292,12 @@ export function useTonightPick(
 
     const result: TonightPick[] = [];
     const usedIds = new Set<number>();
+
+    // Rotation: quando seed > 0, ruota la lista per mostrare pick diversi
+    if (seed > 0) {
+      const offset = (seed * 3) % Math.max(1, scored.length);
+      scored.push(...scored.splice(0, offset));
+    }
 
     // SLOT 1: "Perfetto per stasera" — massimo score composito
     const best = scored[0];
@@ -321,7 +328,7 @@ export function useTonightPick(
     }
 
     return result;
-  }, [watchlist, watchedIds, taste, ctx]);
+  }, [watchlist, watchedIds, taste, ctx, seed]);
 
   return { picks, ctx, taste, hasPicks: picks.length > 0 };
 }

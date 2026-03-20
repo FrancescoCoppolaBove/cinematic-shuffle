@@ -174,7 +174,7 @@ export interface TrendingItem {
   overview: string;
 }
 
-export type AppView = 'home' | 'shuffle' | 'tonight' | 'search' | 'watched' | 'watchlist' | 'profile';
+export type AppView = 'home' | 'shuffle' | 'tonight' | 'search' | 'profile';
 
 export const TMDB_MOVIE_GENRES: TMDBGenre[] = [
   { id: 28, name: 'Azione' },

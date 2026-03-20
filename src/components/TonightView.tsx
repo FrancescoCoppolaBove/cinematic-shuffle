@@ -43,7 +43,8 @@ const SLOT_LABELS: Record<TonightPick['slot'], { label: string; color: string; b
 };
 
 export function TonightView({ watchlist, watchedMovies, watchedIds, onOpenMovie }: TonightViewProps) {
-  const { picks, ctx, taste, hasPicks } = useTonightPick(watchlist, watchedMovies, watchedIds);
+  const [seed, setSeed] = useState(0);
+  const { picks, ctx, taste, hasPicks } = useTonightPick(watchlist, watchedMovies, watchedIds, seed);
 
   const hour = ctx.hour;
   const greeting = getGreeting(hour);
@@ -86,7 +87,7 @@ export function TonightView({ watchlist, watchedMovies, watchedIds, onOpenMovie 
             <p className="text-film-muted text-sm mt-0.5">{contextLabel}</p>
           </div>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => setSeed(s => s + 1)}
             className="p-2.5 rounded-xl bg-film-surface border border-film-border text-film-muted active:scale-90 transition-transform"
             title="Rigenera"
           >

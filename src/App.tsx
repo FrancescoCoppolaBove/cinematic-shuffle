@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { TrendingUp, Shuffle, Search, Eye, Bookmark, X, CheckCircle, User, Moon } from 'lucide-react';
+import { TrendingUp, Shuffle, Search, X, CheckCircle, User, Moon } from 'lucide-react';
 import type { AppView, TMDBMovieDetail } from './types';
 import { useAuth } from './hooks/useAuth';
 import { useWatched } from './hooks/useWatched';
@@ -10,8 +10,6 @@ import { HomeView } from './components/HomeView';
 import { TonightView } from './components/TonightView';
 import { ShuffleView } from './components/ShuffleView';
 import { SearchView } from './components/SearchView';
-import { WatchedView } from './components/WatchedView';
-import { WatchlistView } from './components/WatchlistView';
 import { ProfileView } from './components/ProfileView';
 import { InstallPrompt } from './components/InstallPrompt';
 import { MovieDetailScreen } from './components/MovieDetailScreen';
@@ -64,13 +62,11 @@ function LoginScreen({ onSignIn, loading, error }: {
 
 // ─── Nav items ──────────────────────────────────────────────────
 const NAV: { view: AppView; icon: typeof Shuffle; label: string }[] = [
-  { view: 'home',      icon: TrendingUp, label: 'Home'      },
-  { view: 'tonight',   icon: Moon,       label: 'Stasera'   },
-  { view: 'shuffle',   icon: Shuffle,    label: 'Shuffle'   },
-  { view: 'search',    icon: Search,     label: 'Cerca'     },
-  { view: 'watchlist', icon: Bookmark,   label: 'Watchlist' },
-  { view: 'watched',   icon: Eye,        label: 'Visti'     },
-  { view: 'profile',   icon: User,       label: 'Profilo'   },
+  { view: 'home',    icon: TrendingUp, label: 'Home'    },
+  { view: 'tonight', icon: Moon,       label: 'Stasera' },
+  { view: 'shuffle', icon: Shuffle,    label: 'Shuffle' },
+  { view: 'search',  icon: Search,     label: 'Cerca'   },
+  { view: 'profile', icon: User,       label: 'Profilo' },
 ];
 
 // Labels for back button per ogni tab
@@ -79,8 +75,6 @@ const VIEW_LABELS: Record<AppView, string> = {
   home: 'Home',
   shuffle: 'Shuffle',
   search: 'Cerca',
-  watchlist: 'Watchlist',
-  watched: 'Visti',
   profile: 'Profilo',
 };
 
@@ -98,7 +92,7 @@ export default function App() {
 
   const { user, loading: authLoading, error: authError, signInWithGoogle, signOut } = useAuth();
   const {
-    watchedMovies, watchedIds, watchlist, watchlistIds, loading: watchedLoading,
+    watchedMovies, watchedIds, watchlist, watchlistIds,
     markWatched, unmarkWatched, updateRating, toggleLiked, incrementRewatch,
     addToWatchlist, removeFromWatchlist,
   } = useWatched(user);
@@ -112,7 +106,6 @@ export default function App() {
 
   useEffect(() => { if (authError) showToast(authError, 'info'); }, [authError, showToast]);
   useEffect(() => {
-    if (user && !authLoading) showToast(`Bentornato, ${user.displayName?.split(' ')[0] || 'back'}!`, 'info');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid]);
 
@@ -341,26 +334,23 @@ export default function App() {
             onOpenMovieGlobal={(id: number, mt: 'movie' | 'tv', playlist?: PlaylistItem[], index?: number) => openWithPlaylist(id, mt, playlist, index, 'Cerca')}
           />
         )}
-        {view === 'watched' && (
-          <WatchedView
-            {...sharedProps}
-            loading={watchedLoading}
-            onOpenMovieGlobal={(id: number, mt: 'movie' | 'tv', playlist?: PlaylistItem[], index?: number) => openWithPlaylist(id, mt, playlist, index, 'Visti')}
-          />
-        )}
-        {view === 'watchlist' && (
-          <WatchlistView
-            watchlist={watchlist}
-            {...sharedProps}
-            onOpenMovieGlobal={(id: number, mt: 'movie' | 'tv', playlist?: PlaylistItem[], index?: number) => openWithPlaylist(id, mt, playlist, index, 'Watchlist')}
-          />
-        )}
+
         {view === 'profile' && (
           <ProfileView
             user={user}
             watchedMovies={watchedMovies}
             watchlist={watchlist}
+            watchedIds={watchedIds}
+            watchlistIds={watchlistIds}
+            likedIds={likedIds}
+            getPersonalRating={getPersonalRating}
             onUpdateRating={updateRating}
+            onMarkWatched={markWatched}
+            onUnmarkWatched={unmarkWatched}
+            onToggleLiked={toggleLiked}
+            onAddToWatchlist={addToWatchlist}
+            onRemoveFromWatchlist={removeFromWatchlist}
+            onOpenMovieGlobal={(id, mt, playlist, index) => openWithPlaylist(id, mt, playlist, index, 'Profilo')}
             onSignOut={signOut}
           />
         )}
