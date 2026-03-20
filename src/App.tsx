@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { TrendingUp, Shuffle, Search, Eye, Bookmark, X, CheckCircle } from 'lucide-react';
+import { TrendingUp, Shuffle, Search, Eye, Bookmark, X, CheckCircle, User } from 'lucide-react';
 import type { AppView, TMDBMovieDetail } from './types';
 import { useAuth } from './hooks/useAuth';
 import { useWatched } from './hooks/useWatched';
@@ -68,6 +68,7 @@ const NAV: { view: AppView; icon: typeof Shuffle; label: string }[] = [
   { view: 'search',    icon: Search,     label: 'Cerca'     },
   { view: 'watchlist', icon: Bookmark,   label: 'Watchlist' },
   { view: 'watched',   icon: Eye,        label: 'Visti'     },
+  { view: 'profile',   icon: User,       label: 'Profilo'   },
 ];
 
 // Labels for back button per ogni tab
@@ -242,8 +243,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-film-black text-film-text"
-      style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div className="min-h-screen bg-film-black text-film-text" style={{ "--header-height": "57px", "--nav-height": "calc(56px + env(safe-area-inset-bottom))", paddingTop: "env(safe-area-inset-top)" } as React.CSSProperties}>
       <div className="fixed inset-0 pointer-events-none opacity-30 bg-grain z-50" />
 
       {/* PWA update banner */}
@@ -286,23 +286,13 @@ export default function App() {
         ))}
       </div>
 
-      {/* ── Header ── */}
+      {/* ── Header — minimal, no profile avatar ── */}
       <header className="sticky top-0 z-40 border-b border-film-border bg-film-black/90 backdrop-blur-md">
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-center">
           <div className="flex items-center gap-2">
             <span className="font-display text-lg tracking-[0.2em] text-film-text">CINEMATIC</span>
             <span className="font-display text-lg tracking-[0.2em] text-film-accent">SHUFFLE</span>
           </div>
-          <button onClick={() => { handleNavChange('profile' as AppView); }} className="group">
-            <div className="w-7 h-7 rounded-full overflow-hidden border border-film-border group-hover:border-film-accent transition-colors">
-              {user.photoURL
-                ? <img src={user.photoURL} alt={user.displayName || ''} className="w-full h-full object-cover" />
-                : <div className="w-full h-full bg-film-accent flex items-center justify-center text-film-black text-xs font-bold">
-                    {(user.displayName || 'U')[0].toUpperCase()}
-                  </div>
-              }
-            </div>
-          </button>
         </div>
       </header>
 
@@ -360,7 +350,7 @@ export default function App() {
       </main>
 
       {/* ── Bottom nav ── */}
-      {view !== 'profile' && (
+      {true && (
         <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-film-border bg-film-black/95 backdrop-blur-md"
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <div className="max-w-3xl mx-auto px-4 flex">
@@ -371,7 +361,19 @@ export default function App() {
                   className={cn('flex-1 flex flex-col items-center gap-1 py-3 transition-all relative',
                     active ? 'text-film-accent' : 'text-film-subtle hover:text-film-muted')}>
                   {active && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-film-accent rounded-full" />}
-                  <Icon size={19} strokeWidth={active ? 2 : 1.5} />
+                  {v === 'profile' ? (
+                    <div className={cn('w-5 h-5 rounded-full overflow-hidden border transition-colors',
+                      active ? 'border-film-accent' : 'border-film-subtle')}>
+                      {user.photoURL
+                        ? <img src={user.photoURL} alt="" className="w-full h-full object-cover" />
+                        : <div className="w-full h-full bg-film-accent flex items-center justify-center text-film-black text-[8px] font-bold">
+                            {(user.displayName || 'U')[0].toUpperCase()}
+                          </div>
+                      }
+                    </div>
+                  ) : (
+                    <Icon size={19} strokeWidth={active ? 2 : 1.5} />
+                  )}
                   <span className="text-[9px] uppercase tracking-widest font-medium">{label}</span>
                 </button>
               );
@@ -380,15 +382,7 @@ export default function App() {
         </nav>
       )}
 
-      {/* Profile back button */}
-      {view === 'profile' && (
-        <div className="fixed bottom-6 left-0 right-0 flex justify-center z-40">
-          <button onClick={() => handleNavChange('home')}
-            className="flex items-center gap-2 px-5 py-2.5 bg-film-surface border border-film-border rounded-full text-film-muted text-sm transition-all active:scale-95">
-            ← Torna alla home
-          </button>
-        </div>
-      )}
+      {/* Profile tab is now in bottom nav — no separate back button needed */}
 
       {/* ── Movie Detail Fullscreen Overlay ── */}
       {navStack.isOpen && detailMovie && (
