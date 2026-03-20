@@ -15,8 +15,9 @@ export const getImageUrl = (
 
 export const getProviderLogoUrl = (path: string) => `${PROVIDER_IMG}${path}`;
 
-export function getTitle(item: { title?: string; name?: string }): string {
-  return item.title || item.name || 'Titolo sconosciuto';
+export function getTitle(item: { title?: string; name?: string; original_title?: string; original_name?: string }): string {
+  // Usa sempre il titolo originale (inglese o lingua originale), fallback al localizzato
+  return item.original_title || item.original_name || item.title || item.name || 'Titolo sconosciuto';
 }
 export function getReleaseDate(item: { release_date?: string; first_air_date?: string }): string {
   return item.release_date || item.first_air_date || '';

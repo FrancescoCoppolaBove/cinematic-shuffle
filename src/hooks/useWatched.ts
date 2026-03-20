@@ -52,6 +52,7 @@ export function useWatched(user: User | null) {
     const entry: Omit<WatchedMovie, 'addedAt'> = {
       id: movie.id,
       title: getTitle(movie),
+      original_title: movie.original_title || movie.original_name,
       poster_path: movie.poster_path,
       release_date: getReleaseDate(movie),
       vote_average: movie.vote_average,
@@ -103,6 +104,7 @@ export function useWatched(user: User | null) {
     const item: Omit<WatchlistItem, 'addedAt'> = {
       id: movie.id,
       title: getTitle(movie),
+      original_title: movie.original_title || movie.original_name,
       poster_path: movie.poster_path,
       release_date: getReleaseDate(movie),
       vote_average: movie.vote_average,
