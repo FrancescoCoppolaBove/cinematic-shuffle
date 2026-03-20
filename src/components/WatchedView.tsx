@@ -158,7 +158,7 @@ onOpenMovieGlobal,
                   key={movie.id}
                   movie={movie}
                   isLoading={loadingId === movie.id}
-                  onSelect={() => handleSelect(movie, filtered, idx)}
+                  onSelect={() => handleSelect(movie)}
                   onCardView={() => handleSelectByIndex(idx)}
                 />
               ))}

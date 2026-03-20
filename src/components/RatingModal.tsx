@@ -86,7 +86,7 @@ export function RatingModal({
               icon={<Heart size={26} fill={liked ? 'currentColor' : 'none'} strokeWidth={liked ? 2 : 1.5} />}
               active={liked}
               activeColor="text-pink-400"
-              onClick={() => setLiked(!liked)}
+              onClick={() => { const newLiked = !liked; setLiked(newLiked); if (newLiked) setWatched(true); }}
             />
             <CtaButton
               label="Watchlist"

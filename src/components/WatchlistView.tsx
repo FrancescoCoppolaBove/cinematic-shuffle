@@ -35,7 +35,6 @@ onOpenMovieGlobal,
   const [loadingId, setLoadingId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [filters, setFilters] = useState<GridFilters>(DEFAULT_GRID_FILTERS);
-  const [cardIndex, setCardIndex] = useState(0);
 
   const filtered = useMemo(() => {
     let list = [...watchlist];
@@ -149,16 +148,15 @@ onOpenMovieGlobal,
               onToggleLiked={onToggleLiked}
               onOpenFull={handleOpenRelated}
               onClose={() => setViewMode('grid')}
-              initialIndex={cardIndex}
             />
           ) : (
             <div className="grid grid-cols-3 gap-2.5">
-              {filtered.map((item, idx) => (
+              {filtered.map((item) => (
                 <WatchlistCard
                   key={item.id}
                   item={item}
                   isLoading={loadingId === item.id}
-                  onSelect={() => { setCardIndex(idx); handleSelect(item, filtered, idx); }}
+                  onSelect={() => handleSelect(item)}
                   onRemove={() => onRemoveFromWatchlist(item.id)}
                 />
               ))}

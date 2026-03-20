@@ -38,11 +38,20 @@ export function SearchView({
     }, 400);
   }
 
+  // Quando l'utente torna alla ricerca, re-mostra i risultati precedenti
+  async function handleFocus() {
+    if (query.trim() && results.length === 0) {
+      setLoading(true);
+      try { setResults(await searchContent(query)); }
+      catch { /* silente */ }
+      finally { setLoading(false); }
+    }
+  }
+
   function handleSelect(result: SearchResult) {
-    // Always open fullscreen via global navigation stack
+    // Open fullscreen — preserva query e results per quando l'utente torna indietro
     onOpenMovieGlobal?.(result.id, result.media_type);
-    setResults([]);
-    setQuery('');
+    setResults([]); // chiudi solo il dropdown, non la query
   }
 
   return (
@@ -59,6 +68,7 @@ export function SearchView({
             value={query}
             onChange={e => handleSearch(e.target.value)}
             autoFocus
+            onFocus={handleFocus}
             className="flex-1 bg-transparent text-film-text placeholder:text-film-subtle text-base focus:outline-none"
           />
           {query && (
