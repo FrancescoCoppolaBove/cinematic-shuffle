@@ -133,7 +133,9 @@ export interface WatchedMovie {
   vote_average: number;
   personal_rating: number | null;
   liked: boolean;
-  rewatchCount: number;            // volte che l'utente ha rivisto
+  rewatchCount: number;
+  genre_ids: number[];
+  runtime?: number | null;         // durata in minuti
   addedAt: string;
   media_type: 'movie' | 'tv';
 }
@@ -145,6 +147,8 @@ export interface WatchlistItem {
   poster_path: string | null;
   release_date: string;
   vote_average: number;
+  genre_ids: number[];
+  runtime?: number | null;         // durata in minuti
   addedAt: string;
   media_type: 'movie' | 'tv';
 }
@@ -170,7 +174,7 @@ export interface TrendingItem {
   overview: string;
 }
 
-export type AppView = 'home' | 'shuffle' | 'search' | 'watched' | 'watchlist' | 'profile';
+export type AppView = 'home' | 'shuffle' | 'tonight' | 'search' | 'watched' | 'watchlist' | 'profile';
 
 export const TMDB_MOVIE_GENRES: TMDBGenre[] = [
   { id: 28, name: 'Azione' },

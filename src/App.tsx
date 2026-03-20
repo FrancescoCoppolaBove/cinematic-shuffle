@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { TrendingUp, Shuffle, Search, Eye, Bookmark, X, CheckCircle, User } from 'lucide-react';
+import { TrendingUp, Shuffle, Search, Eye, Bookmark, X, CheckCircle, User, Moon } from 'lucide-react';
 import type { AppView, TMDBMovieDetail } from './types';
 import { useAuth } from './hooks/useAuth';
 import { useWatched } from './hooks/useWatched';
@@ -7,6 +7,7 @@ import { useNavigationStack } from './hooks/useNavigationStack';
 import type { PlaylistItem } from './hooks/useNavigationStack';
 import { getMovieDetail } from './services/tmdb';
 import { HomeView } from './components/HomeView';
+import { TonightView } from './components/TonightView';
 import { ShuffleView } from './components/ShuffleView';
 import { SearchView } from './components/SearchView';
 import { WatchedView } from './components/WatchedView';
@@ -64,6 +65,7 @@ function LoginScreen({ onSignIn, loading, error }: {
 // ─── Nav items ──────────────────────────────────────────────────
 const NAV: { view: AppView; icon: typeof Shuffle; label: string }[] = [
   { view: 'home',      icon: TrendingUp, label: 'Home'      },
+  { view: 'tonight',   icon: Moon,       label: 'Stasera'   },
   { view: 'shuffle',   icon: Shuffle,    label: 'Shuffle'   },
   { view: 'search',    icon: Search,     label: 'Cerca'     },
   { view: 'watchlist', icon: Bookmark,   label: 'Watchlist' },
@@ -73,6 +75,7 @@ const NAV: { view: AppView; icon: typeof Shuffle; label: string }[] = [
 
 // Labels for back button per ogni tab
 const VIEW_LABELS: Record<AppView, string> = {
+  tonight: 'Stasera',
   home: 'Home',
   shuffle: 'Shuffle',
   search: 'Cerca',
@@ -304,6 +307,14 @@ export default function App() {
         className={view === 'shuffle' ? "max-w-3xl mx-auto" : "max-w-3xl mx-auto px-4 py-4 pb-28"}
         style={{ paddingTop: view === 'shuffle' ? 0 : 'calc(env(safe-area-inset-top) + 57px)' }}
       >
+        {view === 'tonight' && (
+          <TonightView
+            watchlist={watchlist}
+            watchedMovies={watchedMovies}
+            watchedIds={watchedIds}
+            onOpenMovie={(id, mt) => openWithPlaylist(id, mt, undefined, undefined, 'Stasera')}
+          />
+        )}
         {view === 'home' && (
           <HomeView
             watchedIds={watchedIds}

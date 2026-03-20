@@ -59,6 +59,8 @@ export function useWatched(user: User | null) {
       personal_rating: personalRating,
       liked: false,
       rewatchCount: 0,
+      genre_ids: movie.genres?.map(g => g.id) ?? [],
+      runtime: movie.runtime ?? movie.episode_run_time?.[0] ?? null,
       media_type: movie.media_type,
     };
     await addWatchedToFirestore(user.uid, entry);
@@ -108,6 +110,8 @@ export function useWatched(user: User | null) {
       poster_path: movie.poster_path,
       release_date: getReleaseDate(movie),
       vote_average: movie.vote_average,
+      genre_ids: movie.genres?.map(g => g.id) ?? [],
+      runtime: movie.runtime ?? movie.episode_run_time?.[0] ?? null,
       media_type: movie.media_type,
     };
     await addToWatchlistFirestore(user.uid, item);
