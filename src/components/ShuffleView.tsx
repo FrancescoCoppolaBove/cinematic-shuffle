@@ -6,6 +6,7 @@ import { ShuffleCard } from './ShuffleCard';
 import { FilterPanel } from './FilterPanel';
 import { cn } from '../utils';
 import type { WatchedMovie } from '../types';
+import type { RatingResult } from './RatingModal';
 import { useUserTaste } from '../hooks/useUserTaste';
 
 interface ShuffleViewProps {
@@ -18,6 +19,7 @@ interface ShuffleViewProps {
   onUpdateRating: (id: number, rating: number | null) => Promise<void>;
   onAddToWatchlist: (movie: TMDBMovieDetail) => Promise<void>;
   onRemoveFromWatchlist: (id: number) => Promise<void>;
+  likedIds?: Set<number>;
   onIncrementRewatch?: (id: number, delta: number) => Promise<void>;
   onOpenMovieGlobal?: (id: number, mediaType: 'movie' | 'tv', playlist?: import('../hooks/useNavigationStack').PlaylistItem[], index?: number) => void;
 }
@@ -34,6 +36,7 @@ export function ShuffleView({
   watchedIds, watchlistIds, watchedMovies,
   onMarkWatched, onUnmarkWatched,
   onAddToWatchlist, onRemoveFromWatchlist,
+  likedIds, getPersonalRating,
   onIncrementRewatch,
   onOpenMovieGlobal,
 }: ShuffleViewProps) {
@@ -134,10 +137,15 @@ export function ShuffleView({
           isWatched={watchedIds.has(movie.id)}
           isOnWatchlist={watchlistIds.has(movie.id)}
           onShuffle={handleShuffle}
-          onMarkWatched={(rating, _liked) => { onMarkWatched(movie, rating); }}
+          onMarkWatched={async (result: RatingResult) => {
+            if (result.watched) await onMarkWatched(movie, result.rating);
+            else await onUnmarkWatched(movie.id);
+          }}
           onUnmarkWatched={() => onUnmarkWatched(movie.id)}
           onAddToWatchlist={() => onAddToWatchlist(movie)}
           onRemoveFromWatchlist={() => onRemoveFromWatchlist(movie.id)}
+          isLiked={likedIds?.has(movie.id) ?? false}
+          personalRating={getPersonalRating(movie.id)}
           onOpenDetail={() => onOpenMovieGlobal?.(movie.id, movie.media_type)}
           onIncrementRewatch={onIncrementRewatch}
           rewatchCount={watchedMovies.find(m => m.id === movie.id)?.rewatchCount ?? 0}

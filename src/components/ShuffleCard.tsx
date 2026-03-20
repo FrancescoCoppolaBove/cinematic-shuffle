@@ -4,32 +4,35 @@
  * "Già visto" apre la RatingModal per votare subito.
  */
 import { useState } from 'react';
-import { Play, Eye, EyeOff, Bookmark, BookmarkCheck, Shuffle, ChevronRight, Star, Clock, Tv, Film, MapPin } from 'lucide-react';
+import { Play, Eye, Bookmark, BookmarkCheck, Shuffle, ChevronRight, Star, Clock, Tv, Film, MapPin } from 'lucide-react';
 import type { TMDBMovieDetail } from '../types';
 import { getImageUrl, getTitle, getReleaseDate, getBestTrailer, getWatchProviders, getProviderLogoUrl } from '../services/tmdb';
 import { formatYear, formatRating, formatRuntime, cn } from '../utils';
 import { RatingModal } from './RatingModal';
+import type { RatingResult } from './RatingModal';
 
 interface ShuffleCardProps {
   movie: TMDBMovieDetail;
   isWatched: boolean;
   isOnWatchlist: boolean;
   onShuffle: () => void;
-  onMarkWatched: (rating: number | null, liked: boolean) => void;
+  onMarkWatched: (result: RatingResult) => void;
   onUnmarkWatched: () => void;
   onAddToWatchlist: () => void;
   onRemoveFromWatchlist: () => void;
   onOpenDetail: () => void;
   onIncrementRewatch?: (id: number, delta: number) => Promise<void>;
   rewatchCount?: number;
+  isLiked?: boolean;
+  personalRating?: number | null;
   loading?: boolean;
 }
 
 export function ShuffleCard({
   movie, isWatched, isOnWatchlist,
-  onShuffle, onMarkWatched, onUnmarkWatched,
+  onShuffle, onMarkWatched, onUnmarkWatched: _onUnmarkWatched,
   onAddToWatchlist, onRemoveFromWatchlist,
-  onOpenDetail, onIncrementRewatch, rewatchCount = 0, loading,
+  onOpenDetail, onIncrementRewatch, rewatchCount = 0, isLiked = false, personalRating = null, loading,
 }: ShuffleCardProps) {
   const [posterErr, setPosterErr] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
@@ -193,9 +196,9 @@ export function ShuffleCard({
               <span className="text-xs font-bold">{loading ? '...' : 'Altro'}</span>
             </button>
 
-            {/* Già visto — apre RatingModal */}
+            {/* Già visto — apre sempre il modal */}
             <button
-              onClick={isWatched ? onUnmarkWatched : () => setShowRatingModal(true)}
+              onClick={() => setShowRatingModal(true)}
               className={cn(
                 'flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-2xl border transition-all active:scale-95 text-xs font-medium',
                 isWatched
@@ -203,7 +206,7 @@ export function ShuffleCard({
                   : 'border-film-border bg-film-surface text-film-muted'
               )}
             >
-              {isWatched ? <EyeOff size={20} /> : <Eye size={20} />}
+              <Eye size={20} />
               <span>{isWatched ? 'Visto ✓' : 'Già visto'}</span>
             </button>
 
@@ -259,10 +262,15 @@ export function ShuffleCard({
       {showRatingModal && (
         <RatingModal
           movie={movie}
-          onConfirm={(rating, liked) => {
+          initialWatched={isWatched}
+          initialRating={personalRating}
+          initialLiked={isLiked}
+          initialWatchlist={isOnWatchlist}
+          onConfirm={(result: RatingResult) => {
             setShowRatingModal(false);
-            onMarkWatched(rating, liked);
+            onMarkWatched(result);
           }}
+          onToggleWatchlist={isOnWatchlist ? onRemoveFromWatchlist : onAddToWatchlist}
           onCancel={() => setShowRatingModal(false)}
         />
       )}

@@ -32,26 +32,23 @@ export function SearchView({
     if (!q.trim()) { setResults([]); return; }
     timerRef.current = setTimeout(async () => {
       setLoading(true);
-      try { setResults(await searchContent(q)); }
+      try { const r = await searchContent(q); setResults(r); setDropdownOpen(r.length > 0); }
       catch { setError('Errore nella ricerca'); }
       finally { setLoading(false); }
     }, 400);
   }
 
-  // Quando l'utente torna alla ricerca, re-mostra i risultati precedenti
-  async function handleFocus() {
-    if (query.trim() && results.length === 0) {
-      setLoading(true);
-      try { setResults(await searchContent(query)); }
-      catch { /* silente */ }
-      finally { setLoading(false); }
-    }
+  // Quando l'utente torna alla ricerca, re-mostra i risultati esistenti
+  function handleFocus() {
+    if (results.length > 0) setDropdownOpen(true);
   }
 
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
   function handleSelect(result: SearchResult) {
-    // Open fullscreen — preserva query e results per quando l'utente torna indietro
+    // Apri il film — mantieni query E results per quando l'utente torna
     onOpenMovieGlobal?.(result.id, result.media_type);
-    setResults([]); // chiudi solo il dropdown, non la query
+    setDropdownOpen(false); // chiudi solo il dropdown
   }
 
   return (
@@ -72,14 +69,14 @@ export function SearchView({
             className="flex-1 bg-transparent text-film-text placeholder:text-film-subtle text-base focus:outline-none"
           />
           {query && (
-            <button onClick={() => { setQuery(''); setResults([]); }} className="text-film-muted active:opacity-60">
+            <button onClick={() => { setQuery(''); setResults([]); setDropdownOpen(false); }} className="text-film-muted active:opacity-60">
               <X size={16} />
             </button>
           )}
         </div>
 
         {/* Dropdown results */}
-        {results.length > 0 && (
+        {results.length > 0 && dropdownOpen && (
           <div className="absolute top-full mt-2 left-0 right-0 bg-film-card border border-film-border rounded-2xl overflow-hidden z-20 shadow-2xl max-h-[60vh] overflow-y-auto">
             {results.map(r => (
               <button

@@ -1,39 +1,77 @@
 /**
  * RatingModal — fullscreen stile Letterboxd.
- * Backdrop sfocato, poster grande, CTA Watched/Liked/Watchlist in alto,
- * stelle XXL con swipe orizzontale al centro, Done in basso.
+ * Usata sia per aggiungere che per modificare lo stato di un film.
+ * Pre-popola watched/liked/rating con i valori attuali.
+ * "Done" comunica tutto: { watched, rating, liked }
  */
 import { useState } from 'react';
-import { X, Eye, Heart, Bookmark } from 'lucide-react';
+import { X, Eye, Heart, Bookmark, BookmarkCheck } from 'lucide-react';
 import type { TMDBMovieDetail } from '../types';
 import { getImageUrl, getTitle, getReleaseDate } from '../services/tmdb';
 import { formatYear, cn } from '../utils';
 import { StarRating } from './StarRating';
 
+export interface RatingResult {
+  watched: boolean;
+  rating: number | null;
+  liked: boolean;
+}
+
 interface RatingModalProps {
   movie: TMDBMovieDetail;
+  // Valori iniziali (pre-popola lo stato corrente del film)
   initialWatched?: boolean;
+  initialRating?: number | null;
   initialLiked?: boolean;
   initialWatchlist?: boolean;
-  onConfirm: (rating: number | null, liked: boolean) => void;
+  showWatchlistBtn?: boolean;
+  onConfirm: (result: RatingResult) => void;
+  onToggleWatchlist?: () => void;
   onCancel: () => void;
 }
 
 export function RatingModal({
   movie,
-  initialWatched = true,
+  initialWatched = false,
+  initialRating = null,
   initialLiked = false,
   initialWatchlist = false,
+  showWatchlistBtn = true,
   onConfirm,
+  onToggleWatchlist,
   onCancel,
 }: RatingModalProps) {
-  const [rating, setRating] = useState<number | null>(null);
+  const [rating, setRating] = useState<number | null>(initialRating ?? null);
   const [liked, setLiked] = useState(initialLiked);
   const [watched, setWatched] = useState(initialWatched);
+  const [watchlist, setWatchlist] = useState(initialWatchlist);
 
   const poster = getImageUrl(movie.poster_path, 'w342');
   const backdrop = getImageUrl(movie.backdrop_path, 'w780');
   const title = getTitle(movie);
+
+  function handleWatchedToggle() {
+    const next = !watched;
+    setWatched(next);
+    // Se rimuove "visto", azzera anche liked e rating
+    if (!next) { setLiked(false); setRating(null); }
+  }
+
+  function handleLikedToggle() {
+    const next = !liked;
+    setLiked(next);
+    // Liked implica watched
+    if (next) setWatched(true);
+  }
+
+  function handleWatchlistToggle() {
+    setWatchlist(prev => !prev);
+    onToggleWatchlist?.();
+  }
+
+  function handleDone() {
+    onConfirm({ watched, rating, liked });
+  }
 
   return (
     <div className="fixed inset-0 z-[90]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
@@ -60,7 +98,7 @@ export function RatingModal({
           </button>
         </div>
 
-        {/* Poster — takes remaining space */}
+        {/* Poster */}
         <div className="flex-1 flex items-center justify-center px-6 py-4 min-h-0">
           <div className="relative w-full max-w-[280px] aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl border border-white/10">
             {poster
@@ -79,37 +117,42 @@ export function RatingModal({
               icon={<Eye size={26} strokeWidth={watched ? 2.5 : 1.5} />}
               active={watched}
               activeColor="text-green-400"
-              onClick={() => setWatched(!watched)}
+              onClick={handleWatchedToggle}
             />
             <CtaButton
               label="Liked"
               icon={<Heart size={26} fill={liked ? 'currentColor' : 'none'} strokeWidth={liked ? 2 : 1.5} />}
               active={liked}
               activeColor="text-pink-400"
-              onClick={() => { const newLiked = !liked; setLiked(newLiked); if (newLiked) setWatched(true); }}
+              onClick={handleLikedToggle}
             />
-            <CtaButton
-              label="Watchlist"
-              icon={<Bookmark size={26} strokeWidth={1.5} />}
-              active={initialWatchlist}
-              activeColor="text-purple-400"
-              onClick={() => {/* handled externally */}}
-            />
+            {showWatchlistBtn ? (
+              <CtaButton
+                label={watchlist ? 'Saved' : 'Watchlist'}
+                icon={watchlist
+                  ? <BookmarkCheck size={26} strokeWidth={2} />
+                  : <Bookmark size={26} strokeWidth={1.5} />
+                }
+                active={watchlist}
+                activeColor="text-purple-400"
+                onClick={handleWatchlistToggle}
+              />
+            ) : <div />}
           </div>
 
-          {/* Stars — XXL, swipe to rate */}
+          {/* Stars — solo attive se watched */}
           <div className="mb-2 text-center">
             <p className="text-white/40 text-xs uppercase tracking-widest mb-4">
-              {rating ? `${rating} / 5` : 'Rate'}
+              {!watched ? 'Segna come visto per votare' : rating ? `${rating} / 5` : 'Rate'}
             </p>
-            <div className="flex justify-center">
+            <div className={cn('flex justify-center', !watched && 'opacity-30 pointer-events-none')}>
               <StarRating value={rating} onChange={setRating} size="xl" />
             </div>
           </div>
 
           {/* Done */}
           <button
-            onClick={() => onConfirm(rating, liked)}
+            onClick={handleDone}
             className="w-full py-4 mt-5 bg-white text-film-black font-bold text-base rounded-2xl active:scale-[0.98] transition-transform"
           >
             Done
@@ -123,23 +166,13 @@ export function RatingModal({
 function CtaButton({
   label, icon, active, activeColor, onClick,
 }: {
-  label: string;
-  icon: React.ReactNode;
-  active: boolean;
-  activeColor: string;
-  onClick: () => void;
+  label: string; icon: React.ReactNode;
+  active: boolean; activeColor: string; onClick: () => void;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className="flex flex-col items-center gap-2 py-3 active:scale-95 transition-transform"
-    >
-      <span className={cn('transition-colors', active ? activeColor : 'text-white/40')}>
-        {icon}
-      </span>
-      <span className={cn('text-xs font-medium', active ? 'text-white' : 'text-white/40')}>
-        {label}
-      </span>
+    <button onClick={onClick} className="flex flex-col items-center gap-2 py-3 active:scale-95 transition-transform">
+      <span className={cn('transition-colors', active ? activeColor : 'text-white/40')}>{icon}</span>
+      <span className={cn('text-xs font-medium', active ? 'text-white' : 'text-white/40')}>{label}</span>
     </button>
   );
 }

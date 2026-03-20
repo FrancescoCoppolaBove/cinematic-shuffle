@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ChevronLeft, Star, Clock, Play,
-  Eye, EyeOff, Bookmark, BookmarkCheck, Heart,
+  Eye, Bookmark, BookmarkCheck, Heart,
   Tv, Film, MapPin, ChevronDown, ChevronUp, Shuffle,
 } from 'lucide-react';
 import type { TMDBMovieDetail, TMDBMovieBasic } from '../types';
@@ -11,6 +11,7 @@ import {
 } from '../services/tmdb';
 import { formatRuntime, formatYear, formatRating, cn } from '../utils';
 import { RatingModal } from './RatingModal';
+import type { RatingResult } from './RatingModal';
 import { StarRating } from './StarRating';
 import type { PlaylistItem } from '../hooks/useNavigationStack';
 
@@ -43,7 +44,7 @@ export function MovieDetailScreen({
   movie, isWatched, isOnWatchlist, personalRating,
   showShuffleBtn = false, backLabel = 'Indietro',
   playlist, playlistIndex = 0, onSwipeToIndex,
-  onBack, onMarkWatched, onUnmarkWatched, onUpdateRating,
+  onBack, onMarkWatched, onUnmarkWatched, onUpdateRating: _onUpdateRating,
   onAddToWatchlist, onRemoveFromWatchlist,
   onShuffle, onOpenMovie, onIncrementRewatch, onToggleLiked, isLiked = false, rewatchCount = 0, loading,
 }: MovieDetailScreenProps) {
@@ -397,7 +398,7 @@ export function MovieDetailScreen({
             {isWatched && (
               <div className="flex items-center gap-3 px-4 py-3 bg-film-surface rounded-2xl border border-film-border mb-4">
                 <span className="text-film-subtle text-xs uppercase tracking-wider shrink-0">Il tuo voto</span>
-                <StarRating value={personalRating ?? null} onChange={r => onUpdateRating?.(r)} size="sm" />
+                <StarRating value={personalRating ?? null} onChange={() => {}} readonly size="sm" />
               </div>
             )}
 
@@ -441,17 +442,37 @@ export function MovieDetailScreen({
                   <Play size={14} fill="currentColor" />Trailer
                 </a>
               )}
-              {!isWatched ? (
-                <button onClick={() => setShowRatingModal(true)}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border border-film-border bg-film-surface text-film-muted active:scale-95 transition-all">
-                  <Eye size={14} />Già visto
-                </button>
-              ) : (
-                <button onClick={onUnmarkWatched}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border border-film-red/50 bg-film-red/10 text-film-red active:scale-95 transition-all">
-                  <EyeOff size={14} />Rimuovi
+              {/* "Già visto" — apre sempre il modal, sia per aggiungere che per modificare */}
+              <button
+                onClick={() => setShowRatingModal(true)}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border transition-all active:scale-95',
+                  isWatched
+                    ? 'border-green-600/50 bg-green-950/30 text-green-400'
+                    : 'border-film-border bg-film-surface text-film-muted'
+                )}
+              >
+                <Eye size={14} />
+                {isWatched ? 'Visto ✓' : 'Già visto'}
+              </button>
+
+              {/* Liked badge — tap apre il modal */}
+              {isWatched && (
+                <button
+                  onClick={() => setShowRatingModal(true)}
+                  className={cn(
+                    'flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border transition-all active:scale-95',
+                    isLiked
+                      ? 'border-pink-500/40 bg-pink-950/30 text-pink-400'
+                      : 'border-film-border bg-film-surface text-film-muted'
+                  )}
+                >
+                  <Heart size={14} fill={isLiked ? 'currentColor' : 'none'} />
+                  {isLiked ? 'Piaciuto ♥' : 'Mi è piaciuto?'}
                 </button>
               )}
+
+              {/* Watchlist */}
               {!isOnWatchlist && !isWatched && (
                 <button onClick={onAddToWatchlist}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border border-film-border bg-film-surface text-film-muted active:scale-95 transition-all">
@@ -462,22 +483,6 @@ export function MovieDetailScreen({
                 <button onClick={onRemoveFromWatchlist}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border border-purple-500/40 bg-purple-900/20 text-purple-300 active:scale-95 transition-all">
                   <BookmarkCheck size={14} />In watchlist
-                </button>
-              )}
-
-              {/* Like — sempre visibile se il film è stato visto */}
-              {isWatched && onToggleLiked && (
-                <button
-                  onClick={() => onToggleLiked(movie.id)}
-                  className={cn(
-                    'flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border transition-all active:scale-95',
-                    isLiked
-                      ? 'border-pink-500/40 bg-pink-950/30 text-pink-400'
-                      : 'border-film-border bg-film-surface text-film-muted'
-                  )}
-                >
-                  <Heart size={14} fill={isLiked ? 'currentColor' : 'none'} />
-                  {isLiked ? 'Piaciuto ♥' : 'Mi è piaciuto?'}
                 </button>
               )}
             </div>
@@ -596,7 +601,24 @@ export function MovieDetailScreen({
       {showRatingModal && (
         <RatingModal
           movie={movie}
-          onConfirm={(r, _liked) => { setShowRatingModal(false); onMarkWatched(r); }}
+          initialWatched={isWatched}
+          initialRating={personalRating ?? null}
+          initialLiked={isLiked}
+          initialWatchlist={isOnWatchlist}
+          showWatchlistBtn={!isWatched}
+          onConfirm={(result: RatingResult) => {
+            setShowRatingModal(false);
+            if (result.watched) {
+              // Segna come visto (o aggiorna rating/liked)
+              onMarkWatched(result.rating);
+              if (result.liked && onToggleLiked && !isLiked) onToggleLiked(movie.id);
+              if (!result.liked && onToggleLiked && isLiked) onToggleLiked(movie.id);
+            } else if (isWatched) {
+              // Era visto, ora deselezionato → rimuovi
+              onUnmarkWatched();
+            }
+          }}
+          onToggleWatchlist={isOnWatchlist ? onRemoveFromWatchlist : onAddToWatchlist}
           onCancel={() => setShowRatingModal(false)}
         />
       )}

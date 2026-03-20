@@ -10,6 +10,7 @@ import {
 } from '../services/tmdb';
 import { formatRuntime, formatYear, formatRating, cn } from '../utils';
 import { RatingModal } from './RatingModal';
+import type { RatingResult } from './RatingModal';
 import { StarRating } from './StarRating';
 
 interface MovieCardProps {
@@ -404,7 +405,7 @@ export function MovieCard({
       {showRatingModal && (
         <RatingModal
           movie={movie}
-          onConfirm={r => { setShowRatingModal(false); onMarkWatched(r); }}
+          onConfirm={(result: RatingResult) => { setShowRatingModal(false); onMarkWatched(result.rating); }}
           onCancel={() => setShowRatingModal(false)}
         />
       )}
