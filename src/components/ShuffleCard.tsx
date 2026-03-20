@@ -86,6 +86,17 @@ export function ShuffleCard({
 
         <div className="p-4 space-y-3">
           {/* Poster + title + meta */}
+          {/* Title — full width, no squeezing */}
+          <div>
+            <h2 className="font-display text-2xl leading-tight tracking-wide text-film-text break-words mb-1">
+              {title}
+            </h2>
+            {movie.tagline && (
+              <p className="text-film-accent text-xs italic leading-snug mb-2">"{movie.tagline}"</p>
+            )}
+          </div>
+
+          {/* Poster + meta row */}
           <div className="flex gap-3">
             <div className="shrink-0 w-[72px] aspect-[2/3] rounded-xl overflow-hidden border border-film-border bg-film-card">
               {poster
@@ -95,15 +106,6 @@ export function ShuffleCard({
             </div>
 
             <div className="flex-1 min-w-0 py-0.5">
-              {/* Full title, no truncation */}
-              <h2 className="font-display text-xl leading-tight tracking-wide text-film-text break-words mb-1">
-                {title}
-              </h2>
-              {movie.tagline && (
-                <p className="text-film-accent text-xs italic leading-snug mb-2">"{movie.tagline}"</p>
-              )}
-
-              {/* Meta row */}
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <div className="flex items-center gap-1">
                   <Star size={11} className={ratingColor} fill="currentColor" />

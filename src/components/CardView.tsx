@@ -194,7 +194,13 @@ export function CardView({
   }
 
   async function handleRateChange(newRating: number | null) {
-    await onUpdateRating(item.id, newRating);
+    // Se non è ancora visto e l'utente vota, segnalo automaticamente come visto
+    if (newRating !== null && !isWatched) {
+      const d = await getDetail();
+      if (d) await onMarkWatched(d, newRating);
+    } else {
+      await onUpdateRating(item.id, newRating);
+    }
   }
 
   const isDragged = swipeLocked.current === 'h' && dragX !== 0;

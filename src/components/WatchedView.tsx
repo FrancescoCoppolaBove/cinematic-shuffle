@@ -53,14 +53,14 @@ onOpenMovieGlobal,
 
   const handleSelect = useCallback(async (movie: WatchedMovie, playlist?: WatchedMovie[], index?: number) => {
     if (onOpenMovieGlobal) {
-      // Open via global fullscreen with playlist
-      const pl = (playlist ?? filtered).map(m => ({
+      // Solo passa la playlist se siamo in modalità card (playlist esplicita passata)
+      const pl = playlist ? playlist.map(m => ({
         id: m.id,
         mediaType: m.media_type as 'movie' | 'tv',
         title: m.title,
         poster_path: m.poster_path,
-      }));
-      const idx = index ?? pl.findIndex(p => p.id === movie.id);
+      })) : undefined;
+      const idx = pl ? (index ?? pl.findIndex(p => p.id === movie.id)) : undefined;
       onOpenMovieGlobal(movie.id, movie.media_type, pl, idx);
       return;
     }

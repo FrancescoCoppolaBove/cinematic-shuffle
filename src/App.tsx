@@ -409,6 +409,8 @@ export default function App() {
           onAddToWatchlist={() => addToWatchlist(detailMovie)}
           onRemoveFromWatchlist={() => removeFromWatchlist(detailMovie.id)}
           onOpenMovie={openRelatedMovie}
+          onToggleLiked={toggleLiked}
+          isLiked={detailMovie ? (likedIds.has(detailMovie.id)) : false}
           onIncrementRewatch={incrementRewatch}
           rewatchCount={detailMovie ? (watchedMovies.find(m => m.id === detailMovie.id)?.rewatchCount ?? 0) : 0}
           loading={detailLoading}

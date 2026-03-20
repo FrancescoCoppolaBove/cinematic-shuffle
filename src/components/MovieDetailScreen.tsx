@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ChevronLeft, Star, Clock, Play,
-  Eye, EyeOff, Bookmark, BookmarkCheck,
+  Eye, EyeOff, Bookmark, BookmarkCheck, Heart,
   Tv, Film, MapPin, ChevronDown, ChevronUp, Shuffle,
 } from 'lucide-react';
 import type { TMDBMovieDetail, TMDBMovieBasic } from '../types';
@@ -32,7 +32,9 @@ interface MovieDetailScreenProps {
   onRemoveFromWatchlist: () => void;
   onShuffle?: () => void;
   onIncrementRewatch?: (id: number, delta: number) => Promise<void>;
+  onToggleLiked?: (id: number) => Promise<void>;
   onOpenMovie?: (id: number, mediaType: 'movie' | 'tv') => void;
+  isLiked?: boolean;
   rewatchCount?: number;
   loading?: boolean;
 }
@@ -43,7 +45,7 @@ export function MovieDetailScreen({
   playlist, playlistIndex = 0, onSwipeToIndex,
   onBack, onMarkWatched, onUnmarkWatched, onUpdateRating,
   onAddToWatchlist, onRemoveFromWatchlist,
-  onShuffle, onOpenMovie, onIncrementRewatch, rewatchCount = 0, loading,
+  onShuffle, onOpenMovie, onIncrementRewatch, onToggleLiked, isLiked = false, rewatchCount = 0, loading,
 }: MovieDetailScreenProps) {
   const [showFullCast, setShowFullCast] = useState(false);
   const [posterError, setPosterError] = useState(false);
@@ -460,6 +462,22 @@ export function MovieDetailScreen({
                 <button onClick={onRemoveFromWatchlist}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border border-purple-500/40 bg-purple-900/20 text-purple-300 active:scale-95 transition-all">
                   <BookmarkCheck size={14} />In watchlist
+                </button>
+              )}
+
+              {/* Like — sempre visibile se il film è stato visto */}
+              {isWatched && onToggleLiked && (
+                <button
+                  onClick={() => onToggleLiked(movie.id)}
+                  className={cn(
+                    'flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border transition-all active:scale-95',
+                    isLiked
+                      ? 'border-pink-500/40 bg-pink-950/30 text-pink-400'
+                      : 'border-film-border bg-film-surface text-film-muted'
+                  )}
+                >
+                  <Heart size={14} fill={isLiked ? 'currentColor' : 'none'} />
+                  {isLiked ? 'Piaciuto ♥' : 'Mi è piaciuto?'}
                 </button>
               )}
             </div>

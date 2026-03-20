@@ -18,6 +18,8 @@ interface WatchlistViewProps {
   onUnmarkWatched: (id: number) => Promise<void>;
   onUpdateRating: (id: number, rating: number | null) => Promise<void>;
   onAddToWatchlist: (movie: TMDBMovieDetail) => Promise<void>;
+  likedIds?: Set<number>;
+  onToggleLiked?: (id: number) => Promise<void>;
   onRemoveFromWatchlist: (id: number) => Promise<void>;
   onOpenMovieGlobal?: (id: number, mediaType: 'movie' | 'tv', playlist?: import('../hooks/useNavigationStack').PlaylistItem[], index?: number) => void;
 }
@@ -26,6 +28,7 @@ export function WatchlistView({
   watchlist, watchedIds, watchlistIds, getPersonalRating,
   onMarkWatched, onUnmarkWatched, onUpdateRating,
   onAddToWatchlist, onRemoveFromWatchlist,
+likedIds, onToggleLiked,
 onOpenMovieGlobal,
 }: WatchlistViewProps) {
   const [selectedMovie, setSelectedMovie] = useState<TMDBMovieDetail | null>(null);
@@ -51,13 +54,14 @@ onOpenMovieGlobal,
 
   const handleSelect = useCallback(async (item: WatchlistItem, playlist?: WatchlistItem[], index?: number) => {
     if (onOpenMovieGlobal) {
-      const pl = (playlist ?? filtered).map(m => ({
+      // Solo passa la playlist se siamo in modalità card (playlist esplicita passata)
+      const pl = playlist ? playlist.map(m => ({
         id: m.id,
         mediaType: m.media_type as 'movie' | 'tv',
         title: getTitle(m),
         poster_path: m.poster_path,
-      }));
-      const idx = index ?? pl.findIndex(p => p.id === item.id);
+      })) : undefined;
+      const idx = pl ? (index ?? pl.findIndex(p => p.id === item.id)) : undefined;
       onOpenMovieGlobal(item.id, item.media_type, pl, idx);
       return;
     }
@@ -141,6 +145,8 @@ onOpenMovieGlobal,
               onUpdateRating={onUpdateRating}
               onAddToWatchlist={onAddToWatchlist}
               onRemoveFromWatchlist={onRemoveFromWatchlist}
+              likedIds={likedIds}
+              onToggleLiked={onToggleLiked}
               onOpenFull={handleOpenRelated}
               onClose={() => setViewMode('grid')}
               initialIndex={cardIndex}
