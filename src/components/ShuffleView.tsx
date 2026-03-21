@@ -46,7 +46,7 @@ export function ShuffleView({
   const [openPerson, setOpenPerson] = useState<{id: number; name: string} | null>(null);
   const [openGenre, setOpenGenre] = useState<{id: number; name: string; type: 'genre'|'keyword'; mediaType: 'movie'|'tv'} | null>(null);
   const { movie, loading, error, hasSearched, shuffle } = useShuffle();
-  const { applyTasteToFilters } = useUserTaste(watchedMovies);
+  const { profile, getStrategyAndFilters } = useUserTaste(watchedMovies);
 
   const isWatched = movie ? watchedIds.has(movie.id) : false;
   const isOnWatchlist = movie ? watchlistIds.has(movie.id) : false;
@@ -65,9 +65,9 @@ export function ShuffleView({
     filters.withAwards,
   ].filter(Boolean).length;
 
-  function handleShuffle() {
-    const enrichedFilters = applyTasteToFilters(filters);
-    shuffle(enrichedFilters, watchedIds);
+  function handleShuffle(exploreMode = false) {
+    const strategyResult = getStrategyAndFilters(filters, exploreMode);
+    shuffle(strategyResult, watchedIds, profile);
     setShowFilters(false);
   }
 
@@ -143,7 +143,7 @@ export function ShuffleView({
 
         {/* Row 2: SHUFFLE button */}
         <button
-          onClick={handleShuffle}
+          onClick={() => handleShuffle()}
           disabled={loading}
           className={cn(
             'w-full flex items-center justify-center gap-3 py-3 rounded-2xl font-display text-lg tracking-widest transition-all active:scale-[0.98] disabled:opacity-60',

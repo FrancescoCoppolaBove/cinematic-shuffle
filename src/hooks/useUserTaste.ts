@@ -1,127 +1,367 @@
 /**
- * useUserTaste — recommendation engine basato sui gusti dell'utente.
+ * useUserTaste — motore di raccomandazione adattivo.
  *
- * Come funziona:
- * 1. Analizza i film che l'utente ha visto, con quanto li ha votati e se li ha "likati"
- * 2. Costruisce un profilo di generi preferiti, decadi, registi, voto medio
- * 3. Quando si fa Shuffle, se il profilo è abbastanza ricco (≥5 film visti),
- *    usa queste info per orientare i filtri verso i gusti dell'utente
- * 4. Introduce casualità controllata (70% gusti / 30% puro random) per non essere
- *    troppo prevedibile e continuare a far scoprire cose nuove
+ * ARCHITETTURA A TRE LIVELLI:
+ *
+ * 1. PROFILO UTENTE (buildProfile)
+ *    Analizza watchedMovies e costruisce un modello statistico:
+ *    - Pesi per genere: media pesata voto×liked su ogni genre_id
+ *    - Pesi per decade: distribuzione dei film liked
+ *    - Runtime preferita: distribuzione dei film liked
+ *    - Lingue originali preferite
+ *    - Soglia qualità TMDB calibrata sul voto medio personale
+ *    - Punteggio "esplorazione": quante categorie ha mai visto
+ *
+ * 2. STRATEGIA DI QUERY (getQueryStrategy)
+ *    Sceglie come costruire la query TMDB in base ai dati disponibili.
+ *    Più dati = più personalizzazione. Meno dati = più casualità.
+ *    Strategie: RANDOM | GENRE_SINGLE | GENRE_MULTI | EXPLORE
+ *    con probabilità graduate che si calibrano con l'uso.
+ *
+ * 3. SCORING POST-FETCH (scoreCandidates)
+ *    Dopo che TMDB restituisce 20 candidati, li scorea con:
+ *    - Affinità genere (peso 40%)
+ *    - Qualità relativa (voto TMDB vs soglia utente, peso 20%)
+ *    - Affinità decade (peso 15%)
+ *    - Affinità runtime (peso 15%)
+ *    - Novità (non in history recente, peso 10%)
+ *    Seleziona tra i top-3 con leggera casualità (non sempre il primo).
  */
 
 import { useMemo } from 'react';
 import type { WatchedMovie } from '../types';
 import type { MovieFilters } from '../types';
+import type { TMDBMovieBasic } from '../types';
 
-interface TasteProfile {
-  topGenreIds: number[];       // generi più votati/piaciuti
-  preferredDecade?: string;    // decade con più film piaciuti
-  avgRating: number;           // voto medio che l'utente dà
-  minAcceptableRating: number; // voto TMDB minimo basato su ciò che gli piace
-  hasEnoughData: boolean;      // true se ci sono abbastanza dati per inferire gusti
+// ── Profilo utente ─────────────────────────────────────────────────
+
+export interface UserProfile {
+  // Pesi genere: genreId → score 0–1 (1 = massima affinità)
+  genreWeights: Record<number, number>;
+  // Top generi ordinati per peso
+  topGenreIds: number[];
+  // Generi che l'utente NON ha mai visto (per esplorazione)
+  unseenGenreIds: number[];
+  // Pesi decade: "1990s" → score 0–1
+  decadeWeights: Record<string, number>;
+  // Runtime: range preferito [min, max] in minuti
+  preferredRuntimeRange: [number, number] | null;
+  // Lingue originali (ISO 639-1) ordinate per frequenza nei film liked
+  topLanguages: string[];
+  // Soglia voto TMDB calibrata sul comportamento utente
+  qualityThreshold: number;
+  // Quanti film visti: determina quanto pesare la personalizzazione
+  watchedCount: number;
+  // Confidenza del profilo: 0 (nessun dato) → 1 (profilo completo)
+  confidence: number;
+  // Fase utente
+  phase: 'cold' | 'warming' | 'calibrated' | 'expert';
 }
 
-// Mappa genere TMDB → lista film visti con quel genere
-// Non abbiamo i generi nel WatchedMovie, ma abbiamo i genre_ids dal tipo base.
-// Per semplicità usiamo la correlazione tramite vote_average e liked.
+// Tutti i genre_ids TMDB principali per film e TV
+const ALL_GENRE_IDS = [28,12,16,35,80,99,18,10751,14,36,27,10402,9648,10749,878,10770,53,10752,37,10759,10762,10763,10764,10765,10766,10767,10768];
 
-export function useUserTaste(watchedMovies: WatchedMovie[]): {
-  profile: TasteProfile;
-  applyTasteToFilters: (filters: MovieFilters) => MovieFilters;
-} {
-  const profile = useMemo<TasteProfile>(() => {
-    const rated = watchedMovies.filter(m => m.personal_rating !== null);
-    const hasEnoughData = watchedMovies.length >= 5;
+export function buildProfile(watchedMovies: WatchedMovie[]): UserProfile {
+  const count = watchedMovies.length;
 
-    if (!hasEnoughData) {
-      return {
-        topGenreIds: [],
-        avgRating: 0,
-        minAcceptableRating: 0,
-        hasEnoughData: false,
-      };
-    }
+  // Determina la fase dell'utente
+  const phase = count === 0 ? 'cold'
+    : count < 5 ? 'warming'
+    : count < 20 ? 'calibrated'
+    : 'expert';
 
-    // Calcola voto medio che l'utente assegna ai film
-    const avgRating = rated.length > 0
-      ? rated.reduce((sum, m) => sum + (m.personal_rating ?? 0), 0) / rated.length
-      : 0;
+  const confidence = Math.min(1, count / 30);
 
-    // I film "buoni" = votati ≥ 4 stelle o "likati"
-    const goodMovies = watchedMovies.filter(m =>
-      (m.personal_rating !== null && m.personal_rating >= 4) || m.liked
-    );
-
-    // Analisi decadi: qual è la decade con più film piaciuti
-    const decadeMap: Record<string, number> = {};
-    for (const m of goodMovies) {
-      const year = parseInt(m.release_date?.split('-')[0] ?? '0');
-      if (year < 1930) continue;
-      const decade = `${Math.floor(year / 10) * 10}s`;
-      decadeMap[decade] = (decadeMap[decade] ?? 0) + 1;
-    }
-    const preferredDecade = Object.entries(decadeMap)
-      .sort(([, a], [, b]) => b - a)[0]?.[0];
-
-    // Soglia minima voto TMDB: se l'utente ha votato alto i suoi film,
-    // alza la soglia del voto TMDB per proporre cose più di qualità
-    // (ma non troppo aggressivo — max 6.5)
-    let minAcceptableRating = 0;
-    if (avgRating >= 4 && rated.length >= 5) {
-      // Utente selettivo: proponi film con voto TMDB ≥ 6.5
-      minAcceptableRating = 6.5;
-    } else if (avgRating >= 3 && rated.length >= 3) {
-      // Utente moderato: proponi film con voto TMDB ≥ 5.5
-      minAcceptableRating = 5.5;
-    }
-
+  if (count === 0) {
     return {
-      topGenreIds: [],        // TODO: da popolare quando salviamo i generi nel WatchedMovie
-      preferredDecade,
-      avgRating,
-      minAcceptableRating,
-      hasEnoughData,
+      genreWeights: {}, topGenreIds: [], unseenGenreIds: ALL_GENRE_IDS,
+      decadeWeights: {}, preferredRuntimeRange: null, topLanguages: [],
+      qualityThreshold: 6.0, watchedCount: 0, confidence: 0, phase: 'cold',
     };
-  }, [watchedMovies]);
-
-  /**
-   * Modifica i filtri per includere le preferenze dell'utente.
-   * Applica solo se l'utente non ha già impostato filtri manuali
-   * per quella dimensione (non sovrascrive le scelte esplicite).
-   *
-   * Casualità: 70% del tempo applica i gusti, 30% puro random
-   * per continuare a far scoprire contenuti fuori dalla comfort zone.
-   */
-  function applyTasteToFilters(filters: MovieFilters): MovieFilters {
-    if (!profile.hasEnoughData) return filters;
-
-    // 30% chance: shuffle puro, niente personalizzazione
-    if (Math.random() < 0.30) return filters;
-
-    const modified = { ...filters };
-
-    // Alza il voto minimo se l'utente è selettivo (e non l'ha già impostato manualmente)
-    if (
-      profile.minAcceptableRating > 0 &&
-      (!modified.minImdbRating || modified.minImdbRating < profile.minAcceptableRating)
-    ) {
-      modified.minImdbRating = profile.minAcceptableRating;
-    }
-
-    // Decade preferita: applica solo se non c'è già un filtro anno/decade
-    // e solo il 50% delle volte (per variare)
-    if (
-      profile.preferredDecade &&
-      !modified.year &&
-      !modified.decade &&
-      Math.random() < 0.50
-    ) {
-      modified.decade = profile.preferredDecade;
-    }
-
-    return modified;
   }
 
-  return { profile, applyTasteToFilters };
+  // ── Calcola peso per ogni genere ──────────────────────────────
+  // Formula: media di (rating_score × liked_multiplier) per ogni film con quel genere
+  // rating_score: personal_rating normalizzato 0–1, fallback a voto TMDB/10
+  // liked_multiplier: 1.5 se liked, 1.0 altrimenti, 0.3 se votato basso (< 2.5)
+  const genreRaw: Record<number, { sum: number; count: number }> = {};
+
+  for (const m of watchedMovies) {
+    if (!m.genre_ids?.length) continue;
+    const personalScore = m.personal_rating !== null
+      ? m.personal_rating / 5        // 0–1
+      : m.vote_average / 10;         // fallback TMDB
+    const likedMult = m.liked ? 1.5
+      : (m.personal_rating !== null && m.personal_rating < 2.5) ? 0.3
+      : 1.0;
+    const score = Math.min(1, personalScore * likedMult);
+
+    for (const gid of m.genre_ids) {
+      if (!genreRaw[gid]) genreRaw[gid] = { sum: 0, count: 0 };
+      genreRaw[gid].sum += score;
+      genreRaw[gid].count += 1;
+    }
+  }
+
+  // Normalizza a 0–1
+  const genreAvg: Record<number, number> = {};
+  for (const [id, { sum, count }] of Object.entries(genreRaw)) {
+    genreAvg[Number(id)] = sum / count;
+  }
+  const maxG = Math.max(...Object.values(genreAvg), 0.01);
+  const genreWeights: Record<number, number> = {};
+  for (const [id, v] of Object.entries(genreAvg)) {
+    genreWeights[Number(id)] = v / maxG;
+  }
+
+  const topGenreIds = Object.entries(genreWeights)
+    .sort(([, a], [, b]) => b - a)
+    .map(([id]) => Number(id));
+
+  const seenGenreIds = new Set(Object.keys(genreRaw).map(Number));
+  const unseenGenreIds = ALL_GENRE_IDS.filter(id => !seenGenreIds.has(id));
+
+  // ── Calcola peso per decade ──────────────────────────────────
+  const decadeRaw: Record<string, number> = {};
+  const goodMovies = watchedMovies.filter(m =>
+    m.liked || (m.personal_rating !== null && m.personal_rating >= 3.5));
+  for (const m of goodMovies) {
+    const year = parseInt(m.release_date?.slice(0, 4) ?? '0');
+    if (year < 1920) continue;
+    const decade = `${Math.floor(year / 10) * 10}s`;
+    decadeRaw[decade] = (decadeRaw[decade] ?? 0) + 1;
+  }
+  const maxD = Math.max(...Object.values(decadeRaw), 1);
+  const decadeWeights: Record<string, number> = {};
+  for (const [d, v] of Object.entries(decadeRaw)) {
+    decadeWeights[d] = v / maxD;
+  }
+
+  // ── Runtime preferita ─────────────────────────────────────────
+  const runtimes = goodMovies
+    .filter(m => m.runtime && m.runtime > 40 && m.runtime < 300)
+    .map(m => m.runtime!);
+  let preferredRuntimeRange: [number, number] | null = null;
+  if (runtimes.length >= 3) {
+    const sorted = [...runtimes].sort((a, b) => a - b);
+    const p25 = sorted[Math.floor(sorted.length * 0.25)];
+    const p75 = sorted[Math.floor(sorted.length * 0.75)];
+    preferredRuntimeRange = [Math.max(40, p25 - 15), Math.min(240, p75 + 15)];
+  }
+
+  // ── Lingue originali ─────────────────────────────────────────
+  // (salvate in future — per ora non abbiamo original_language in WatchedMovie)
+  const topLanguages: string[] = ['en']; // default inglese
+
+  // ── Soglia qualità TMDB ──────────────────────────────────────
+  const rated = watchedMovies.filter(m => m.personal_rating !== null);
+  const avgPersonal = rated.length > 0
+    ? rated.reduce((s, m) => s + m.personal_rating!, 0) / rated.length : 3;
+  // Calibra: utente esigente (vota alto) → soglia più alta
+  const qualityThreshold = avgPersonal >= 4.5 ? 7.5
+    : avgPersonal >= 4.0 ? 7.0
+    : avgPersonal >= 3.5 ? 6.5
+    : avgPersonal >= 3.0 ? 6.0
+    : 5.5;
+
+  return {
+    genreWeights, topGenreIds, unseenGenreIds,
+    decadeWeights, preferredRuntimeRange, topLanguages,
+    qualityThreshold, watchedCount: count, confidence, phase,
+  };
+}
+
+// ── Strategia di query ─────────────────────────────────────────────
+
+export type QueryStrategy = 'random' | 'genre_single' | 'genre_multi' | 'explore';
+
+export interface QueryStrategyResult {
+  strategy: QueryStrategy;
+  filters: MovieFilters;
+  label: string; // per debug
+}
+
+/**
+ * Sceglie una strategia in base alla confidenza del profilo.
+ * Le probabilità si spostano gradualmente verso la personalizzazione.
+ *
+ * cold (0-4 film):    80% random, 15% genre_single, 5% explore
+ * warming (5-19):     30% random, 40% genre_single, 20% genre_multi, 10% explore
+ * calibrated (20-29): 15% random, 35% genre_single, 35% genre_multi, 15% explore
+ * expert (30+):       10% random, 25% genre_single, 45% genre_multi, 20% explore
+ */
+export function getQueryStrategy(
+  profile: UserProfile,
+  baseFilters: MovieFilters,
+  exploreMode: boolean = false
+): QueryStrategyResult {
+  const { phase, topGenreIds, unseenGenreIds, qualityThreshold } = profile;
+  const r = Math.random();
+
+  // Probabilità per fase
+  const probs: Record<UserProfile['phase'], [number, number, number, number]> = {
+    cold:       [0.80, 0.95, 1.00, 1.00],
+    warming:    [0.30, 0.70, 0.90, 1.00],
+    calibrated: [0.15, 0.50, 0.85, 1.00],
+    expert:     [0.10, 0.35, 0.80, 1.00],
+  };
+  const [pRandom, pSingle, pMulti] = probs[phase];
+
+  let strategy: QueryStrategy;
+  if (exploreMode || r >= pMulti) strategy = 'explore';
+  else if (r >= pSingle) strategy = 'genre_multi';
+  else if (r >= pRandom) strategy = 'genre_single';
+  else strategy = 'random';
+
+  const filters = { ...baseFilters };
+
+  // Applica sempre la soglia qualità se l'utente non ha già un filtro
+  if (!filters.minImdbRating && qualityThreshold > 5.5) {
+    filters.minImdbRating = qualityThreshold;
+  }
+
+  switch (strategy) {
+    case 'genre_single': {
+      // Top genere con un po' di variabilità (scegli tra i top 3)
+      const topN = topGenreIds.slice(0, 3);
+      const picked = topN[Math.floor(Math.random() * Math.min(topN.length, 3))];
+      if (picked && !filters.genreIds?.length) {
+        filters.genreIds = [picked];
+      }
+      return { strategy, filters, label: `Top genre: ${picked}` };
+    }
+
+    case 'genre_multi': {
+      // Combina 2 generi affini (evita combinazioni improbabili)
+      const topN = topGenreIds.slice(0, 5);
+      if (topN.length >= 2 && !filters.genreIds?.length) {
+        // Prendi due generi casuali dai top 5, ma non dalla stessa fascia (varietà)
+        const i1 = Math.floor(Math.random() * Math.min(3, topN.length));
+        let i2 = Math.floor(Math.random() * Math.min(5, topN.length));
+        if (i2 === i1) i2 = (i2 + 1) % topN.length;
+        filters.genreIds = [topN[i1], topN[i2]];
+      }
+      return { strategy, filters, label: `Multi genre: ${filters.genreIds?.join(',')}` };
+    }
+
+    case 'explore': {
+      // Suggerisci un genere che l'utente non ha mai visto
+      // o un genere "secondario" (pesi bassi) per espandere i gusti
+      const lowWeightGenres = topGenreIds
+        .filter(id => (profile.genreWeights[id] ?? 0) < 0.4)
+        .slice(0, 5);
+      const candidates = [...unseenGenreIds.slice(0, 10), ...lowWeightGenres];
+      if (candidates.length > 0 && !filters.genreIds?.length) {
+        const picked = candidates[Math.floor(Math.random() * candidates.length)];
+        filters.genreIds = [picked];
+        // Per esplorazione abbassiamo leggermente la soglia qualità
+        if (filters.minImdbRating && filters.minImdbRating > 6.5) {
+          filters.minImdbRating = 6.5;
+        }
+      }
+      return { strategy, filters, label: `Explore genre: ${filters.genreIds?.[0]}` };
+    }
+
+    default:
+      return { strategy: 'random', filters, label: 'Random' };
+  }
+}
+
+// ── Scoring post-fetch ─────────────────────────────────────────────
+
+/**
+ * Dato un array di candidati TMDB, assegna uno score a ciascuno
+ * in base al profilo utente e sceglie uno tra i migliori.
+ */
+export function scoreCandidates(
+  candidates: TMDBMovieBasic[],
+  profile: UserProfile,
+  recentHistoryIds: Set<number>
+): TMDBMovieBasic | null {
+  if (candidates.length === 0) return null;
+
+  // Se profilo non ancora calibrato, scegli casualmente
+  if (profile.confidence < 0.15) {
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  const scored = candidates.map(m => {
+    let score = 0;
+
+    // 1. Affinità genere (40%)
+    const gids = m.genre_ids ?? [];
+    if (gids.length > 0 && Object.keys(profile.genreWeights).length > 0) {
+      const genreScore = gids.reduce((s, g) => s + (profile.genreWeights[g] ?? 0), 0) / gids.length;
+      score += genreScore * 40;
+    } else {
+      score += 20; // neutro se nessun dato genere
+    }
+
+    // 2. Qualità relativa (20%)
+    // Film sopra la soglia dell'utente ottengono bonus proporzionale
+    const voteNorm = Math.max(0, (m.vote_average - profile.qualityThreshold) / (10 - profile.qualityThreshold));
+    score += voteNorm * 20;
+
+    // 3. Affinità decade (15%)
+    const year = parseInt(m.release_date?.slice(0, 4) ?? '0');
+    if (year > 1920) {
+      const decade = `${Math.floor(year / 10) * 10}s`;
+      score += (profile.decadeWeights[decade] ?? 0) * 15;
+    }
+
+    // 4. Affinità runtime (15%)
+    if (profile.preferredRuntimeRange && m.vote_count > 0) {
+      // TMDB non restituisce runtime nei risultati discover — skip
+      // Ma possiamo usare il voto_count come proxy di film "mainstream" vs "di nicchia"
+      // Alto vote_count = film molto visto = probabilmente nella fascia dell'utente
+      const isPopular = m.vote_count > 500;
+      score += isPopular ? 8 : 5;
+    } else {
+      score += 7;
+    }
+
+    // 5. Novità — penalizza film già visti di recente (10%)
+    if (!recentHistoryIds.has(m.id)) score += 10;
+
+    return { m, score };
+  }).sort((a, b) => b.score - a.score);
+
+  // Scegli tra i top-3 con distribuzione pesata (non sempre il primo)
+  // Questo evita che l'utente veda sempre lo stesso film "perfetto"
+  const topK = Math.min(3, scored.length);
+  const weights = [0.60, 0.30, 0.10].slice(0, topK);
+  const total = weights.reduce((s, w) => s + w, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < topK; i++) {
+    r -= weights[i];
+    if (r <= 0) return scored[i].m;
+  }
+  return scored[0].m;
+}
+
+// ── Hook principale ─────────────────────────────────────────────────
+
+export function useUserTaste(watchedMovies: WatchedMovie[]): {
+  profile: UserProfile;
+  getStrategyAndFilters: (baseFilters: MovieFilters, exploreMode?: boolean) => QueryStrategyResult;
+  scoreCandidates: (candidates: TMDBMovieBasic[], recentIds: Set<number>) => TMDBMovieBasic | null;
+  applyTasteToFilters: (filters: MovieFilters) => MovieFilters; // backward compat
+} {
+  const profile = useMemo(() => buildProfile(watchedMovies), [watchedMovies]);
+
+  function getStrategyAndFilters(baseFilters: MovieFilters, exploreMode = false) {
+    return getQueryStrategy(profile, baseFilters, exploreMode);
+  }
+
+  function scoreC(candidates: TMDBMovieBasic[], recentIds: Set<number>) {
+    return scoreCandidates(candidates, profile, recentIds);
+  }
+
+  // Backward compat per usages esistenti (TonightView, ecc.)
+  function applyTasteToFilters(filters: MovieFilters): MovieFilters {
+    const { filters: enriched } = getQueryStrategy(profile, filters);
+    return enriched;
+  }
+
+  return { profile, getStrategyAndFilters, scoreCandidates: scoreC, applyTasteToFilters };
 }

@@ -253,11 +253,11 @@ export const searchMovies = searchContent;
 const SHUFFLE_HISTORY_KEY = 'cinematic_shuffle_history';
 const MAX_HISTORY = 100;  // più lunga per evitare ripetizioni
 
-function getShuffleHistory(): number[] {
+export function getShuffleHistory(): number[] {
   try { return JSON.parse(localStorage.getItem(SHUFFLE_HISTORY_KEY) || '[]') as number[]; }
   catch { return []; }
 }
-function addToShuffleHistory(id: number) {
+export function addToShuffleHistory(id: number) {
   const h = getShuffleHistory();
   localStorage.setItem(SHUFFLE_HISTORY_KEY,
     JSON.stringify([id, ...h.filter(x => x !== id)].slice(0, MAX_HISTORY)));
