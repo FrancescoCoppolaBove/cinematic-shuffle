@@ -4,8 +4,7 @@ import type { MovieFilters, MediaType, TMDBMovieDetail } from '../types';
 import { useShuffle } from '../hooks/useShuffle';
 import { FilterPanel } from './FilterPanel';
 import { RatingModal } from './RatingModal';
-import { PersonDetailScreen } from './PersonDetailScreen';
-import { GenreMoviesScreen } from './GenreMoviesScreen';
+import { PersonInner, GenreInner } from './InnerMovieDetail';
 import { MovieDetailTabs } from './MovieDetailTabs';
 import type { RatingResult } from './RatingModal';
 import { cn } from '../utils';
@@ -226,18 +225,27 @@ export function ShuffleView({
 
       {/* Person detail overlay */}
       {openPerson && movie && (
-        <PersonDetailScreen
+        <PersonInner
           personId={openPerson.id}
           personName={openPerson.name}
           watchedIds={watchedIds}
+          watchlistIds={watchlistIds}
+          likedIds={likedIds}
+          getPersonalRating={getPersonalRating}
+          onMarkWatched={onMarkWatched}
+          onUnmarkWatched={onUnmarkWatched}
+          onUpdateRating={onUpdateRating}
+          onToggleLiked={onToggleLiked}
+          onIncrementRewatch={onIncrementRewatch}
+          onAddToWatchlist={onAddToWatchlist}
+          onRemoveFromWatchlist={onRemoveFromWatchlist}
           onBack={() => setOpenPerson(null)}
-          onOpenMovie={(id, mt) => { setOpenPerson(null); onOpenMovieGlobal?.(id, mt); }}
         />
       )}
 
       {/* Genre/keyword overlay */}
       {openGenre && movie && (
-        <GenreMoviesScreen
+        <GenreInner
           id={openGenre.id}
           name={openGenre.name}
           type={openGenre.type}
@@ -250,10 +258,10 @@ export function ShuffleView({
           onUnmarkWatched={onUnmarkWatched}
           onUpdateRating={onUpdateRating}
           onToggleLiked={onToggleLiked}
+          onIncrementRewatch={onIncrementRewatch}
           onAddToWatchlist={onAddToWatchlist}
           onRemoveFromWatchlist={onRemoveFromWatchlist}
           onBack={() => setOpenGenre(null)}
-          onOpenMovie={(id: number, mt: 'movie'|'tv') => { setOpenGenre(null); onOpenMovieGlobal?.(id, mt); }}
         />
       )}
 

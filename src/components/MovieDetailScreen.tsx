@@ -13,8 +13,7 @@ import { formatRuntime, formatYear, formatRating, cn } from '../utils';
 import { RatingModal } from './RatingModal';
 import type { RatingResult } from './RatingModal';
 import { MovieDetailTabs } from './MovieDetailTabs';
-import { PersonDetailScreen } from './PersonDetailScreen';
-import { GenreMoviesScreen } from './GenreMoviesScreen';
+import { PersonInner, GenreInner } from './InnerMovieDetail';
 import { StarRating } from './StarRating';
 import type { PlaylistItem } from '../hooks/useNavigationStack';
 
@@ -609,19 +608,27 @@ export function MovieDetailScreen({
 
       {/* Person detail overlay */}
       {openPerson && (
-        <PersonDetailScreen
+        <PersonInner
           personId={openPerson.id}
           personName={openPerson.name}
-          backLabel={title}
           watchedIds={propWatchedIds ?? new Set()}
+          watchlistIds={propWatchlistIds}
+          likedIds={propLikedIds}
+          getPersonalRating={getPersonalRatingFull}
+          onMarkWatched={onMarkWatchedFull}
+          onUnmarkWatched={onUnmarkWatchedFull}
+          onUpdateRating={onUpdateRatingFull}
+          onToggleLiked={onToggleLikedFull}
+          onIncrementRewatch={onIncrementRewatch}
+          onAddToWatchlist={onAddToWatchlistFull}
+          onRemoveFromWatchlist={onRemoveFromWatchlistFull}
           onBack={() => setOpenPerson(null)}
-          onOpenMovie={(id, mt) => { setOpenPerson(null); onOpenMovie?.(id, mt); }}
         />
       )}
 
       {/* Genre/Keyword overlay */}
       {openGenre && (
-        <GenreMoviesScreen
+        <GenreInner
           id={openGenre.id}
           name={openGenre.name}
           type={openGenre.type}
@@ -634,10 +641,10 @@ export function MovieDetailScreen({
           onUnmarkWatched={onUnmarkWatchedFull}
           onUpdateRating={onUpdateRatingFull}
           onToggleLiked={onToggleLikedFull}
+          onIncrementRewatch={onIncrementRewatch}
           onAddToWatchlist={onAddToWatchlistFull}
           onRemoveFromWatchlist={onRemoveFromWatchlistFull}
           onBack={() => setOpenGenre(null)}
-          onOpenMovie={(id, mt) => { setOpenGenre(null); onOpenMovie?.(id, mt); }}
         />
       )}
 

@@ -19,7 +19,9 @@ interface PersonDetailScreenProps {
   getPersonalRating?: (id: number) => number | null;
   onMarkWatched?: (movie: import('../types').TMDBMovieDetail, rating: number | null) => Promise<void>;
   onUnmarkWatched?: (id: number) => Promise<void>;
+  onUpdateRating?: (id: number, rating: number | null) => Promise<void>;
   onToggleLiked?: (id: number) => Promise<void>;
+  onIncrementRewatch?: (id: number, delta: number) => Promise<void>;
   onAddToWatchlist?: (movie: import('../types').TMDBMovieDetail) => Promise<void>;
   onRemoveFromWatchlist?: (id: number) => Promise<void>;
   onBack: () => void;
@@ -29,8 +31,8 @@ interface PersonDetailScreenProps {
 export function PersonDetailScreen({
   personId, personName, backLabel: _backLabel = 'Indietro',
   watchedIds, watchlistIds = new Set(), likedIds = new Set(),
-  getPersonalRating, onMarkWatched, onUnmarkWatched, onToggleLiked,
-  onAddToWatchlist, onRemoveFromWatchlist,
+  getPersonalRating, onMarkWatched, onUnmarkWatched, onUpdateRating, onToggleLiked,
+  onIncrementRewatch, onAddToWatchlist, onRemoveFromWatchlist,
   onBack, onOpenMovie: _onOpenMovie,
 }: PersonDetailScreenProps) {
   const [person, setPerson] = useState<TMDBPerson | null>(null);
@@ -233,7 +235,9 @@ export function PersonDetailScreen({
           getPersonalRating={getPersonalRating}
           onMarkWatched={onMarkWatched}
           onUnmarkWatched={onUnmarkWatched}
+          onUpdateRating={onUpdateRating}
           onToggleLiked={onToggleLiked}
+          onIncrementRewatch={onIncrementRewatch}
           onAddToWatchlist={onAddToWatchlist}
           onRemoveFromWatchlist={onRemoveFromWatchlist}
           onBack={() => setInnerMovie(null)}
