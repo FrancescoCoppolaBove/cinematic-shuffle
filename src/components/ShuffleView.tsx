@@ -208,7 +208,7 @@ export function ShuffleView({
             isWatched={isWatched}
             isOnWatchlist={isOnWatchlist}
             rewatchCount={rewatchCount}
-            onShuffle={handleShuffle}
+            onShuffle={() => handleShuffle()}
             onOpenRating={() => setShowRatingModal(true)}
             onWatchlistToggle={isOnWatchlist
               ? () => onRemoveFromWatchlist(movie.id)
