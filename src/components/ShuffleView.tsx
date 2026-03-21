@@ -95,8 +95,8 @@ export function ShuffleView({
     <div
       className="flex flex-col bg-film-black"
       style={{
-        marginTop: 'calc(env(safe-area-inset-top) + 57px)',
-        height: 'calc(100dvh - env(safe-area-inset-top) - 57px - 56px - env(safe-area-inset-bottom))',
+        marginTop: 'calc(env(safe-area-inset-top) + 52px)',
+        height: 'calc(100dvh - env(safe-area-inset-top) - 52px - 56px - env(safe-area-inset-bottom))',
         minHeight: 0,
       }}
     >

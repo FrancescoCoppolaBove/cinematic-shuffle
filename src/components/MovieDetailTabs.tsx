@@ -54,13 +54,13 @@ export function MovieDetailTabs({
   return (
     <div>
       {/* Tab bar */}
-      <div className="flex gap-1 mb-4 bg-film-surface rounded-xl p-1 border border-film-border">
+      <div className="flex gap-1 mb-4 bg-film-surface rounded-2xl p-1.5 border border-film-border">
         {(['cast', 'crew', 'generi'] as Tab[]).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={cn(
-              'flex-1 py-2 rounded-lg text-xs font-medium transition-all capitalize',
+              'flex-1 py-2.5 rounded-xl text-xs font-medium transition-all capitalize',
               tab === t
                 ? 'bg-film-accent text-film-black'
                 : 'text-film-muted'

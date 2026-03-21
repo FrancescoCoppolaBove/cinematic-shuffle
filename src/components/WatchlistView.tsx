@@ -150,7 +150,7 @@ onOpenMovieGlobal,
               onClose={() => setViewMode('grid')}
             />
           ) : (
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-3 gap-2">
               {filtered.map((item) => (
                 <WatchlistCard
                   key={item.id}

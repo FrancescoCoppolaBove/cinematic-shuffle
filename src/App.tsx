@@ -300,8 +300,8 @@ export default function App() {
 
       {/* ── Main content — padding-top compensa l'header fixed ── */}
       <main
-        className={view === 'shuffle' ? "max-w-3xl mx-auto" : "max-w-3xl mx-auto px-4 py-4 pb-28"}
-        style={{ paddingTop: view === 'shuffle' ? 0 : 'calc(env(safe-area-inset-top) + 57px)' }}
+        className={view === 'shuffle' ? "max-w-3xl mx-auto" : "max-w-3xl mx-auto px-4 py-4 pb-24"}
+        style={{ paddingTop: view === 'shuffle' ? 0 : 'calc(env(safe-area-inset-top) + 52px)' }}
       >
         {view === 'tonight' && (
           <TonightView

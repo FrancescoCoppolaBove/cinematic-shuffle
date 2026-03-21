@@ -152,7 +152,7 @@ onOpenMovieGlobal,
               initialIndex={cardIndex}
             />
           ) : (
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-3 gap-2">
               {filtered.map((movie, idx) => (
                 <WatchedPosterCard
                   key={movie.id}

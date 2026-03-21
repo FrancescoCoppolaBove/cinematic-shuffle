@@ -142,7 +142,7 @@ function TrendingSection({
           </div>
         </div>
         <button onClick={onSeeAll}
-          className="flex items-center gap-1 text-film-muted hover:text-film-accent text-xs transition-colors">
+          className="flex items-center gap-1 text-film-muted text-xs transition-colors">
           Vedi tutti <ChevronRight size={13} />
         </button>
       </div>

@@ -358,7 +358,7 @@ export function MovieCard({
                   {collectionName || 'Saga'}
                 </h3>
                 {loadingCollection ? (
-                  <div className="flex gap-2 overflow-x-auto pb-1">
+                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                     {[1, 2, 3].map(i => (
                       <div key={i} className="shrink-0 w-20 aspect-[2/3] rounded-xl bg-film-card animate-pulse" />
                     ))}

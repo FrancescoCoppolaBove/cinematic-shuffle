@@ -81,7 +81,7 @@ export function ProfileView({
             key={key}
             onClick={() => setTab(key)}
             className={cn(
-              'flex-1 py-3 text-sm font-medium transition-all relative',
+              'flex-1 py-3.5 text-sm font-medium transition-all relative active:opacity-70',
               tab === key ? 'text-film-accent' : 'text-film-muted'
             )}
           >

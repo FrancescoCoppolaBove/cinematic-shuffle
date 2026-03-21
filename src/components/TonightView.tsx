@@ -240,7 +240,7 @@ function PickCard({ pick, onOpen, isFirst }: {
   return (
     <button
       onClick={onOpen}
-      className="w-full flex items-center gap-3 p-3 rounded-2xl border border-film-border bg-film-card active:scale-[0.98] transition-transform text-left"
+      className="w-full flex items-center gap-3 p-4 rounded-2xl border border-film-border bg-film-card active:scale-[0.98] transition-transform text-left"
     >
       {/* Mini poster */}
       <div className="shrink-0 w-16 aspect-[2/3] rounded-xl overflow-hidden border border-film-border bg-film-surface">

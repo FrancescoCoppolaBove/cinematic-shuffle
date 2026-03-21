@@ -251,7 +251,7 @@ export const searchMovies = searchContent;
 // ─── Shuffle ──────────────────────────────────────────────────────
 
 const SHUFFLE_HISTORY_KEY = 'cinematic_shuffle_history';
-const MAX_HISTORY = 50;
+const MAX_HISTORY = 100;  // più lunga per evitare ripetizioni
 
 function getShuffleHistory(): number[] {
   try { return JSON.parse(localStorage.getItem(SHUFFLE_HISTORY_KEY) || '[]') as number[]; }
@@ -264,38 +264,63 @@ function addToShuffleHistory(id: number) {
 }
 export function clearShuffleHistory() { localStorage.removeItem(SHUFFLE_HISTORY_KEY); }
 
-function shuffleArray<T>(arr: T[]): T[] {
-  const c = [...arr];
-  for (let i = c.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [c[i], c[j]] = [c[j], c[i]];
-  }
-  return c;
+/**
+ * Seleziona una pagina random con distribuzione pesata verso pagine alte.
+ * Evita sempre le prime pagine (che TMDB restituisce sempre uguali).
+ * Peso: pagina alta = più probabilità (esplora la coda del catalogo).
+ */
+function weightedRandomPage(totalPages: number): number {
+  // Divide il pool in 4 fasce e pesa le fasce superiori di più
+  const capped = Math.min(totalPages, 200);
+  // 10% dalle pagine 1-5 (top noti), 20% 6-25, 30% 26-75, 40% 76-fine
+  const r = Math.random();
+  if (r < 0.10 || capped <= 5) return Math.floor(Math.random() * Math.min(5, capped)) + 1;
+  if (r < 0.30 || capped <= 25) return Math.floor(Math.random() * Math.min(20, capped - 5)) + 6;
+  if (r < 0.60 || capped <= 75) return Math.floor(Math.random() * Math.min(50, capped - 25)) + 26;
+  return Math.floor(Math.random() * Math.max(1, capped - 75)) + 76;
 }
+
 
 export async function getRandomContent(
   filters: MovieFilters,
   watchedIds: Set<number>
 ): Promise<TMDBMovieDetail | null> {
   const history = getShuffleHistory();
-  const first = await discoverContent(filters, 1);
-  const totalPages = Math.min(first.total_pages, 50);
-  if (first.total_results === 0) return null;
+  const recentHistory = new Set(history.slice(0, 20)); // escludi gli ultimi 20
 
-  const pagePool = shuffleArray(Array.from({ length: totalPages }, (_, i) => i + 1));
+  // Prima chiamata: scopriamo quante pagine esistono (usiamo pagina pesata subito)
+  const first = await discoverContent(filters, 1);
+  if (first.total_results === 0) return null;
+  const totalPages = first.total_pages;
   const mediaType = filters.mediaType === 'tv' ? 'tv' : 'movie';
 
-  for (let attempt = 0; attempt < Math.min(5, totalPages); attempt++) {
-    const page = pagePool[attempt];
+  // Genera 6 pagine candidate con distribuzione pesata (evita sempre le prime)
+  // Se pochi risultati (≤2 pagine), usa pagina 1 o 2 direttamente
+  const pageCandidates: number[] = [];
+  if (totalPages <= 2) {
+    pageCandidates.push(1, 2);
+  } else {
+    const seen = new Set<number>();
+    // Forza almeno una pagina "alta" e una "media"
+    while (pageCandidates.length < 6) {
+      const p = weightedRandomPage(totalPages);
+      if (!seen.has(p)) { seen.add(p); pageCandidates.push(p); }
+    }
+  }
+
+  for (const page of pageCandidates) {
     const response = page === 1 ? first : await discoverContent(filters, page);
     const candidates = response.results.filter(m => {
       if (filters.watchedStatus === 'unwatched' && watchedIds.has(m.id)) return false;
       if (filters.watchedStatus === 'watched' && !watchedIds.has(m.id)) return false;
       return true;
     });
-    const recent = history.slice(0, 10);
-    const pool = candidates.filter(m => !recent.includes(m.id));
-    const source = pool.length > 0 ? pool : candidates;
+    // Preferisci film non visti di recente nello shuffle
+    const fresh = candidates.filter(m => !recentHistory.has(m.id));
+    const source = fresh.length > 0 ? fresh : candidates;
+    if (source.length === 0) continue;
+
+    // Scegli casualmente tra i candidati disponibili
     const chosen = source[Math.floor(Math.random() * source.length)];
     if (chosen) {
       addToShuffleHistory(chosen.id);
@@ -303,6 +328,7 @@ export async function getRandomContent(
     }
   }
 
+  // Fallback: usa qualsiasi film dalla prima pagina che rispetti i filtri
   const fallback = first.results.find(m => {
     if (filters.watchedStatus === 'unwatched' && watchedIds.has(m.id)) return false;
     if (filters.watchedStatus === 'watched' && !watchedIds.has(m.id)) return false;
