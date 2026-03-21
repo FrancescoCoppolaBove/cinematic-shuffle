@@ -50,7 +50,7 @@ async function apiFetch<T>(endpoint: string, params: Record<string, string> = {}
   const apiKey = getApiKey();
   const url = new URL(`${BASE_URL}${endpoint}`);
   url.searchParams.set('api_key', apiKey);
-  url.searchParams.set('language', 'it-IT');
+  url.searchParams.set('language', 'en-US');
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   const res = await fetch(url.toString());
   if (!res.ok) {
@@ -405,13 +405,30 @@ export async function getPersonCredits(personId: number): Promise<TMDBPersonCred
   const data = await apiFetch<{ cast: (TMDBPersonCreditMovie & { media_type: string })[]; crew: (TMDBPersonCreditMovie & { media_type: string })[] }>(
     `/person/${personId}/combined_credits`
   );
+  // Filtra SOLO film e serie TV — escludi episodi, stagioni, cortometraggi TV, ecc.
+  const isValidMedia = (m: { media_type: string }) =>
+    m.media_type === 'movie' || m.media_type === 'tv';
+
   const toItem = (m: TMDBPersonCreditMovie & { media_type: string }): TMDBPersonCreditMovie => ({
     ...m,
     media_type: m.media_type === 'tv' ? 'tv' : 'movie',
   });
+
+  // Deduplicazione per id (stessa persona può avere più ruoli nello stesso film)
+  const dedupe = (arr: TMDBPersonCreditMovie[]) => {
+    const seen = new Set<number>();
+    return arr.filter(m => {
+      if (seen.has(m.id)) return false;
+      seen.add(m.id);
+      return true;
+    });
+  };
+
   return {
-    cast: data.cast.map(toItem).sort((a, b) => (b.vote_average ?? 0) - (a.vote_average ?? 0)),
-    crew: data.crew.map(toItem).sort((a, b) => (b.vote_average ?? 0) - (a.vote_average ?? 0)),
+    cast: dedupe(data.cast.filter(isValidMedia).map(toItem))
+      .sort((a, b) => (b.vote_average ?? 0) - (a.vote_average ?? 0)),
+    crew: dedupe(data.crew.filter(isValidMedia).map(toItem))
+      .sort((a, b) => (b.vote_average ?? 0) - (a.vote_average ?? 0)),
   };
 }
 

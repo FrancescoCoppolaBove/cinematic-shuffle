@@ -3,24 +3,35 @@
  * Foto, bio, crediti divisi per ruolo, badge film visti.
  */
 import { useState, useEffect } from 'react';
-import { ChevronLeft, Film, Tv } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { InnerMovieDetail } from './InnerMovieDetail';
 import type { TMDBPerson, TMDBPersonCredits, TMDBPersonCreditMovie } from '../services/tmdb';
 import { getPersonDetail, getPersonCredits, getImageUrl, getTitle, getReleaseDate } from '../services/tmdb';
-import { formatYear, formatRating, cn } from '../utils';
+import { formatYear, cn } from '../utils';
 
 interface PersonDetailScreenProps {
   personId: number;
   personName: string;
   backLabel?: string;
   watchedIds: Set<number>;
+  watchlistIds?: Set<number>;
+  likedIds?: Set<number>;
+  getPersonalRating?: (id: number) => number | null;
+  onMarkWatched?: (movie: import('../types').TMDBMovieDetail, rating: number | null) => Promise<void>;
+  onUnmarkWatched?: (id: number) => Promise<void>;
+  onToggleLiked?: (id: number) => Promise<void>;
+  onAddToWatchlist?: (movie: import('../types').TMDBMovieDetail) => Promise<void>;
+  onRemoveFromWatchlist?: (id: number) => Promise<void>;
   onBack: () => void;
   onOpenMovie?: (id: number, mediaType: 'movie' | 'tv') => void;
 }
 
 export function PersonDetailScreen({
   personId, personName, backLabel: _backLabel = 'Indietro',
-  watchedIds, onBack, onOpenMovie: _onOpenMovie,
+  watchedIds, watchlistIds = new Set(), likedIds = new Set(),
+  getPersonalRating, onMarkWatched, onUnmarkWatched, onToggleLiked,
+  onAddToWatchlist, onRemoveFromWatchlist,
+  onBack, onOpenMovie: _onOpenMovie,
 }: PersonDetailScreenProps) {
   const [person, setPerson] = useState<TMDBPerson | null>(null);
   const [credits, setCredits] = useState<TMDBPersonCredits | null>(null);
@@ -141,27 +152,29 @@ export function PersonDetailScreen({
 
           {/* Cast list */}
           {tab === 'cast' && credits && (
-            <div className="space-y-1">
+            <div>
               {castCount > 0 && (
-                <div className="flex items-center justify-between py-2 px-1 mb-1">
+                <div className="flex items-center justify-between py-2 px-1 mb-3">
                   <span className="text-film-subtle text-xs uppercase tracking-wider">Film come attore</span>
                   <span className={cn('text-xs font-medium', watchedCastCount > 0 ? 'text-green-400' : 'text-film-subtle')}>
-                    {watchedCastCount > 0 ? `${watchedCastCount} visti su ${castCount}` : `${castCount} in totale`}
+                    {watchedCastCount > 0 ? `${watchedCastCount} visti su ${castCount}` : `${castCount} totali`}
                   </span>
                 </div>
               )}
               {credits.cast.length === 0 ? (
                 <p className="text-film-muted text-sm py-4 text-center">Nessun credito come attore</p>
               ) : (
-                credits.cast.map(m => (
-                  <MovieCreditRow
-                    key={`cast-${m.id}-${m.character}`}
-                    movie={m}
-                    subtitle={m.character ? `come "${m.character}"` : ''}
-                    isWatched={watchedIds.has(m.id)}
-                    onClick={() => setInnerMovie({ id: m.id, mediaType: m.media_type })}
-                  />
-                ))
+                <div className="grid grid-cols-3 gap-2">
+                  {credits.cast.map(m => (
+                    <CreditPoster
+                      key={`cast-${m.id}`}
+                      movie={m}
+                      subtitle={m.character}
+                      isWatched={watchedIds.has(m.id)}
+                      onClick={() => setInnerMovie({ id: m.id, mediaType: m.media_type })}
+                    />
+                  ))}
+                </div>
               )}
             </div>
           )}
@@ -174,25 +187,22 @@ export function PersonDetailScreen({
               ) : (
                 Object.entries(crewByDepartment)
                   .sort(([a], [b]) => {
-                    // Put Directing and Writing first
                     const order = ['Directing', 'Writing', 'Production', 'Camera'];
                     return (order.indexOf(a) ?? 99) - (order.indexOf(b) ?? 99);
                   })
-                  .map(([dept, movies]) => (
+                  .map(([dept, movies]) => {
+                    const watched = movies.filter(m => watchedIds.has(m.id)).length;
+                    return (
                     <div key={dept}>
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-2 mb-3">
                         <h3 className="text-film-subtle text-xs uppercase tracking-widest">{dept}</h3>
                         <span className="text-film-subtle text-xs">· {movies.length}</span>
-                        {movies.some(m => watchedIds.has(m.id)) && (
-                          <span className="text-green-400 text-xs">
-                            · {movies.filter(m => watchedIds.has(m.id)).length} visti
-                          </span>
-                        )}
+                        {watched > 0 && <span className="text-green-400 text-xs">· {watched} visti</span>}
                       </div>
-                      <div className="space-y-1">
+                      <div className="grid grid-cols-3 gap-2">
                         {movies.map(m => (
-                          <MovieCreditRow
-                            key={`crew-${m.id}-${m.job}`}
+                          <CreditPoster
+                            key={`crew-${m.id}`}
                             movie={m}
                             subtitle={m.job ?? ''}
                             isWatched={watchedIds.has(m.id)}
@@ -201,7 +211,8 @@ export function PersonDetailScreen({
                         ))}
                       </div>
                     </div>
-                  ))
+                    );
+                  })
               )}
             </div>
           )}
@@ -217,6 +228,14 @@ export function PersonDetailScreen({
           id={innerMovie.id}
           mediaType={innerMovie.mediaType}
           watchedIds={watchedIds}
+          watchlistIds={watchlistIds}
+          likedIds={likedIds}
+          getPersonalRating={getPersonalRating}
+          onMarkWatched={onMarkWatched}
+          onUnmarkWatched={onUnmarkWatched}
+          onToggleLiked={onToggleLiked}
+          onAddToWatchlist={onAddToWatchlist}
+          onRemoveFromWatchlist={onRemoveFromWatchlist}
           onBack={() => setInnerMovie(null)}
         />
       )}
@@ -259,52 +278,37 @@ function TabBtn({ active, onClick, label, badge, watchedBadge }: {
   );
 }
 
-function MovieCreditRow({ movie, subtitle, isWatched, onClick }: {
-  movie: TMDBPersonCreditMovie; subtitle: string;
-  isWatched: boolean; onClick: () => void;
+
+function CreditPoster({ movie, subtitle, isWatched, onClick }: {
+  movie: TMDBPersonCreditMovie;
+  subtitle?: string;
+  isWatched: boolean;
+  onClick: () => void;
 }) {
   const [imgErr, setImgErr] = useState(false);
-  const poster = !imgErr ? getImageUrl(movie.poster_path, 'w92') : null;
+  const poster = !imgErr ? getImageUrl(movie.poster_path, 'w342') : null;
   const title = getTitle(movie);
   const year = formatYear(getReleaseDate(movie));
 
   return (
-    <button
-      onClick={onClick}
-      className="w-full flex items-center gap-3 py-2 px-2 rounded-xl active:bg-film-surface/60 transition-colors text-left"
-    >
-      {/* Mini poster */}
-      <div className="shrink-0 w-10 h-14 rounded-lg overflow-hidden bg-film-surface border border-film-border">
-        {poster
-          ? <img src={poster} alt={title} className="w-full h-full object-cover" onError={() => setImgErr(true)} />
-          : <div className="w-full h-full flex items-center justify-center text-xs text-film-subtle">
-              {movie.media_type === 'tv' ? '📺' : '🎬'}
-            </div>
-        }
-      </div>
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <p className={cn('text-sm font-medium truncate', isWatched ? 'text-film-text' : 'text-film-muted')}>
-            {title}
-          </p>
-          {isWatched && <span className="shrink-0 text-green-400 text-xs">✓</span>}
-          {movie.media_type === 'tv' && <Tv size={10} className="shrink-0 text-purple-400" />}
-          {movie.media_type === 'movie' && <Film size={10} className="shrink-0 text-film-subtle" />}
+    <button onClick={onClick}
+      className="relative aspect-[2/3] rounded-xl overflow-hidden border border-film-border bg-film-card active:scale-[0.97] transition-transform text-left w-full">
+      {poster
+        ? <img src={poster} alt={title} className="w-full h-full object-cover" onError={() => setImgErr(true)} />
+        : <div className="w-full h-full flex items-center justify-center text-xl text-film-subtle">
+            {movie.media_type === 'tv' ? '📺' : '🎬'}
+          </div>
+      }
+      {isWatched && (
+        <div className="absolute top-1.5 right-1.5 bg-green-500/90 rounded-full w-4 h-4 flex items-center justify-center">
+          <span className="text-white text-[8px] font-bold">✓</span>
         </div>
-        <div className="flex items-center gap-2 mt-0.5">
-          {year && <span className="text-film-subtle text-xs">{year}</span>}
-          {subtitle && <span className="text-film-subtle text-xs truncate italic">{subtitle}</span>}
-        </div>
-      </div>
-
-      {/* Rating */}
-      {movie.vote_average > 0 && (
-        <span className="shrink-0 text-film-accent text-xs font-mono">
-          ★ {formatRating(movie.vote_average)}
-        </span>
       )}
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-film-black/95 via-film-black/50 to-transparent px-1.5 pt-6 pb-1.5 pointer-events-none">
+        <p className="text-white text-xs font-medium line-clamp-2 leading-tight">{title}</p>
+        {year && <p className="text-white/50 text-xs">{year}</p>}
+        {subtitle && <p className="text-white/40 text-[10px] line-clamp-1 italic">{subtitle}</p>}
+      </div>
     </button>
   );
 }
