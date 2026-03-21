@@ -15,9 +15,24 @@ export const getImageUrl = (
 
 export const getProviderLogoUrl = (path: string) => `${PROVIDER_IMG}${path}`;
 
+// Rileva se una stringa contiene caratteri non-latini (giapponese, coreano, cinese, arabo, russo, ecc.)
+function hasNonLatinChars(s: string): boolean {
+  // Copre: CJK, Hangul, Hiragana, Katakana, Arabo, Ebraico, Cirillico, Thai, Devanagari, ecc.
+  return /[\u0370-\u03FF\u0400-\u04FF\u0600-\u06FF\u0900-\u097F\u0E00-\u0E7F\u3000-\u9FFF\uAC00-\uD7AF\uF900-\uFAFF]/.test(s);
+}
+
 export function getTitle(item: { title?: string; name?: string; original_title?: string; original_name?: string }): string {
-  // Usa sempre il titolo originale (inglese o lingua originale), fallback al localizzato
-  return item.original_title || item.original_name || item.title || item.name || 'Titolo sconosciuto';
+  const orig = item.original_title || item.original_name;
+  const localized = item.title || item.name;
+
+  if (!orig) return localized || 'Titolo sconosciuto';
+
+  // Se il titolo originale è in caratteri non-latini → usa quello localizzato
+  // (TMDB lo restituisce già in inglese/italiano con caratteri latini)
+  if (hasNonLatinChars(orig)) return localized || orig;
+
+  // Altrimenti usa sempre il titolo originale (es. "The Godfather" invece di "Il Padrino")
+  return orig;
 }
 export function getReleaseDate(item: { release_date?: string; first_air_date?: string }): string {
   return item.release_date || item.first_air_date || '';

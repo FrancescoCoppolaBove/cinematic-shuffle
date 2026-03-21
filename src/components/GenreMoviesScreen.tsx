@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, LayoutGrid, Rows3, SlidersHorizontal, X } from 'lucide-react';
+import { InnerMovieDetail } from './InnerMovieDetail';
 import type { TMDBMovieBasic, TMDBMovieDetail } from '../types';
 import { discoverByGenre, discoverByKeyword, getImageUrl, getTitle, getReleaseDate } from '../services/tmdb';
 import { formatYear, formatRating, cn } from '../utils';
@@ -27,7 +28,7 @@ interface GenreMoviesScreenProps {
   onAddToWatchlist?: (movie: TMDBMovieDetail) => Promise<void>;
   onRemoveFromWatchlist?: (id: number) => Promise<void>;
   onBack: () => void;
-  onOpenMovie: (id: number, mediaType: 'movie' | 'tv') => void;
+  onOpenMovie?: (id: number, mediaType: 'movie' | 'tv') => void;
 }
 
 type SortBy = 'rating' | 'year_desc' | 'year_asc';
@@ -37,11 +38,12 @@ export function GenreMoviesScreen({
   watchedIds, watchlistIds = new Set(), likedIds = new Set(),
   getPersonalRating, onMarkWatched, onUnmarkWatched, onUpdateRating,
   onToggleLiked, onAddToWatchlist, onRemoveFromWatchlist,
-  onBack, onOpenMovie,
+  onBack, onOpenMovie: _onOpenMovie,
 }: GenreMoviesScreenProps) {
   const [movies, setMovies] = useState<TMDBMovieBasic[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [innerMovie, setInnerMovie] = useState<{id: number; mediaType: 'movie'|'tv'} | null>(null);
   const [sortBy, setSortBy] = useState<SortBy>('rating');
   const [showFilters, setShowFilters] = useState(false);
   const [minRating, setMinRating] = useState(0);
@@ -202,7 +204,7 @@ export function GenreMoviesScreen({
             onToggleLiked={onToggleLiked}
             onAddToWatchlist={onAddToWatchlist ?? (async () => {})}
             onRemoveFromWatchlist={onRemoveFromWatchlist ?? (async () => {})}
-            onOpenFull={(id, mt) => onOpenMovie(id, mt)}
+            onOpenFull={(id, mt) => setInnerMovie({ id, mediaType: mt })}
             onClose={() => setViewMode('grid')}
           />
         ) : (
@@ -210,7 +212,7 @@ export function GenreMoviesScreen({
             {filtered.map(m => {
               const mt = (m.media_type ?? mediaType) as 'movie' | 'tv';
               return (
-                <button key={m.id} onClick={() => onOpenMovie(m.id, mt)}
+                <button key={m.id} onClick={() => setInnerMovie({ id: m.id, mediaType: mt })}
                   className="relative aspect-[2/3] rounded-xl overflow-hidden border border-film-border bg-film-card active:scale-[0.97] transition-transform text-left">
                   {m.poster_path ? (
                     <img src={getImageUrl(m.poster_path, 'w342') || ''} alt={getTitle(m)} className="w-full h-full object-cover" />
@@ -237,6 +239,15 @@ export function GenreMoviesScreen({
           </div>
         )}
       </div>
+      {/* Inner movie detail */}
+      {innerMovie && (
+        <InnerMovieDetail
+          id={innerMovie.id}
+          mediaType={innerMovie.mediaType}
+          watchedIds={watchedIds}
+          onBack={() => setInnerMovie(null)}
+        />
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@
  */
 import { useState, useEffect } from 'react';
 import { ChevronLeft, Film, Tv } from 'lucide-react';
+import { InnerMovieDetail } from './InnerMovieDetail';
 import type { TMDBPerson, TMDBPersonCredits, TMDBPersonCreditMovie } from '../services/tmdb';
 import { getPersonDetail, getPersonCredits, getImageUrl, getTitle, getReleaseDate } from '../services/tmdb';
 import { formatYear, formatRating, cn } from '../utils';
@@ -14,17 +15,18 @@ interface PersonDetailScreenProps {
   backLabel?: string;
   watchedIds: Set<number>;
   onBack: () => void;
-  onOpenMovie: (id: number, mediaType: 'movie' | 'tv') => void;
+  onOpenMovie?: (id: number, mediaType: 'movie' | 'tv') => void;
 }
 
 export function PersonDetailScreen({
   personId, personName, backLabel: _backLabel = 'Indietro',
-  watchedIds, onBack, onOpenMovie,
+  watchedIds, onBack, onOpenMovie: _onOpenMovie,
 }: PersonDetailScreenProps) {
   const [person, setPerson] = useState<TMDBPerson | null>(null);
   const [credits, setCredits] = useState<TMDBPersonCredits | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'cast' | 'crew'>('cast');
+  const [innerMovie, setInnerMovie] = useState<{id: number; mediaType: 'movie'|'tv'} | null>(null);
   const [expandBio, setExpandBio] = useState(false);
 
   useEffect(() => {
@@ -157,7 +159,7 @@ export function PersonDetailScreen({
                     movie={m}
                     subtitle={m.character ? `come "${m.character}"` : ''}
                     isWatched={watchedIds.has(m.id)}
-                    onClick={() => onOpenMovie(m.id, m.media_type)}
+                    onClick={() => setInnerMovie({ id: m.id, mediaType: m.media_type })}
                   />
                 ))
               )}
@@ -194,7 +196,7 @@ export function PersonDetailScreen({
                             movie={m}
                             subtitle={m.job ?? ''}
                             isWatched={watchedIds.has(m.id)}
-                            onClick={() => onOpenMovie(m.id, m.media_type)}
+                            onClick={() => setInnerMovie({ id: m.id, mediaType: m.media_type })}
                           />
                         ))}
                       </div>
@@ -208,6 +210,15 @@ export function PersonDetailScreen({
         <div className="text-center py-16 text-film-muted">
           <p>Impossibile caricare i dettagli</p>
         </div>
+      )}
+      {/* Inner movie detail — opens on top, back returns here */}
+      {innerMovie && (
+        <InnerMovieDetail
+          id={innerMovie.id}
+          mediaType={innerMovie.mediaType}
+          watchedIds={watchedIds}
+          onBack={() => setInnerMovie(null)}
+        />
       )}
     </div>
   );
