@@ -1,52 +1,25 @@
-/**
- * useShuffle — motore di shuffle con vera varietà.
- *
- * PROBLEMA PRECEDENTE: sort_by=vote_count.desc → pagina 1 sempre uguale.
- * SOLUZIONE: sort_by randomizzato tra 4 varianti + nessuna pagina "fissa".
- *
- * Strategia:
- * - Sceglie random tra 4 ordinamenti TMDB (popularity, vote_avg, date, random)
- * - Salta sempre la pagina 1 (troppo mainstream) a meno che non ci sia 1 sola pagina
- * - Fetcha 3 pagine casuali non sovrapposte
- * - Aggrega i candidati, filtra history, scoreua con profilo utente
- * - Seleziona tra i top-5 con distribuzione pesata (non sempre il primo)
- */
 import { useState, useCallback, useRef } from 'react';
 import type { TMDBMovieDetail, TMDBMovieBasic, MovieFilters } from '../types';
 import { getMovieDetail, getShuffleHistory, addToShuffleHistory } from '../services/tmdb';
 import type { QueryStrategyResult, UserProfile } from './useUserTaste';
 import { scoreCandidates } from './useUserTaste';
 
-// ── Sort orders TMDB disponibili ──────────────────────────────────
-// Usiamo 4 varianti per assicurare varietà: ognuna espone una diversa
-// "sezione" del catalogo TMDB. Alternando evita sempre gli stessi top film.
 const SORT_ORDERS = [
   'popularity.desc',
-  'popularity.asc',       // film di nicchia, meno conosciuti
-  'vote_average.desc',    // film più acclamati dalla critica
-  'primary_release_date.desc', // film recenti
+  'popularity.asc',
+  'vote_average.desc',
+  'primary_release_date.desc',
 ];
 
-// ── Session blacklist: film già mostrati in questa sessione ─────────
-// Persiste tra shuffle della stessa sessione, si azzera al refresh.
+// Film già mostrati in questa sessione (si azzera al refresh della PWA)
 const sessionSeen = new Set<number>();
 
-async function apiFetchRaw<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
-
 function getApiKey(): string {
-  // Stesso meccanismo di tmdb.ts
   const envKey = import.meta.env.VITE_TMDB_API_KEY as string | undefined;
   if (envKey) return envKey;
   try { return localStorage.getItem('tmdb_runtime_key') || ''; } catch { return ''; }
 }
 
-/**
- * Fetcha una singola pagina dal discover TMDB con sort randomizzato.
- */
 async function discoverPage(
   filters: MovieFilters,
   page: number,
@@ -58,7 +31,7 @@ async function discoverPage(
     language: 'en-US',
     sort_by: sortOrder,
     page: String(page),
-    'vote_count.gte': '30',  // abbassato per avere più varietà
+    'vote_count.gte': '30',
   });
 
   if (filters.genreIds?.length) params.set('with_genres', filters.genreIds.join(','));
@@ -86,37 +59,112 @@ async function discoverPage(
   }
   if (filters.withAwards) params.set('with_keywords', '207317|210024');
 
-  const data = await apiFetchRaw<{ results: TMDBMovieBasic[]; total_pages: number }>(
-    `https://api.themoviedb.org/3/discover/${mediaType}?${params}`
-  );
+  const res = await fetch(`https://api.themoviedb.org/3/discover/${mediaType}?${params}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
   return {
-    results: (data.results ?? []).map(m => ({ ...m, media_type: mediaType as 'movie' | 'tv' })),
+    results: (data.results ?? []).map((m: TMDBMovieBasic) => ({ ...m, media_type: mediaType as 'movie' | 'tv' })),
     total_pages: data.total_pages ?? 1,
   };
 }
 
 /**
- * Genera N pagine casuali distinte, evitando la pagina 1 se possibile.
- * La pagina 1 ha sempre i film più "mainstream" e tende a ripetersi.
+ * Tenta di trovare un film valido.
+ * Fa fino a MAX_ATTEMPTS giri cambiando pagine e sort ad ogni tentativo.
+ * NON mostra mai errore se ci sono risultati TMDB — insiste finché trova qualcosa.
  */
-function pickRandomPages(totalPages: number, count: number, avoidPage1 = true): number[] {
-  const pages = new Set<number>();
-  const maxPage = Math.min(totalPages, 500); // TMDB permette max 500
+async function findCandidate(
+  filters: MovieFilters,
+  watchedIds: Set<number>,
+  profile: UserProfile,
+  lastSortIdx: number
+): Promise<{ movie: TMDBMovieDetail; sortIdx: number } | { error: string }> {
+  const globalHistory = new Set(getShuffleHistory());
+  const MAX_ATTEMPTS = 8;
 
-  // Se totalPages è piccolo, non possiamo evitare pagina 1
-  const startFrom = (avoidPage1 && maxPage > 5) ? 2 : 1;
+  let sortIdx = lastSortIdx;
+  let totalPagesCache: number | null = null;
 
-  let attempts = 0;
-  while (pages.size < Math.min(count, maxPage - startFrom + 1) && attempts < 50) {
-    const p = startFrom + Math.floor(Math.random() * (maxPage - startFrom + 1));
-    pages.add(p);
-    attempts++;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    // Cambia sort ogni tentativo (garantito diverso dall'ultimo)
+    sortIdx = (sortIdx + 1 + Math.floor(Math.random() * (SORT_ORDERS.length - 1))) % SORT_ORDERS.length;
+    const sortOrder = SORT_ORDERS[sortIdx];
+
+    // Al primo tentativo scopri quante pagine ci sono
+    if (totalPagesCache === null || attempt === 0) {
+      try {
+        const probe = await discoverPage(filters, 1, sortOrder);
+        if (probe.total_pages === 0 || probe.results.length === 0) {
+          return { error: 'Nessun film trovato con questi filtri. Prova ad allargarne qualcuno.' };
+        }
+        totalPagesCache = probe.total_pages;
+      } catch {
+        continue;
+      }
+    }
+
+    const totalPages = totalPagesCache;
+
+    // Scegli 4 pagine casuali sparse — mai la stessa due volte nell'attempt
+    const maxPage = Math.min(totalPages, 500);
+    const pagesToTry = new Set<number>();
+    // Forza varietà: una pagina bassa, una media, due alte
+    pagesToTry.add(Math.max(2, Math.floor(Math.random() * Math.min(20, maxPage)) + 1));
+    pagesToTry.add(Math.floor(maxPage * 0.3) + Math.floor(Math.random() * 10));
+    pagesToTry.add(Math.floor(maxPage * 0.6) + Math.floor(Math.random() * 10));
+    pagesToTry.add(Math.floor(maxPage * 0.9) + Math.floor(Math.random() * Math.max(1, maxPage * 0.1)));
+    const pages = [...pagesToTry].map(p => Math.max(1, Math.min(maxPage, p)));
+
+    // Fetch in parallelo
+    const pageResults = await Promise.allSettled(
+      pages.map(p => discoverPage(filters, p, sortOrder))
+    );
+
+    // Aggrega e deduplica
+    const allCandidates: TMDBMovieBasic[] = [];
+    const seen = new Set<number>();
+    for (const r of pageResults) {
+      if (r.status !== 'fulfilled') continue;
+      for (const m of r.value.results) {
+        if (!seen.has(m.id)) { seen.add(m.id); allCandidates.push(m); }
+      }
+    }
+
+    // Applica filtro watchedStatus
+    const filtered = allCandidates.filter(m => {
+      if (filters.watchedStatus === 'unwatched' && watchedIds.has(m.id)) return false;
+      if (filters.watchedStatus === 'watched' && !watchedIds.has(m.id)) return false;
+      return true;
+    });
+
+    if (filtered.length === 0) continue; // nessun candidato valido, riprova
+
+    // Tier di preferenza: evita history e session
+    // Se history piena ignoriamo la history (ma non la session)
+    const historyTooFull = globalHistory.size >= 80;
+    const notInSession = filtered.filter(m => !sessionSeen.has(m.id));
+    const notInHistory = notInSession.filter(m => historyTooFull || !globalHistory.has(m.id));
+
+    // Pool finale: usa il più esclusivo possibile, ma non svuotarlo mai
+    const pool = notInHistory.length > 0 ? notInHistory
+      : notInSession.length > 0 ? notInSession
+      : filtered; // fallback assoluto: ignora tutto, prendi qualsiasi
+
+    // Scoreua
+    const chosen = scoreCandidates(pool, profile, globalHistory);
+    if (!chosen) continue;
+
+    // Trovato! Salva e restituisci
+    addToShuffleHistory(chosen.id);
+    sessionSeen.add(chosen.id);
+
+    const mediaType = filters.mediaType === 'tv' ? 'tv' : 'movie';
+    const movie = await getMovieDetail(chosen.id, mediaType);
+    return { movie, sortIdx };
   }
 
-  // Se non abbiamo abbastanza pagine, aggiungi pagina 1
-  if (pages.size < count && !pages.has(1)) pages.add(1);
-
-  return [...pages];
+  // Tutti gli 8 tentativi falliti — errore genuino (filtri troppo restrittivi)
+  return { error: 'Troppi filtri attivi: nessun film trovato. Prova a rimuovere qualche filtro.' };
 }
 
 export function useShuffle() {
@@ -127,8 +175,7 @@ export function useShuffle() {
     hasSearched: false,
   });
 
-  // Tiene traccia del sort usato nell'ultima chiamata per variarlo
-  const lastSortIndex = useRef<number>(-1);
+  const lastSortIdx = useRef<number>(-1);
 
   const shuffle = useCallback(async (
     strategyResult: QueryStrategyResult,
@@ -143,98 +190,20 @@ export function useShuffle() {
         ? { ...filters, mediaType: Math.random() < 0.5 ? 'movie' : 'tv' }
         : filters;
 
-      const mediaType = effectiveFilters.mediaType === 'tv' ? 'tv' : 'movie';
+      const result = await findCandidate(effectiveFilters, watchedIds, profile, lastSortIdx.current);
 
-      // Scegli un sort order DIVERSO dall'ultimo usato
-      let sortIdx: number;
-      do {
-        sortIdx = Math.floor(Math.random() * SORT_ORDERS.length);
-      } while (sortIdx === lastSortIndex.current && SORT_ORDERS.length > 1);
-      lastSortIndex.current = sortIdx;
-      const sortOrder = SORT_ORDERS[sortIdx];
-
-      // Scopri quante pagine esistono (pagina 1 per info)
-      const firstPage = await discoverPage(effectiveFilters, 1, sortOrder);
-      const totalPages = firstPage.total_pages;
-
-      if (totalPages === 0 || firstPage.results.length === 0) {
-        setState({ movie: null, loading: false, error: 'Nessun risultato. Prova ad allargare i filtri.', hasSearched: true });
+      if ('error' in result) {
+        setState({ movie: null, loading: false, error: result.error, hasSearched: true });
         return;
       }
 
-      // Scegli 3 pagine casuali (evita pagina 1 se ci sono abbastanza pagine)
-      const randomPages = pickRandomPages(totalPages, 3, totalPages > 5);
-
-      // Fetcha tutte le pagine in parallelo per velocità
-      const pageResults = await Promise.allSettled(
-        randomPages.map(p => discoverPage(effectiveFilters, p, sortOrder))
-      );
-
-      // Aggrega tutti i candidati
-      const globalHistory = new Set(getShuffleHistory());
-      const allCandidates: TMDBMovieBasic[] = [];
-
-      // Includi anche i risultati di pagina 1 nell'aggregazione
-      for (const r of firstPage.results) {
-        allCandidates.push(r);
-      }
-      for (const result of pageResults) {
-        if (result.status === 'fulfilled') {
-          allCandidates.push(...result.value.results);
-        }
-      }
-
-      // Deduplicazione per id
-      const seen = new Set<number>();
-      const deduped = allCandidates.filter(m => {
-        if (seen.has(m.id)) return false;
-        seen.add(m.id);
-        return true;
-      });
-
-      // Filtra per watchedStatus
-      const filtered = deduped.filter(m => {
-        if (effectiveFilters.watchedStatus === 'unwatched' && watchedIds.has(m.id)) return false;
-        if (effectiveFilters.watchedStatus === 'watched' && !watchedIds.has(m.id)) return false;
-        return true;
-      });
-
-      // Separa in 3 tier:
-      // 1. Fresh: non in history globale, non visti questa sessione
-      // 2. Old: in history globale ma non questa sessione
-      // 3. Session: visti questa sessione (usati solo come fallback)
-      const fresh = filtered.filter(m => !globalHistory.has(m.id) && !sessionSeen.has(m.id));
-      const old = filtered.filter(m => globalHistory.has(m.id) && !sessionSeen.has(m.id));
-      const pool = fresh.length >= 3 ? fresh
-        : fresh.length > 0 ? [...fresh, ...old]
-        : old.length > 0 ? old
-        : filtered; // fallback: tutto
-
-      if (pool.length === 0) {
-        // Fallback totale: pulisci session e riprova
-        sessionSeen.clear();
-        setState({ movie: null, loading: false, error: 'Hai visto quasi tutto! History resettata.', hasSearched: true });
-        return;
-      }
-
-      // Scoreua con il profilo utente
-      const chosen = scoreCandidates(pool, profile, globalHistory);
-      if (!chosen) {
-        setState({ movie: null, loading: false, error: 'Nessun film trovato.', hasSearched: true });
-        return;
-      }
-
-      // Aggiungi a history e session
-      addToShuffleHistory(chosen.id);
-      sessionSeen.add(chosen.id);
-
-      const movie = await getMovieDetail(chosen.id, mediaType);
-      setState({ movie, loading: false, error: null, hasSearched: true });
+      lastSortIdx.current = result.sortIdx;
+      setState({ movie: result.movie, loading: false, error: null, hasSearched: true });
 
     } catch (err) {
       setState({
         movie: null, loading: false,
-        error: err instanceof Error ? err.message : 'Errore sconosciuto',
+        error: 'Errore di rete. Controlla la connessione.',
         hasSearched: true,
       });
     }
