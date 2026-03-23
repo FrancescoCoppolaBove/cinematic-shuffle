@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import type { TMDBMovieDetail, TMDBMovieBasic } from '../types';
 import {
-  getImageUrl, getProviderLogoUrl, getTitle, getReleaseDate,
+  getImageUrl, getProviderLogoUrl, getTitle, getOriginalTitle, getReleaseDate,
   getBestTrailer, getWatchProviders, getCollection,
 } from '../services/tmdb';
 import { formatRuntime, formatYear, formatRating, cn } from '../utils';
@@ -357,6 +357,9 @@ export function MovieDetailScreen({
                 <h1 className="font-display text-2xl leading-tight tracking-wide text-film-text break-words">
                   {title}
                 </h1>
+                {getOriginalTitle(movie) && (
+                  <p className="text-film-subtle text-sm mt-0.5 leading-snug">{getOriginalTitle(movie)}</p>
+                )}
                 {movie.tagline && (
                   <p className="text-film-accent text-xs italic mt-1 leading-snug">"{movie.tagline}"</p>
                 )}

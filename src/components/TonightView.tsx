@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { RefreshCw, Clock, Star, Bookmark, Play, ChevronRight } from 'lucide-react';
 import type { WatchedMovie, WatchlistItem } from '../types';
 import { useTonightPick, type TonightPick } from '../hooks/useTonightPick';
-import { getImageUrl, getTitle, getReleaseDate } from '../services/tmdb';
+import { getImageUrl, getTitle, getOriginalTitle, getReleaseDate } from '../services/tmdb';
 import { formatYear, formatRating, cn } from '../utils';
 
 interface TonightViewProps {
@@ -209,6 +209,9 @@ function PickCard({ pick, onOpen, isFirst }: {
         {/* Info sotto */}
         <div className="px-4 py-3 space-y-1">
           <h3 className="font-display text-xl text-film-text tracking-wide leading-tight">{title}</h3>
+          {getOriginalTitle(item) && (
+            <p className="text-film-subtle text-xs leading-snug">{getOriginalTitle(item)}</p>
+          )}
           <div className="flex items-center gap-2">
             <span className="text-film-subtle text-sm">{year}</span>
             {item.vote_average > 0 && (
@@ -267,6 +270,9 @@ function PickCard({ pick, onOpen, isFirst }: {
         </div>
 
         <h3 className="font-display text-base text-film-text tracking-wide leading-tight line-clamp-2">{title}</h3>
+        {getOriginalTitle(item) && (
+          <p className="text-film-subtle text-xs leading-snug line-clamp-1">{getOriginalTitle(item)}</p>
+        )}
 
         <div className="flex items-center gap-2 flex-wrap">
           {year && <span className="text-film-subtle text-xs">{year}</span>}

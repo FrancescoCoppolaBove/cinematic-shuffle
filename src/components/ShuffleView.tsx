@@ -10,7 +10,7 @@ import type { RatingResult } from './RatingModal';
 import { cn } from '../utils';
 import type { WatchedMovie } from '../types';
 import { useUserTaste } from '../hooks/useUserTaste';
-import { getImageUrl, getTitle, getReleaseDate, getBestTrailer, getWatchProviders, getProviderLogoUrl } from '../services/tmdb';
+import { getImageUrl, getTitle, getOriginalTitle, getReleaseDate, getBestTrailer, getWatchProviders, getProviderLogoUrl } from '../services/tmdb';
 import { formatYear, formatRating, formatRuntime } from '../utils';
 import { Star, Clock, MapPin } from 'lucide-react';
 
@@ -351,7 +351,10 @@ function ShuffleMovieCard({
       <h2 className="font-display text-2xl leading-tight tracking-wide text-film-text break-words">
         {title}
       </h2>
-      {movie.tagline && <p className="text-film-accent text-xs italic -mt-1">"{movie.tagline}"</p>}
+      {getOriginalTitle(movie) && (
+        <p className="text-film-subtle text-sm -mt-0.5 leading-snug">{getOriginalTitle(movie)}</p>
+      )}
+      {movie.tagline && <p className="text-film-accent text-xs italic mt-0.5">"{movie.tagline}"</p>}
 
       {/* Poster + meta */}
       <div className="flex gap-3">

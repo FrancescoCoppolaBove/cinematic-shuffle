@@ -34,6 +34,25 @@ export function getTitle(item: { title?: string; name?: string; original_title?:
   // Altrimenti usa sempre il titolo originale (es. "The Godfather" invece di "Il Padrino")
   return orig;
 }
+
+/**
+ * Restituisce il titolo originale del film da mostrare sotto il titolo principale,
+ * solo quando è diverso dal titolo principale.
+ * Esempi:
+ *   "Parasite" (en) + "기생충" (ko) → mostra "기생충"
+ *   "Il Padrino" (it) → getTitle = "The Godfather", orig = "The Godfather" → non mostrare
+ *   "Seven Samurai" + "七人の侍" → mostra "七人の侍"
+ *   "Pulp Fiction" + "Pulp Fiction" → non mostrare (uguale)
+ */
+export function getOriginalTitle(item: { title?: string; name?: string; original_title?: string; original_name?: string }): string | null {
+  const displayTitle = getTitle(item);
+  const orig = item.original_title || item.original_name;
+  if (!orig) return null;
+  // Non mostrare se è identico al titolo principale (case-insensitive)
+  if (orig.trim().toLowerCase() === displayTitle.trim().toLowerCase()) return null;
+  return orig;
+}
+
 export function getReleaseDate(item: { release_date?: string; first_air_date?: string }): string {
   return item.release_date || item.first_air_date || '';
 }
