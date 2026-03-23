@@ -177,8 +177,9 @@ export type QueryStrategy = 'random' | 'genre_single' | 'genre_multi' | 'explore
 
 export interface QueryStrategyResult {
   strategy: QueryStrategy;
-  filters: MovieFilters;
-  label: string; // per debug
+  filters: MovieFilters;     // filtri arricchiti dal profilo (genreIds dal profilo, ecc.)
+  baseFilters: MovieFilters; // filtri PURI dell'utente, senza nulla dal profilo
+  label: string;
 }
 
 /**
@@ -214,6 +215,7 @@ export function getQueryStrategy(
   else strategy = 'random';
 
   const filters = { ...baseFilters };
+  const userBase = { ...baseFilters }; // copia pulita da restituire
 
   // La qualità viene gestita da scoreCandidates, NON dal filtro API.
   // Aggiungere minImdbRating qui restringe troppo il catalogo per utenti esperti.
@@ -226,7 +228,7 @@ export function getQueryStrategy(
       if (picked && !filters.genreIds?.length) {
         filters.genreIds = [picked];
       }
-      return { strategy, filters, label: `Top genre: ${picked}` };
+      return { strategy, filters, baseFilters: userBase, label: `Top genre: ${picked}` };
     }
 
     case 'genre_multi': {
@@ -239,7 +241,7 @@ export function getQueryStrategy(
         if (i2 === i1) i2 = (i2 + 1) % topN.length;
         filters.genreIds = [topN[i1], topN[i2]];
       }
-      return { strategy, filters, label: `Multi genre: ${filters.genreIds?.join(',')}` };
+      return { strategy, filters, baseFilters: userBase, label: `Multi genre: ${filters.genreIds?.join(',')}` };
     }
 
     case 'explore': {
@@ -253,11 +255,11 @@ export function getQueryStrategy(
         const picked = candidates[Math.floor(Math.random() * candidates.length)];
         filters.genreIds = [picked];
       }
-      return { strategy, filters, label: `Explore genre: ${filters.genreIds?.[0]}` };
+      return { strategy, filters, baseFilters: userBase, label: `Explore genre: ${filters.genreIds?.[0]}` };
     }
 
     default:
-      return { strategy: 'random', filters, label: 'Random' };
+      return { strategy: 'random', filters, baseFilters: userBase, label: 'Random' };
   }
 }
 
