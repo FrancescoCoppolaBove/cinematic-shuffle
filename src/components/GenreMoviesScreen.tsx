@@ -2,7 +2,7 @@
  * GenreMoviesScreen — lista film/serie per genere o keyword.
  * Con filtri e modalità Card.
  */
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { ChevronLeft, LayoutGrid, Rows3, SlidersHorizontal, X } from 'lucide-react';
 import { InnerMovieDetail } from './InnerMovieDetail';
 import type { TMDBMovieBasic, TMDBMovieDetail } from '../types';
@@ -42,21 +42,55 @@ export function GenreMoviesScreen({
 }: GenreMoviesScreenProps) {
   const [movies, setMovies] = useState<TMDBMovieBasic[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [innerMovie, setInnerMovie] = useState<{id: number; mediaType: 'movie'|'tv'} | null>(null);
   const [sortBy, setSortBy] = useState<SortBy>('rating');
   const [showFilters, setShowFilters] = useState(false);
   const [minRating, setMinRating] = useState(0);
   const [onlyUnseen, setOnlyUnseen] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Carica pagina iniziale + pagina 2 subito per avere ~40 film
   useEffect(() => {
     setLoading(true);
+    setMovies([]);
+    setPage(2);
     const fn = type === 'genre' ? discoverByGenre : discoverByKeyword;
-    fn(id, mediaType)
-      .then(setMovies)
+    Promise.all([fn(id, mediaType, 1), fn(id, mediaType, 2)])
+      .then(([r1, r2]) => {
+        const combined = [...r1.items, ...r2.items];
+        const seen = new Set<number>();
+        setMovies(combined.filter(m => { if (seen.has(m.id)) return false; seen.add(m.id); return true; }));
+        setTotalPages(r1.totalPages);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [id, type, mediaType]);
+
+  const loadMore = useCallback(async () => {
+    const nextPage = page + 1;
+    if (loadingMore || nextPage > totalPages) return;
+    setLoadingMore(true);
+    try {
+      const fn = type === 'genre' ? discoverByGenre : discoverByKeyword;
+      const res = await fn(id, mediaType, nextPage);
+      setMovies(prev => {
+        const existingIds = new Set(prev.map(m => m.id));
+        return [...prev, ...res.items.filter(m => !existingIds.has(m.id))];
+      });
+      setPage(nextPage);
+    } catch { /* silent */ }
+    finally { setLoadingMore(false); }
+  }, [id, type, mediaType, page, totalPages, loadingMore]);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 400) loadMore();
+  }, [loadMore]);
 
   const filtered = useMemo(() => {
     let list = [...movies];
@@ -182,7 +216,7 @@ export function GenreMoviesScreen({
       </div>
 
       {/* Content */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="w-10 h-10 border-2 border-film-accent border-t-transparent rounded-full animate-spin" />

@@ -540,26 +540,52 @@ export async function getMovieKeywords(movieId: number, mediaType: 'movie' | 'tv
 
 // ─── Discover by keyword ────────────────────────────────────────────
 
-export async function discoverByKeyword(keywordId: number, mediaType: 'movie' | 'tv' = 'movie'): Promise<TMDBMovieBasic[]> {
-  const data = await apiFetch<{ results: TMDBMovieBasic[] }>(`/discover/${mediaType}`, {
-    with_keywords: String(keywordId),
-    sort_by: 'vote_average.desc',
-    'vote_count.gte': '50',
-    page: '1',
-  });
-  return (data.results ?? []).map(m => ({ ...m, media_type: mediaType }));
+export interface DiscoverPageResult {
+  items: TMDBMovieBasic[];
+  totalPages: number;
+  totalResults: number;
+}
+
+export async function discoverByKeyword(
+  keywordId: number,
+  mediaType: 'movie' | 'tv' = 'movie',
+  page = 1
+): Promise<DiscoverPageResult> {
+  const data = await apiFetch<{ results: TMDBMovieBasic[]; total_pages: number; total_results: number }>(
+    `/discover/${mediaType}`, {
+      with_keywords: String(keywordId),
+      sort_by: 'vote_average.desc',
+      'vote_count.gte': '50',
+      page: String(page),
+    }
+  );
+  return {
+    items: (data.results ?? []).map(m => ({ ...m, media_type: mediaType })),
+    totalPages: data.total_pages ?? 1,
+    totalResults: data.total_results ?? 0,
+  };
 }
 
 // ─── Discover by genre ─────────────────────────────────────────────
 
-export async function discoverByGenre(genreId: number, mediaType: 'movie' | 'tv' = 'movie'): Promise<TMDBMovieBasic[]> {
-  const data = await apiFetch<{ results: TMDBMovieBasic[] }>(`/discover/${mediaType}`, {
-    with_genres: String(genreId),
-    sort_by: 'vote_average.desc',
-    'vote_count.gte': '100',
-    page: '1',
-  });
-  return (data.results ?? []).map(m => ({ ...m, media_type: mediaType }));
+export async function discoverByGenre(
+  genreId: number,
+  mediaType: 'movie' | 'tv' = 'movie',
+  page = 1
+): Promise<DiscoverPageResult> {
+  const data = await apiFetch<{ results: TMDBMovieBasic[]; total_pages: number; total_results: number }>(
+    `/discover/${mediaType}`, {
+      with_genres: String(genreId),
+      sort_by: 'vote_average.desc',
+      'vote_count.gte': '100',
+      page: String(page),
+    }
+  );
+  return {
+    items: (data.results ?? []).map(m => ({ ...m, media_type: mediaType })),
+    totalPages: data.total_pages ?? 1,
+    totalResults: data.total_results ?? 0,
+  };
 }
 
 // ─── Tonight: fetch trending + cinephile picks ─────────────────────
