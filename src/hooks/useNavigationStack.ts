@@ -23,8 +23,14 @@ export function useNavigationStack() {
   const current = stack[stack.length - 1] ?? null;
   const isOpen = stack.length > 0;
 
+  const MAX_STACK_DEPTH = 10;
+
   const push = useCallback((entry: NavEntry) => {
-    setStack(prev => [...prev, entry]);
+    setStack(prev => {
+      const next = [...prev, entry];
+      // Se supera la profondità massima, rimuovi le entry più vecchie
+      return next.length > MAX_STACK_DEPTH ? next.slice(-MAX_STACK_DEPTH) : next;
+    });
   }, []);
 
   const pop = useCallback(() => {

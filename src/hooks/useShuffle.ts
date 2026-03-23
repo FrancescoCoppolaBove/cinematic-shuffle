@@ -25,6 +25,20 @@ const SORT_ORDERS = [
 ];
 
 const sessionSeen = new Set<number>();
+const MAX_SESSION_SEEN = 200;
+
+function sessionSeenAdd(id: number) {
+  sessionSeen.add(id);
+  if (sessionSeen.size > MAX_SESSION_SEEN) {
+    const toRemove = sessionSeen.size - MAX_SESSION_SEEN;
+    let removed = 0;
+    for (const val of sessionSeen) {
+      if (removed >= toRemove) break;
+      sessionSeen.delete(val);
+      removed++;
+    }
+  }
+}
 
 function getApiKey(): string {
   const k = import.meta.env.VITE_TMDB_API_KEY as string | undefined;
@@ -147,7 +161,7 @@ export function useShuffle() {
           ?? candidates[Math.floor(Math.random() * candidates.length)];
 
         addToShuffleHistory(chosen.id);
-        sessionSeen.add(chosen.id);
+        sessionSeenAdd(chosen.id);
         const movie = await getMovieDetail(chosen.id, mediaType);
         setState({ movie, loading: false, error: null, hasSearched: true });
         return;

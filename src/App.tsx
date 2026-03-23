@@ -165,10 +165,23 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navStack.current?.id]);
 
-  // Cache per preload film adiacenti — evita fetch al momento dello swipe
+  // Cache per preload film adiacenti — cap 30 entries, LRU eviction
   const preloadCache = useRef<Map<number, TMDBMovieDetail>>(new Map());
+  const CACHE_MAX = 30;
 
-  // Preloads adjacent playlist items silently (called on first render and on index change)
+  const cacheSet = useCallback((id: number, movie: TMDBMovieDetail) => {
+    const cache = preloadCache.current;
+    // Se già presente, rimuovi e riaggiungi in coda (LRU touch)
+    if (cache.has(id)) cache.delete(id);
+    // Se piena, rimuovi la entry più vecchia (first inserted = first in Map iteration)
+    if (cache.size >= CACHE_MAX) {
+      const firstKey = cache.keys().next().value;
+      if (firstKey !== undefined) cache.delete(firstKey);
+    }
+    cache.set(id, movie);
+  }, []);
+
+  // Preloads adjacent playlist items silently
   const preloadAdjacent = useCallback(async (playlist: PlaylistItem[], currentIndex: number) => {
     const toLoad = [currentIndex - 1, currentIndex + 1].filter(
       i => i >= 0 && i < playlist.length
@@ -178,11 +191,11 @@ export default function App() {
       if (!preloadCache.current.has(item.id)) {
         try {
           const movie = await getMovieDetail(item.id, item.mediaType);
-          preloadCache.current.set(item.id, movie);
+          cacheSet(item.id, movie);
         } catch { /* silente */ }
       }
     }
-  }, []);
+  }, [cacheSet]);
 
   // Swipe to adjacent item — usa cache se disponibile, altrimenti fetch
   const handleSwipeToIndex = useCallback(async (newIndex: number) => {
@@ -202,7 +215,7 @@ export default function App() {
       setDetailLoading(true);
       try {
         const movie = await getMovieDetail(item.id, item.mediaType);
-        preloadCache.current.set(item.id, movie);
+        cacheSet(item.id, movie);
         setDetailMovie(movie);
         navStack.updatePlaylistIndex(newIndex);
         preloadAdjacent(current.playlist, newIndex);
@@ -214,6 +227,10 @@ export default function App() {
   // Back from detail — pop stack, if empty close detail
   const handleDetailBack = useCallback(() => {
     navStack.pop();
+    // Se torniamo alla home (stack vuoto), svuota la cache per liberare memoria
+    if (navStack.stack.length <= 1) {
+      preloadCache.current.clear();
+    }
     if (navStack.stack.length <= 1) {
       // Last entry — close the detail screen
       setDetailMovie(null);
