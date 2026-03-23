@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { TrendingUp, Shuffle, Search, X, CheckCircle, User, Moon } from 'lucide-react';
 import type { AppView, TMDBMovieDetail } from './types';
 import { useAuth } from './hooks/useAuth';
@@ -156,20 +156,60 @@ export default function App() {
     finally { setDetailLoading(false); }
   }, [navStack, detailMovie]);
 
-  // Swipe to adjacent item in playlist
+  // Preloads adjacent items when a playlist detail opens
+  useEffect(() => {
+    const current = navStack.current;
+    if (current?.playlist && current.playlistIndex !== undefined) {
+      preloadAdjacent(current.playlist, current.playlistIndex);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navStack.current?.id]);
+
+  // Cache per preload film adiacenti — evita fetch al momento dello swipe
+  const preloadCache = useRef<Map<number, TMDBMovieDetail>>(new Map());
+
+  // Preloads adjacent playlist items silently (called on first render and on index change)
+  const preloadAdjacent = useCallback(async (playlist: PlaylistItem[], currentIndex: number) => {
+    const toLoad = [currentIndex - 1, currentIndex + 1].filter(
+      i => i >= 0 && i < playlist.length
+    );
+    for (const i of toLoad) {
+      const item = playlist[i];
+      if (!preloadCache.current.has(item.id)) {
+        try {
+          const movie = await getMovieDetail(item.id, item.mediaType);
+          preloadCache.current.set(item.id, movie);
+        } catch { /* silente */ }
+      }
+    }
+  }, []);
+
+  // Swipe to adjacent item — usa cache se disponibile, altrimenti fetch
   const handleSwipeToIndex = useCallback(async (newIndex: number) => {
     const current = navStack.current;
     if (!current?.playlist) return;
     const item = current.playlist[newIndex];
     if (!item) return;
-    setDetailLoading(true);
-    try {
-      const movie = await getMovieDetail(item.id, item.mediaType);
-      setDetailMovie(movie);
+
+    // Usa cache se disponibile (0ms) altrimenti fetch
+    const cached = preloadCache.current.get(item.id);
+    if (cached) {
+      setDetailMovie(cached);
       navStack.updatePlaylistIndex(newIndex);
-    } catch { /* silente */ }
-    finally { setDetailLoading(false); }
-  }, [navStack]);
+      // Preload the next adjacent items
+      preloadAdjacent(current.playlist, newIndex);
+    } else {
+      setDetailLoading(true);
+      try {
+        const movie = await getMovieDetail(item.id, item.mediaType);
+        preloadCache.current.set(item.id, movie);
+        setDetailMovie(movie);
+        navStack.updatePlaylistIndex(newIndex);
+        preloadAdjacent(current.playlist, newIndex);
+      } catch { /* silente */ }
+      finally { setDetailLoading(false); }
+    }
+  }, [navStack, preloadAdjacent]);
 
   // Back from detail — pop stack, if empty close detail
   const handleDetailBack = useCallback(() => {

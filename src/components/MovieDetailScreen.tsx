@@ -192,30 +192,37 @@ export function MovieDetailScreen({
     }
 
     const dx = activeDragX.current;
-    const threshold = 80; // px needed to commit
+    const threshold = 60; // px needed to commit
 
     if (dx < -threshold && canGoNext) {
-      // Commit: slide out to the left
-
+      // Commit: quick snap left, swap content, snap back from right
       setIsAnimating(true);
-      setDragX(-window.innerWidth); // fly off screen
+      setDragX(-window.innerWidth * 0.6); // fly partially off — faster
       setTimeout(() => {
         onSwipeToIndex!(playlistIndex + 1);
-        setDragX(0);
-
-        setIsAnimating(false);
-      }, 280);
+        // Place new content coming in from the right
+        setDragX(window.innerWidth * 0.3);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setDragX(0); // animate to center
+            setTimeout(() => setIsAnimating(false), 220);
+          });
+        });
+      }, 180);
     } else if (dx > threshold && canGoPrev) {
-      // Commit: slide out to the right
-
+      // Commit: quick snap right, swap content, snap back from left
       setIsAnimating(true);
-      setDragX(window.innerWidth);
+      setDragX(window.innerWidth * 0.6);
       setTimeout(() => {
         onSwipeToIndex!(playlistIndex - 1);
-        setDragX(0);
-
-        setIsAnimating(false);
-      }, 280);
+        setDragX(-window.innerWidth * 0.3);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setDragX(0);
+            setTimeout(() => setIsAnimating(false), 220);
+          });
+        });
+      }, 180);
     } else {
       // Snap back: spring return to center
       setDragX(0);
@@ -233,7 +240,7 @@ export function MovieDetailScreen({
   const isBeingDragged = swipeLocked.current === 'horizontal' && dragX !== 0;
   const transitionStyle = isBeingDragged
     ? 'none'
-    : 'transform 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+    : 'transform 220ms cubic-bezier(0.33, 1, 0.68, 1)'; // snappier ease-out
 
   return (
     <div
@@ -248,7 +255,7 @@ export function MovieDetailScreen({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         className="h-full overflow-y-auto"
-        style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+        style={{ WebkitOverflowScrolling: 'touch', willChange: 'transform' } as React.CSSProperties}
       >
         {/* This inner div is what physically moves during swipe */}
         <div

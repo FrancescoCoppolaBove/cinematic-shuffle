@@ -150,13 +150,13 @@ function TrendingSection({
       {/* Grid */}
       {loading ? (
         <div className="grid grid-cols-3 gap-2.5">
-          {Array.from({ length: 6 }).map((_, i) => (
+          {Array.from({ length: 9 }).map((_, i) => (
             <div key={i} className="aspect-[2/3] rounded-xl bg-film-surface animate-pulse border border-film-border" />
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-2.5">
-          {items.slice(0, 6).map((item, idx) => (
+          {items.slice(0, 9).map((item, idx) => (
             <TrendingPosterCard
               key={item.id}
               item={item}
