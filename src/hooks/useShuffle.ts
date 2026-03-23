@@ -217,62 +217,37 @@ export function useShuffle() {
       for (const m of allRaw) dedupMap.set(m.id, m);
       const allCandidates = [...dedupMap.values()];
 
-      // ── Selezione con degradazione a 4 livelli ─────────────────────
-      // L1: rispetta watchedStatus, non in session, non in history
-      // L2: rispetta watchedStatus, ignora session (resetta)
-      // L3: rispetta watchedStatus, ignora session e history
-      // L4: ignora tutto (watchedStatus incluso) — fallback assoluto
+      // ── Selezione: prende il primo candidato disponibile ────────────
+      // Se allCandidates è vuoto (tutte le fetch fallite per rate limit
+      // o rete), riprova con una singola pagina safety senza parametri extra.
+      let pool = allCandidates;
+      if (pool.length === 0) {
+        const safety = await fetchPage(base, 1, 'popularity.desc', mediaType);
+        pool = safety.results;
+      }
 
-      const respects = filterCandidates(allCandidates, watchedIds, base.watchedStatus);
-      const all      = allCandidates; // ignora watchedStatus
-
-      // L1
-      if (respects.length > 0) {
-        const chosen = pickFromPool(respects, globalHistory, profile, false);
-        // chosen è sempre non-null se respects.length > 0
-        addToShuffleHistory(chosen.id);
-        sessionSeen.add(chosen.id);
-        const movie = await getMovieDetail(chosen.id, mediaType);
-        setState({ movie, loading: false, error: null, hasSearched: true });
+      // Ancora vuoto → errore genuino (filtri manuali impossibili)
+      if (pool.length === 0) {
+        setState({ movie: null, loading: false, hasSearched: true,
+          error: 'Nessun film trovato. Prova a modificare i filtri.' });
         return;
       }
 
-      // L2: watchedStatus rispettato ma sessionSeen resettato
-      sessionSeen.clear();
-      const respects2 = filterCandidates(allCandidates, watchedIds, base.watchedStatus);
-      if (respects2.length > 0) {
-        const chosen = pickFromPool(respects2, globalHistory, profile, true);
-        addToShuffleHistory(chosen.id);
-        sessionSeen.add(chosen.id);
-        const movie = await getMovieDetail(chosen.id, mediaType);
-        setState({ movie, loading: false, error: null, hasSearched: true });
-        return;
-      }
+      // Applica watchedStatus
+      const validForStatus = filterCandidates(pool, watchedIds, base.watchedStatus);
 
-      // L3: watchedStatus rispettato, ignora tutta la history
-      if (respects2.length > 0) {
-        const chosen = pickFromPool(respects2, new Set(), profile, true);
-        addToShuffleHistory(chosen.id);
-        sessionSeen.add(chosen.id);
-        const movie = await getMovieDetail(chosen.id, mediaType);
-        setState({ movie, loading: false, error: null, hasSearched: true });
-        return;
-      }
+      // Se non ci sono film che rispettano watchedStatus usa tutto il pool
+      const candidates = validForStatus.length > 0 ? validForStatus : pool;
 
-      // L4: ignora watchedStatus — mostra qualsiasi film
-      // (accade solo se l'utente ha visto OGNI film del catalogo con quei filtri)
-      if (all.length > 0) {
-        const chosen = pickFromPool(all, new Set(), profile, true);
-        addToShuffleHistory(chosen.id);
-        sessionSeen.add(chosen.id);
-        const movie = await getMovieDetail(chosen.id, mediaType);
-        setState({ movie, loading: false, error: null, hasSearched: true });
-        return;
-      }
+      // Reset session se tutti i candidati sono già stati visti questa sessione
+      if (candidates.every(m => sessionSeen.has(m.id))) sessionSeen.clear();
 
-      // Non dovrebbe mai arrivare qui (totalPages > 0 ma zero risultati aggregati)
-      setState({ movie: null, loading: false, hasSearched: true,
-        error: 'Errore inatteso. Riprova.' });
+      // Scegli — pickFromPool non torna mai null se candidates.length > 0
+      const chosen = pickFromPool(candidates, globalHistory, profile, false);
+      addToShuffleHistory(chosen.id);
+      sessionSeen.add(chosen.id);
+      const movie = await getMovieDetail(chosen.id, mediaType);
+      setState({ movie, loading: false, error: null, hasSearched: true });
 
     } catch {
       setState({ movie: null, loading: false, hasSearched: true, error: 'Errore di rete. Riprova.' });
