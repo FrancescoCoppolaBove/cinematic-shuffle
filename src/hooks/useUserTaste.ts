@@ -195,7 +195,7 @@ export function getQueryStrategy(
   baseFilters: MovieFilters,
   exploreMode: boolean = false
 ): QueryStrategyResult {
-  const { phase, topGenreIds, unseenGenreIds, qualityThreshold } = profile;
+  const { phase, topGenreIds, unseenGenreIds } = profile;
   const r = Math.random();
 
   // Probabilità per fase
@@ -215,10 +215,8 @@ export function getQueryStrategy(
 
   const filters = { ...baseFilters };
 
-  // Applica sempre la soglia qualità se l'utente non ha già un filtro
-  if (!filters.minImdbRating && qualityThreshold > 5.5) {
-    filters.minImdbRating = qualityThreshold;
-  }
+  // La qualità viene gestita da scoreCandidates, NON dal filtro API.
+  // Aggiungere minImdbRating qui restringe troppo il catalogo per utenti esperti.
 
   switch (strategy) {
     case 'genre_single': {
@@ -254,10 +252,6 @@ export function getQueryStrategy(
       if (candidates.length > 0 && !filters.genreIds?.length) {
         const picked = candidates[Math.floor(Math.random() * candidates.length)];
         filters.genreIds = [picked];
-        // Per esplorazione abbassiamo leggermente la soglia qualità
-        if (filters.minImdbRating && filters.minImdbRating > 6.5) {
-          filters.minImdbRating = 6.5;
-        }
       }
       return { strategy, filters, label: `Explore genre: ${filters.genreIds?.[0]}` };
     }

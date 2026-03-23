@@ -162,8 +162,23 @@ export function useShuffle() {
         ? (Math.random() < 0.5 ? 'movie' : 'tv')
         : (userFilters.mediaType === 'tv' ? 'tv' : 'movie');
 
-      // Filtri base = solo quelli impostati manualmente dall'utente
-      const base: MovieFilters = { ...userFilters, mediaType };
+      // base = filtri puri dell'utente, senza nulla iniettato dal profilo.
+      // strategyResult.filters può contenere genreIds suggeriti dall'algoritmo —
+      // li usiamo solo per "enriched", mai per "base".
+      // Questo garantisce che il fallback sia sempre su un catalogo ampio.
+      const profileSuggestedGenres = strategyResult.filters.genreIds ?? [];
+      const userHasGenreFilter = !!(userFilters as MovieFilters & { genreIds?: number[] }).genreIds?.length;
+
+      const base: MovieFilters = {
+        ...userFilters,
+        mediaType,
+        // Assicurati che base NON abbia minImdbRating dal profilo
+        minImdbRating: (userFilters as MovieFilters).minImdbRating,
+        // Assicurati che base NON abbia genreIds dal profilo
+        genreIds: userHasGenreFilter
+          ? (userFilters as MovieFilters & { genreIds?: number[] }).genreIds
+          : [],
+      };
 
       // Ruota il sort order ad ogni chiamata per varietà
       sortIdxRef.current = (sortIdxRef.current + 1) % SORT_ORDERS.length;
@@ -171,10 +186,10 @@ export function useShuffle() {
 
       const globalHistory = new Set(getShuffleHistory());
 
-      // Filtri arricchiti dal profilo (solo genere suggerito, mai qualità automatica)
+      // enriched = base + generi suggeriti dal profilo (se l'utente non ne ha scelti)
       const enriched: MovieFilters = { ...base };
-      if (!base.genreIds?.length && strategyResult.filters.genreIds?.length) {
-        enriched.genreIds = strategyResult.filters.genreIds;
+      if (!userHasGenreFilter && profileSuggestedGenres.length > 0) {
+        enriched.genreIds = profileSuggestedGenres;
       }
 
       // ── Raccolta candidati: due batch in parallelo ─────────────────
