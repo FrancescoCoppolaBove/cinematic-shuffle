@@ -10,7 +10,7 @@ import type { RatingResult } from './RatingModal';
 import { cn } from '../utils';
 import type { WatchedMovie } from '../types';
 import { useUserTaste } from '../hooks/useUserTaste';
-import { getImageUrl, getTitle, getOriginalTitle, getReleaseDate, getBestTrailer, getWatchProviders, getProviderLogoUrl } from '../services/tmdb';
+import { getImageUrl, getTitle, getEnglishTitle, getOriginalTitle, getReleaseDate, getBestTrailer, getWatchProviders, getProviderLogoUrl } from '../services/tmdb';
 import { formatYear, formatRating, formatRuntime } from '../utils';
 import { Star, Clock, MapPin } from 'lucide-react';
 
@@ -292,6 +292,7 @@ interface ShuffleMovieCardProps {
   isWatched: boolean;
   isOnWatchlist: boolean;
   rewatchCount: number;
+  watchedIds?: Set<number>;
   onShuffle: () => void;
   onOpenRating: () => void;
   onWatchlistToggle: () => void;
@@ -303,13 +304,13 @@ interface ShuffleMovieCardProps {
 }
 
 function ShuffleMovieCard({
-  movie, isWatched, isOnWatchlist, rewatchCount,
+  movie, isWatched, isOnWatchlist, rewatchCount, watchedIds = new Set(),
   onShuffle, onOpenRating, onWatchlistToggle, onOpenDetail,
   onOpenPerson, onOpenGenre, onIncrementRewatch,
 }: ShuffleMovieCardProps) {
   const [posterErr, setPosterErr] = useState(false);
   const [expandOverview, setExpandOverview] = useState(false);
-  const title = getTitle(movie);
+  const title = getEnglishTitle(movie);
   const backdrop = getImageUrl(movie.backdrop_path, 'w780');
   const poster = !posterErr ? getImageUrl(movie.poster_path, 'w342') : null;
   const isTV = movie.media_type === 'tv';
@@ -465,7 +466,7 @@ function ShuffleMovieCard({
                 className="shrink-0 w-20 text-left active:scale-95 transition-all">
                 <div className="w-20 aspect-[2/3] rounded-xl overflow-hidden bg-film-surface border border-film-border">
                   {item.poster_path
-                    ? <img src={getImageUrl(item.poster_path, 'w185') || ''} alt={getTitle(item)} className="w-full h-full object-cover" />
+                    ? <img src={getImageUrl(item.poster_path, 'w185') || ''} alt={getTitle(item)} className={`w-full h-full object-cover${watchedIds.has(item.id) ? ' opacity-40 grayscale' : ''}`} />
                     : <div className="w-full h-full flex items-center justify-center text-lg">{isTV ? '📺' : '🎬'}</div>
                   }
                 </div>

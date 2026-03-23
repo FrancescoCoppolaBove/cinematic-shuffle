@@ -298,7 +298,7 @@ function CreditPoster({ movie, subtitle, isWatched, onClick }: {
     <button onClick={onClick}
       className="relative aspect-[2/3] rounded-xl overflow-hidden border border-film-border bg-film-card active:scale-[0.97] transition-transform text-left w-full">
       {poster
-        ? <img src={poster} alt={title} className="w-full h-full object-cover" onError={() => setImgErr(true)} />
+        ? <img src={poster} alt={title} className={`w-full h-full object-cover ${isWatched ? 'opacity-40 grayscale' : ''}`} onError={() => setImgErr(true)} />
         : <div className="w-full h-full flex items-center justify-center text-xl text-film-subtle">
             {movie.media_type === 'tv' ? '📺' : '🎬'}
           </div>

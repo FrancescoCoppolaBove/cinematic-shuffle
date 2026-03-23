@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { RefreshCw, Clock, Star, Bookmark, Play, ChevronRight } from 'lucide-react';
 import type { WatchedMovie, WatchlistItem } from '../types';
 import { useTonightPick, type TonightPick } from '../hooks/useTonightPick';
-import { getImageUrl, getTitle, getOriginalTitle, getReleaseDate } from '../services/tmdb';
+import { getImageUrl, getEnglishTitle, getOriginalTitle, getReleaseDate } from '../services/tmdb';
 import { formatYear, formatRating, cn } from '../utils';
 
 interface TonightViewProps {
@@ -161,16 +161,17 @@ export function TonightView({ watchlist, watchedMovies, watchedIds, favoriteProv
 
 // ── PickCard ──────────────────────────────────────────────────────
 
-function PickCard({ pick, onOpen, isFirst }: {
+function PickCard({ pick, onOpen, isFirst, isWatched = false }: {
   pick: TonightPick;
   onOpen: () => void;
   isFirst: boolean;
+  isWatched?: boolean;
 }) {
   const [imgErr, setImgErr] = useState(false);
   const { item, slot, reason, reasonEmoji } = pick;
   const slotStyle = SLOT_LABELS[slot];
   const poster = !imgErr ? getImageUrl(item.poster_path, 'w342') : null;
-  const title = getTitle(item);
+  const title = getEnglishTitle(item);
   const year = formatYear(getReleaseDate(item));
 
   if (isFirst) {
@@ -248,7 +249,7 @@ function PickCard({ pick, onOpen, isFirst }: {
       {/* Mini poster */}
       <div className="shrink-0 w-16 aspect-[2/3] rounded-xl overflow-hidden border border-film-border bg-film-surface">
         {poster ? (
-          <img src={poster} alt={title} className="w-full h-full object-cover" onError={() => setImgErr(true)} />
+          <img src={poster} alt={title} className={`w-full h-full object-cover${isWatched ? ' opacity-40 grayscale' : ''}`} onError={() => setImgErr(true)} />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-xl opacity-30">🎬</div>
         )}

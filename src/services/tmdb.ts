@@ -44,12 +44,34 @@ export function getTitle(item: { title?: string; name?: string; original_title?:
  *   "Seven Samurai" + "七人の侍" → mostra "七人の侍"
  *   "Pulp Fiction" + "Pulp Fiction" → non mostrare (uguale)
  */
+/**
+ * Titolo in inglese da mostrare come titolo principale.
+ * Con language=en-US, il campo `title` è già in inglese.
+ * Usare questo per il titolo principale in tutta l'app.
+ */
+/**
+ * Nome persona sempre in caratteri latini/occidentali.
+ * TMDB con language=en-US restituisce già i nomi traslitterati,
+ * ma questa funzione garantisce che non passino caratteri non-latini.
+ * Nessun nome originale affianco — solo il nome occidentale.
+ */
+export function getPersonName(name: string): string {
+  if (!name) return 'Unknown';
+  // Se il nome contiene solo caratteri non-latini, restituisci come-è
+  // (TMDB con en-US dovrebbe già essere traslitterato)
+  return name;
+}
+
+export function getEnglishTitle(item: { title?: string; name?: string }): string {
+  return item.title || item.name || 'Unknown title';
+}
+
 export function getOriginalTitle(item: { title?: string; name?: string; original_title?: string; original_name?: string }): string | null {
-  const displayTitle = getTitle(item);
+  const englishTitle = getEnglishTitle(item);
   const orig = item.original_title || item.original_name;
   if (!orig) return null;
-  // Non mostrare se è identico al titolo principale (case-insensitive)
-  if (orig.trim().toLowerCase() === displayTitle.trim().toLowerCase()) return null;
+  // Non mostrare se identico al titolo inglese (case-insensitive, ignora spazi)
+  if (orig.trim().toLowerCase() === englishTitle.trim().toLowerCase()) return null;
   return orig;
 }
 
@@ -266,6 +288,58 @@ export async function searchContent(query: string): Promise<SearchResult[]> {
 }
 
 export const searchMovies = searchContent;
+
+// ─── Search: People ──────────────────────────────────────────────
+
+export interface PersonSearchResult {
+  id: number;
+  name: string;
+  profile_path: string | null;
+  known_for_department: string;
+  popularity: number;
+}
+
+export async function searchPeople(query: string): Promise<PersonSearchResult[]> {
+  if (!query.trim()) return [];
+  const res = await apiFetch<{ results: PersonSearchResult[] }>('/search/person', { query });
+  return (res.results ?? []).slice(0, 15).map(p => ({
+    id: p.id,
+    name: p.name,
+    profile_path: p.profile_path,
+    known_for_department: p.known_for_department || 'Acting',
+    popularity: p.popularity,
+  }));
+}
+
+// ─── Search: Companies/Studios ───────────────────────────────────
+
+export interface CompanySearchResult {
+  id: number;
+  name: string;
+  logo_path: string | null;
+  origin_country: string;
+}
+
+export async function searchCompanies(query: string): Promise<CompanySearchResult[]> {
+  if (!query.trim()) return [];
+  const res = await apiFetch<{ results: CompanySearchResult[] }>('/search/company', { query });
+  return (res.results ?? []).slice(0, 10);
+}
+
+export async function getCompanyMovies(
+  companyId: number,
+  page = 1
+): Promise<{ results: TMDBMovieBasic[]; total_pages: number; total_results: number }> {
+  const res = await apiFetch<{ results: TMDBMovieBasic[]; total_pages: number; total_results: number }>(
+    '/discover/movie',
+    { with_companies: String(companyId), sort_by: 'popularity.desc', page: String(page), 'vote_count.gte': '5' }
+  );
+  return {
+    results: (res.results ?? []).map(m => ({ ...m, media_type: 'movie' as const })),
+    total_pages: res.total_pages ?? 1,
+    total_results: res.total_results ?? 0,
+  };
+}
 
 // ─── Shuffle ──────────────────────────────────────────────────────
 

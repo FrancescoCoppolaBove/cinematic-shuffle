@@ -215,7 +215,7 @@ export function GenreMoviesScreen({
                 <button key={m.id} onClick={() => setInnerMovie({ id: m.id, mediaType: mt })}
                   className="relative aspect-[2/3] rounded-xl overflow-hidden border border-film-border bg-film-card active:scale-[0.97] transition-transform text-left">
                   {m.poster_path ? (
-                    <img src={getImageUrl(m.poster_path, 'w342') || ''} alt={getTitle(m)} className="w-full h-full object-cover" />
+                    <img src={getImageUrl(m.poster_path, 'w342') || ''} alt={getTitle(m)} className={`w-full h-full object-cover ${watchedIds.has(m.id) ? 'opacity-40 grayscale' : ''}`} />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-2xl text-film-subtle">
                       {mt === 'tv' ? '📺' : '🎬'}

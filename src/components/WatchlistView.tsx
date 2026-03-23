@@ -5,7 +5,7 @@ import type { GridFilters, ViewMode } from './GridControls';
 import { CardView } from './CardView';
 import { useMemo } from 'react';
 import type { WatchlistItem, TMDBMovieDetail } from '../types';
-import { getImageUrl, getMovieDetail, getTitle, getReleaseDate } from '../services/tmdb';
+import { getImageUrl, getMovieDetail, getEnglishTitle, getReleaseDate } from '../services/tmdb';
 import { formatYear, formatRating, cn } from '../utils';
 import { MovieCard } from './MovieCard';
 
@@ -38,11 +38,11 @@ onOpenMovieGlobal,
 
   const filtered = useMemo(() => {
     let list = [...watchlist];
-    if (filters.search) list = list.filter(m => getTitle(m).toLowerCase().includes(filters.search.toLowerCase()));
+    if (filters.search) list = list.filter(m => getEnglishTitle(m).toLowerCase().includes(filters.search.toLowerCase()));
     if (filters.mediaType !== 'all') list = list.filter(m => m.media_type === filters.mediaType);
     if (filters.minRating > 0) list = list.filter(m => m.vote_average >= filters.minRating);
     switch (filters.sortBy) {
-      case 'title': list.sort((a, b) => getTitle(a).localeCompare(getTitle(b))); break;
+      case 'title': list.sort((a, b) => getEnglishTitle(a).localeCompare(getEnglishTitle(b))); break;
       case 'tmdb_rating': list.sort((a, b) => b.vote_average - a.vote_average); break;
       default: break;
     }
@@ -57,7 +57,7 @@ onOpenMovieGlobal,
       const pl = playlist ? playlist.map(m => ({
         id: m.id,
         mediaType: m.media_type as 'movie' | 'tv',
-        title: getTitle(m),
+        title: getEnglishTitle(m),
         poster_path: m.poster_path,
       })) : undefined;
       const idx = pl ? (index ?? pl.findIndex(p => p.id === item.id)) : undefined;
@@ -182,7 +182,7 @@ function WatchlistCard({
 }) {
   const [imgErr, setImgErr] = useState(false);
   const poster = !imgErr ? getImageUrl(item.poster_path, 'w342') : null;
-  const title = getTitle(item);
+  const title = getEnglishTitle(item);
 
   return (
     // L'intero contenitore è cliccabile — un solo tap apre la scheda

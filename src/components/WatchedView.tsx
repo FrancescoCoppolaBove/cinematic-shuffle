@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Eye } from 'lucide-react';
 import type { WatchedMovie, TMDBMovieDetail } from '../types';
-import { getImageUrl, getMovieDetail, getTitle, getReleaseDate } from '../services/tmdb';
+import { getImageUrl, getMovieDetail, getEnglishTitle, getReleaseDate } from '../services/tmdb';
 import { formatYear, formatRating } from '../utils';
 import { MovieCard } from './MovieCard';
 import { GridControls, DEFAULT_GRID_FILTERS } from './GridControls';
@@ -180,7 +180,7 @@ function WatchedPosterCard({ movie, isLoading, onSelect }: {
 }) {
   const [imgErr, setImgErr] = useState(false);
   const poster = !imgErr ? getImageUrl(movie.poster_path, 'w342') : null;
-  const title = getTitle(movie);
+  const title = getEnglishTitle(movie);
 
   return (
     <button

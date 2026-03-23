@@ -3,7 +3,7 @@ import { TrendingUp, Tv, Film, ChevronRight, Eye as EyeIcon } from 'lucide-react
 import type { TrendingItem, TMDBMovieDetail } from '../types';
 import {
   getTrending, getTrendingPage,
-  getImageUrl, getTitle, getReleaseDate,
+  getImageUrl, getEnglishTitle, getReleaseDate,
 } from '../services/tmdb';
 import { formatYear, formatRating, cn } from '../utils';
 import { GridControls, DEFAULT_GRID_FILTERS } from './GridControls';
@@ -337,7 +337,7 @@ export function TrendingPosterCard({
 }) {
   const [imgErr, setImgErr] = useState(false);
   const poster = !imgErr ? getImageUrl(item.poster_path, 'w342') : null;
-  const title = getTitle(item);
+  const title = getEnglishTitle(item);
 
   return (
     <button

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import type { TMDBMovieDetail, TMDBMovieBasic } from '../types';
 import {
-  getImageUrl, getProviderLogoUrl, getTitle, getOriginalTitle, getReleaseDate,
+  getImageUrl, getProviderLogoUrl, getEnglishTitle, getOriginalTitle, getReleaseDate,
   getBestTrailer, getWatchProviders, getCollection,
 } from '../services/tmdb';
 import { formatRuntime, formatYear, formatRating, cn } from '../utils';
@@ -88,7 +88,7 @@ export function MovieDetailScreen({
   const swipeLocked = useRef<'horizontal' | 'vertical' | null>(null);
   const activeDragX = useRef(0); // mirrors dragX for use inside closures
 
-  const title = getTitle(movie);
+  const title = getEnglishTitle(movie);
   const releaseDate = getReleaseDate(movie);
   const poster = !posterError ? getImageUrl(movie.poster_path, 'w500') : null;
   const backdrop = getImageUrl(movie.backdrop_path, 'w780');
@@ -546,6 +546,7 @@ export function MovieDetailScreen({
                   <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
                     {collectionParts?.map(part => (
                       <RelatedCard key={part.id} item={part} isCurrent={part.id === movie.id}
+                        isWatched={(propWatchedIds ?? new Set()).has(part.id)}
                         mediaType="movie" onClick={() => onOpenMovie?.(part.id, 'movie')} />
                     ))}
                   </div>
@@ -558,6 +559,7 @@ export function MovieDetailScreen({
                 <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
                   {similar.map(item => (
                     <RelatedCard key={item.id} item={item} isCurrent={false}
+                      isWatched={(propWatchedIds ?? new Set()).has(item.id)}
                       mediaType={movie.media_type} onClick={() => onOpenMovie?.(item.id, movie.media_type)} />
                   ))}
                 </div>
@@ -694,12 +696,12 @@ function Section({ label, icon, children }: {
   );
 }
 
-function RelatedCard({ item, isCurrent, mediaType, onClick }: {
-  item: TMDBMovieBasic; isCurrent: boolean; mediaType: 'movie' | 'tv'; onClick?: () => void;
+function RelatedCard({ item, isCurrent, mediaType, onClick, isWatched = false }: {
+  item: TMDBMovieBasic; isCurrent: boolean; mediaType: 'movie' | 'tv'; onClick?: () => void; isWatched?: boolean;
 }) {
   const [err, setErr] = useState(false);
   const poster = !err ? getImageUrl(item.poster_path, 'w185') : null;
-  const t = getTitle(item);
+  const t = getEnglishTitle(item);
   return (
     <button onClick={onClick} disabled={isCurrent || !onClick}
       className={cn('shrink-0 w-24 text-left active:scale-95 transition-all',
@@ -707,7 +709,7 @@ function RelatedCard({ item, isCurrent, mediaType, onClick }: {
       <div className={cn('w-24 aspect-[2/3] rounded-xl overflow-hidden bg-film-surface border',
         isCurrent ? 'border-film-accent' : 'border-film-border')}>
         {poster
-          ? <img src={poster} alt={t} className="w-full h-full object-cover" onError={() => setErr(true)} />
+          ? <img src={poster} alt={t} className={`w-full h-full object-cover${isCurrent ? '' : isWatched ? ' opacity-40 grayscale' : ''}`} onError={() => setErr(true)} />
           : <div className="w-full h-full flex items-center justify-center text-xl">{mediaType === 'tv' ? '📺' : '🎬'}</div>
         }
       </div>

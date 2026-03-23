@@ -22,8 +22,11 @@ export function MovieDetailTabs({
   movie, onOpenPerson, onOpenGenre, onOpenKeyword,
 }: MovieDetailTabsProps) {
   const [tab, setTab] = useState<Tab>('cast');
+  const [castExpanded, setCastExpanded] = useState(false);
   const [keywords, setKeywords] = useState<TMDBKeyword[]>([]);
   const [loadingKw, setLoadingKw] = useState(false);
+
+  useEffect(() => { setCastExpanded(false); }, [movie.id]);
 
   useEffect(() => {
     if (tab === 'generi' && keywords.length === 0) {
@@ -77,16 +80,34 @@ export function MovieDetailTabs({
           {cast.length === 0 ? (
             <p className="text-film-muted text-sm py-4 text-center">Cast non disponibile</p>
           ) : (
-            cast.map((actor: typeof cast[0]) => (
-              <PersonRow
-                key={`${actor.id}-${actor.character}`}
-                name={actor.name}
-                subtitle={actor.character}
-                profile_path={actor.profile_path}
-                isWatched={false}
-                onClick={() => onOpenPerson(actor.id, actor.name)}
-              />
-            ))
+            <>
+              {(castExpanded ? cast : cast.slice(0, 10)).map((actor: typeof cast[0]) => (
+                <PersonRow
+                  key={`${actor.id}-${actor.character}`}
+                  name={actor.name}
+                  subtitle={actor.character}
+                  profile_path={actor.profile_path}
+                  isWatched={false}
+                  onClick={() => onOpenPerson(actor.id, actor.name)}
+                />
+              ))}
+              {cast.length > 10 && !castExpanded && (
+                <button
+                  onClick={() => setCastExpanded(true)}
+                  className="w-full py-2.5 text-film-accent text-sm font-medium active:opacity-60 transition-opacity"
+                >
+                  Show {cast.length - 10} more
+                </button>
+              )}
+              {cast.length > 10 && castExpanded && (
+                <button
+                  onClick={() => setCastExpanded(false)}
+                  className="w-full py-2.5 text-film-subtle text-xs active:opacity-60 transition-opacity"
+                >
+                  Show less
+                </button>
+              )}
+            </>
           )}
         </div>
       )}
