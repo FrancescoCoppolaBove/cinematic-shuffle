@@ -20,6 +20,7 @@ interface InnerMovieDetailProps {
   watchlistIds?: Set<number>;
   likedIds?: Set<number>;
   getPersonalRating?: (id: number) => number | null;
+  getRewatchCount?: (id: number) => number;
   onMarkWatched?: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
   onUnmarkWatched?: (id: number) => Promise<void>;
   onUpdateRating?: (id: number, rating: number | null) => Promise<void>;
@@ -33,7 +34,7 @@ interface InnerMovieDetailProps {
 export function InnerMovieDetail({
   id, mediaType,
   watchedIds, watchlistIds = new Set(), likedIds = new Set(),
-  getPersonalRating, onMarkWatched, onUnmarkWatched, onUpdateRating,
+  getPersonalRating, getRewatchCount, onMarkWatched, onUnmarkWatched, onUpdateRating,
   onToggleLiked, onIncrementRewatch,
   onAddToWatchlist, onRemoveFromWatchlist,
   onBack,
@@ -84,7 +85,7 @@ export function InnerMovieDetail({
   const isOnWatchlist = watchlistIds.has(movie.id);
   const isLiked = likedIds.has(movie.id);
   const personalRating = getPersonalRating?.(movie.id) ?? null;
-  const rewatchCount = 0; // non disponibile nel contesto inner
+  const rewatchCount = getRewatchCount?.(movie.id) ?? 0;
 
   return (
     // Container fisso a z-95 che wrappa MovieDetailScreen (z-80)
@@ -131,6 +132,7 @@ export function InnerMovieDetail({
           watchlistIds={watchlistIds}
           likedIds={likedIds}
           getPersonalRating={getPersonalRating}
+          getRewatchCount={getRewatchCount}
           onMarkWatched={onMarkWatched}
           onUnmarkWatched={onUnmarkWatched}
           onUpdateRating={onUpdateRating}
@@ -153,6 +155,7 @@ export function PersonInner(props: {
   personId: number; personName: string;
   watchedIds: Set<number>; watchlistIds?: Set<number>; likedIds?: Set<number>;
   getPersonalRating?: (id: number) => number | null;
+  getRewatchCount?: (id: number) => number;
   onMarkWatched?: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
   onUnmarkWatched?: (id: number) => Promise<void>;
   onUpdateRating?: (id: number, rating: number | null) => Promise<void>;
@@ -188,6 +191,7 @@ export function PersonInner(props: {
           watchlistIds={props.watchlistIds}
           likedIds={props.likedIds}
           getPersonalRating={props.getPersonalRating}
+          getRewatchCount={props.getRewatchCount}
           onMarkWatched={props.onMarkWatched}
           onUnmarkWatched={props.onUnmarkWatched}
           onUpdateRating={props.onUpdateRating}
@@ -206,6 +210,7 @@ export function GenreInner(props: {
   id: number; name: string; type: 'genre' | 'keyword'; mediaType: 'movie' | 'tv';
   watchedIds: Set<number>; watchlistIds?: Set<number>; likedIds?: Set<number>;
   getPersonalRating?: (id: number) => number | null;
+  getRewatchCount?: (id: number) => number;
   onMarkWatched?: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
   onUnmarkWatched?: (id: number) => Promise<void>;
   onUpdateRating?: (id: number, rating: number | null) => Promise<void>;
@@ -244,6 +249,7 @@ export function GenreInner(props: {
           watchlistIds={props.watchlistIds}
           likedIds={props.likedIds}
           getPersonalRating={props.getPersonalRating}
+          getRewatchCount={props.getRewatchCount}
           onMarkWatched={props.onMarkWatched}
           onUnmarkWatched={props.onUnmarkWatched}
           onUpdateRating={props.onUpdateRating}

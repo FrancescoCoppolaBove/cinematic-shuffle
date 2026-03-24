@@ -7,7 +7,9 @@
  * - Usata da Browse By, Genre, Keyword, Provider, Anno, Country, Language...
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, LayoutGrid, Rows3 } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ListFilterBar, DEFAULT_API_FILTERS, DEFAULT_CLIENT_FILTERS } from './ListFilterBar';
+import type { ApiFilters, ClientFilters } from './ListFilterBar';
 import type { TMDBMovieBasic, TMDBMovieDetail } from '../types';
 import {
   getImageUrl, getEnglishTitle, getReleaseDate,
@@ -27,7 +29,8 @@ export type BrowseSource =
   | { type: 'top500' }
   | { type: 'anticipated' }
   | { type: 'hidden_gems' }
-  | { type: 'classics' };
+  | { type: 'classics' }
+  | { type: 'similar'; movieId: number; movieTitle: string; mediaType: 'movie' | 'tv' };
 
 interface BrowseListScreenProps {
   source: BrowseSource;
@@ -58,6 +61,7 @@ function getSourceTitle(source: BrowseSource): string {
     case 'anticipated': return 'Most Anticipated';
     case 'hidden_gems': return 'Hidden Gems';
     case 'classics': return 'Great Classics';
+    case 'similar': return `Films like "${source.movieTitle}"`;
   }
 }
 
@@ -96,6 +100,10 @@ async function fetchPage(source: BrowseSource, page: number): Promise<DiscoverPa
         minVoteCount: 100,
         minRating: 7.5,
       }, page);
+    case 'similar': {
+      const { getMovieSimilarPaged } = await import('../services/tmdb');
+      return getMovieSimilarPaged(source.movieId, source.mediaType, page);
+    }
     case 'classics':
       return browseDiscover({
         sortBy: 'vote_average.desc',
@@ -119,6 +127,8 @@ export function BrowseListScreen({
   const [loadingMore, setLoadingMore] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'card'>('grid');
   const [innerMovie, setInnerMovie] = useState<{ id: number; mediaType: 'movie' | 'tv' } | null>(null);
+  const [apiFilters, setApiFilters] = useState<ApiFilters>(DEFAULT_API_FILTERS);
+  const [clientFilters, setClientFilters] = useState<ClientFilters>(DEFAULT_CLIENT_FILTERS);
   const scrollRef = useRef<HTMLDivElement>(null);
   const title = getSourceTitle(source);
 
@@ -171,6 +181,23 @@ export function BrowseListScreen({
 
   const mediaType = (source as { mediaType?: 'movie' | 'tv' }).mediaType ?? 'movie';
 
+  // Apply client-side filters
+  const displayedMovies = movies.filter(m => {
+    if (clientFilters.search) {
+      const q = clientFilters.search.toLowerCase();
+      if (!getEnglishTitle(m).toLowerCase().includes(q)) return false;
+    }
+    if (clientFilters.watchedStatus === 'watched' && !watchedIds.has(m.id)) return false;
+    if (clientFilters.watchedStatus === 'unwatched' && watchedIds.has(m.id)) return false;
+    if (clientFilters.likedStatus === 'liked' && !likedIds.has(m.id)) return false;
+    if (clientFilters.likedStatus === 'not_liked' && likedIds.has(m.id)) return false;
+    if (clientFilters.watchlistStatus === 'watchlist' && !watchlistIds.has(m.id)) return false;
+    if (clientFilters.watchlistStatus === 'not_watchlist' && watchlistIds.has(m.id)) return false;
+    if (clientFilters.ratedStatus === 'rated' && !getPersonalRating?.(m.id)) return false;
+    if (clientFilters.ratedStatus === 'not_rated' && getPersonalRating?.(m.id)) return false;
+    return true;
+  });
+
   return (
     <div
       className="fixed inset-0 bg-film-black flex flex-col"
@@ -193,16 +220,21 @@ export function BrowseListScreen({
               <p className="text-film-subtle text-xs">{movies.length.toLocaleString()} di {totalResults.toLocaleString()}</p>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setViewMode(v => v === 'grid' ? 'card' : 'grid')}
-              className="w-9 h-9 rounded-xl bg-film-surface border border-film-border flex items-center justify-center active:opacity-60"
-            >
-              {viewMode === 'grid' ? <Rows3 size={15} className="text-film-muted" /> : <LayoutGrid size={15} className="text-film-muted" />}
-            </button>
-          </div>
+          <div className="w-9" />{/* spacer for centering */}
         </div>
       </div>
+
+      {/* Filter bar */}
+      <ListFilterBar
+        apiFilters={apiFilters}
+        clientFilters={clientFilters}
+        onApiFiltersChange={setApiFilters}
+        onClientFiltersChange={setClientFilters}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        totalCount={movies.length}
+        filteredCount={displayedMovies.length}
+      />
 
       {/* Content */}
       <div ref={scrollRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto">
@@ -219,7 +251,7 @@ export function BrowseListScreen({
         ) : viewMode === 'grid' ? (
           <div className="p-4">
             <div className="grid grid-cols-3 gap-2">
-              {movies.map(m => (
+              {displayedMovies.map(m => (
                 <PosterCard
                   key={m.id}
                   movie={m}
@@ -242,7 +274,7 @@ export function BrowseListScreen({
         ) : (
           // Card view — lista compatta con poster + info + tap per scheda
           <div className="divide-y divide-film-border/40">
-            {movies.map(m => (
+            {displayedMovies.map(m => (
               <button key={m.id} onClick={() => setInnerMovie({ id: m.id, mediaType: m.media_type ?? mediaType })}
                 className="w-full flex items-center gap-3 px-4 py-3 active:bg-film-surface/50 text-left">
                 <div className="relative shrink-0 w-11 h-16 rounded-lg overflow-hidden bg-film-surface">
@@ -287,8 +319,8 @@ export function BrowseListScreen({
   );
 }
 
-function PosterCard({ movie, isWatched, onClick }: {
-  movie: TMDBMovieBasic; isWatched: boolean; onClick: () => void;
+function PosterCard({ movie, isWatched, fadeWatched = true, onClick }: {
+  movie: TMDBMovieBasic; isWatched: boolean; fadeWatched?: boolean; onClick: () => void; // eslint-disable-line
 }) {
   const [err, setErr] = useState(false);
   const poster = !err ? getImageUrl(movie.poster_path, 'w342') : null;
@@ -299,7 +331,7 @@ function PosterCard({ movie, isWatched, onClick }: {
       className="relative aspect-[2/3] rounded-xl overflow-hidden border border-film-border bg-film-card active:scale-[0.97] transition-transform"
     >
       {poster
-        ? <img src={poster} alt={getEnglishTitle(movie)} className={cn("w-full h-full object-cover", isWatched && "opacity-40 grayscale")} onError={() => setErr(true)} />
+        ? <img src={poster} alt={getEnglishTitle(movie)} className={cn("w-full h-full object-cover", isWatched && fadeWatched && "opacity-40 grayscale")} onError={() => setErr(true)} />
         : <div className="w-full h-full flex items-center justify-center text-xl text-film-subtle">{movie.media_type === 'tv' ? '📺' : '🎬'}</div>
       }
       {isWatched && (

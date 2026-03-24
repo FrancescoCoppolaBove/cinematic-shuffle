@@ -341,6 +341,38 @@ export async function getCompanyMovies(
   };
 }
 
+// ─── Similar / Recommendations paginated ─────────────────────────
+export async function getMovieSimilarPaged(
+  movieId: number,
+  mediaType: 'movie' | 'tv' = 'movie',
+  page = 1
+): Promise<DiscoverPageResult> {
+  // Prefer recommendations (editorially curated) over similar (keyword-based)
+  const endpoint = `/movie/${movieId}/recommendations`;
+  const tvEndpoint = `/tv/${movieId}/recommendations`;
+  const data = await apiFetch<{ results: TMDBMovieBasic[]; total_pages: number; total_results: number }>(
+    mediaType === 'tv' ? tvEndpoint : endpoint,
+    { page: String(page) }
+  );
+  if ((data.results?.length ?? 0) > 0) {
+    return {
+      items: (data.results ?? []).map(m => ({ ...m, media_type: mediaType })),
+      totalPages: data.total_pages ?? 1,
+      totalResults: data.total_results ?? 0,
+    };
+  }
+  // Fallback to similar
+  const sim = await apiFetch<{ results: TMDBMovieBasic[]; total_pages: number; total_results: number }>(
+    mediaType === 'tv' ? `/tv/${movieId}/similar` : `/movie/${movieId}/similar`,
+    { page: String(page) }
+  );
+  return {
+    items: (sim.results ?? []).map(m => ({ ...m, media_type: mediaType })),
+    totalPages: sim.total_pages ?? 1,
+    totalResults: sim.total_results ?? 0,
+  };
+}
+
 // ─── Browse By — general discover with flexible params ────────────
 export interface BrowseFilters {
   mediaType?: 'movie' | 'tv';
@@ -619,10 +651,14 @@ export interface TMDBPersonCreditMovie {
   release_date?: string;
   first_air_date?: string;
   vote_average: number;
-  character?: string;       // cast
-  job?: string;             // crew
-  department?: string;      // crew
+  vote_count?: number;
+  popularity?: number;
+  character?: string;
+  job?: string;
+  department?: string;
   media_type: 'movie' | 'tv';
+  original_title?: string;
+  original_name?: string;
 }
 
 export interface TMDBPersonCredits {
@@ -640,15 +676,17 @@ export async function getPersonCredits(personId: number): Promise<TMDBPersonCred
     `/person/${personId}/combined_credits`
   );
   // Filtra SOLO film e serie TV — escludi episodi, stagioni, cortometraggi TV, ecc.
-  const isValidMedia = (m: { media_type: string }) =>
-    m.media_type === 'movie' || m.media_type === 'tv';
+  const isValidMedia = (m: { media_type: string; vote_count?: number; popularity?: number }) => {
+    if (m.media_type !== 'movie' && m.media_type !== 'tv') return false;
+    return true;
+  };
 
   const toItem = (m: TMDBPersonCreditMovie & { media_type: string }): TMDBPersonCreditMovie => ({
     ...m,
     media_type: m.media_type === 'tv' ? 'tv' : 'movie',
   });
 
-  // Deduplicazione per id (stessa persona può avere più ruoli nello stesso film)
+  // Deduplicazione per id
   const dedupe = (arr: TMDBPersonCreditMovie[]) => {
     const seen = new Set<number>();
     return arr.filter(m => {
@@ -658,12 +696,22 @@ export async function getPersonCredits(personId: number): Promise<TMDBPersonCred
     });
   };
 
-  return {
-    cast: dedupe(data.cast.filter(isValidMedia).map(toItem))
-      .sort((a, b) => (b.vote_average ?? 0) - (a.vote_average ?? 0)),
-    crew: dedupe(data.crew.filter(isValidMedia).map(toItem))
-      .sort((a, b) => (b.vote_average ?? 0) - (a.vote_average ?? 0)),
+  // Sort by popularity (reflects actual significance) with vote_average as tiebreaker
+  // This ensures important films aren't missing even if they have niche ratings
+  const sortBySignificance = (a: TMDBPersonCreditMovie, b: TMDBPersonCreditMovie) => {
+    const popDiff = (b.popularity ?? 0) - (a.popularity ?? 0);
+    if (Math.abs(popDiff) > 5) return popDiff;
+    return (b.vote_average ?? 0) - (a.vote_average ?? 0);
   };
+
+  const castFiltered = dedupe(data.cast.filter(isValidMedia).map(toItem))
+    .sort(sortBySignificance);
+
+  // Crew: sort by popularity but also remove obvious duplicates per department
+  const crewFiltered = dedupe(data.crew.filter(isValidMedia).map(toItem))
+    .sort(sortBySignificance);
+
+  return { cast: castFiltered, crew: crewFiltered };
 }
 
 // ─── Keywords ──────────────────────────────────────────────────────

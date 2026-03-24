@@ -78,10 +78,31 @@ export interface TMDBMovieDetail {
   episode_run_time?: number[];
   original_language: string;
   tagline: string;
-  status: string;
+  status?: string;
   media_type: 'movie' | 'tv';
   number_of_seasons?: number;
   number_of_episodes?: number;
+  in_production?: boolean;
+  next_episode_to_air?: {
+    air_date: string;
+    season_number: number;
+    episode_number: number;
+    name: string;
+  } | null;
+  last_episode_to_air?: {
+    air_date: string;
+    season_number: number;
+    name: string;
+  } | null;
+  seasons?: {
+    id: number;
+    name: string;
+    season_number: number;
+    episode_count: number;
+    air_date: string | null;
+    poster_path: string | null;
+    overview: string;
+  }[];
   // belongs_to_collection — for franchise/saga
   belongs_to_collection?: {
     id: number;

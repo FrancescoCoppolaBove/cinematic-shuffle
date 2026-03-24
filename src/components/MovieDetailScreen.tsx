@@ -14,6 +14,7 @@ import { RatingModal } from './RatingModal';
 import type { RatingResult } from './RatingModal';
 import { MovieDetailTabs } from './MovieDetailTabs';
 import { PersonInner, GenreInner } from './InnerMovieDetail';
+import { BrowseListScreen } from './BrowseListScreen';
 import { StarRating } from './StarRating';
 import type { PlaylistItem } from '../hooks/useNavigationStack';
 
@@ -66,6 +67,7 @@ export function MovieDetailScreen({
   const [posterError, setPosterError] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [openPerson, setOpenPerson] = useState<{id: number; name: string} | null>(null);
+  const [openSimilar, setOpenSimilar] = useState(false);
   const [openGenre, setOpenGenre] = useState<{id: number; name: string; type: 'genre'|'keyword'; mediaType: 'movie'|'tv'} | null>(null);
   const [collectionParts, setCollectionParts] = useState<TMDBMovieBasic[] | null>(null);
   const [collectionName, setCollectionName] = useState('');
@@ -110,7 +112,7 @@ export function MovieDetailScreen({
 
   const similar = (movie.recommendations?.results?.length
     ? movie.recommendations.results
-    : movie.similar?.results ?? []).slice(0, 12);
+    : movie.similar?.results ?? []).slice(0, 10);
 
   const runtime = isTV
     ? (movie.episode_run_time?.[0] ? `${movie.episode_run_time[0]}min/ep` : null)
@@ -535,6 +537,65 @@ export function MovieDetailScreen({
               </Section>
             )}
 
+            {/* TV Seasons info — only for TV shows */}
+            {isTV && (movie.seasons?.length ?? 0) > 0 && (
+              <Section label="Stagioni">
+                {/* Status badge */}
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  {movie.in_production !== undefined && (
+                    <span className={`px-2.5 py-1 rounded-xl text-xs font-medium ${
+                      movie.in_production
+                        ? 'bg-green-900/40 text-green-400 border border-green-700/50'
+                        : 'bg-film-surface text-film-muted border border-film-border'
+                    }`}>
+                      {movie.in_production ? '🟢 In produzione' : '⬛ Terminata'}
+                    </span>
+                  )}
+                  {movie.next_episode_to_air && (
+                    <span className="px-2.5 py-1 rounded-xl text-xs font-medium bg-film-accent/10 text-film-accent border border-film-accent/30">
+                      🎬 Stagione {movie.next_episode_to_air.season_number} · {new Date(movie.next_episode_to_air.air_date).getFullYear()}
+                    </span>
+                  )}
+                </div>
+
+                {/* Seasons list */}
+                <div className="space-y-2">
+                  {movie.seasons
+                    ?.filter(s => s.season_number > 0) // exclude "Specials" season 0
+                    .map(s => {
+                      const year = s.air_date ? new Date(s.air_date).getFullYear() : null;
+                      const isLatest = s.season_number === (movie.number_of_seasons ?? 0);
+                      return (
+                        <div key={s.id} className="flex items-center gap-3 py-2 border-b border-film-border/40 last:border-0">
+                          {s.poster_path ? (
+                            <img
+                              src={`https://image.tmdb.org/t/p/w92${s.poster_path}`}
+                              alt={s.name}
+                              className="w-10 h-14 rounded-lg object-cover shrink-0 border border-film-border"
+                            />
+                          ) : (
+                            <div className="w-10 h-14 rounded-lg bg-film-surface border border-film-border shrink-0 flex items-center justify-center text-film-subtle text-xs">
+                              {s.season_number}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-film-text text-sm font-medium">{s.name}</p>
+                              {isLatest && movie.in_production && (
+                                <span className="text-film-accent text-xs">●</span>
+                              )}
+                            </div>
+                            <p className="text-film-subtle text-xs">
+                              {s.episode_count} episodi{year ? ` · ${year}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </Section>
+            )}
+
             {similar.length > 0 && (
               <Section label={isTV ? 'Serie simili' : 'Film simili'}>
                 <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
@@ -544,6 +605,12 @@ export function MovieDetailScreen({
                       mediaType={movie.media_type} onClick={() => onOpenMovie?.(item.id, movie.media_type)} />
                   ))}
                 </div>
+                <button
+                  onClick={() => setOpenSimilar(true)}
+                  className="mt-2 text-film-accent text-xs font-medium active:opacity-60 transition-opacity"
+                >
+                  Vedi tutti i film simili →
+                </button>
               </Section>
             )}
 
@@ -631,6 +698,25 @@ export function MovieDetailScreen({
           onAddToWatchlist={onAddToWatchlistFull}
           onRemoveFromWatchlist={onRemoveFromWatchlistFull}
           onBack={() => setOpenGenre(null)}
+        />
+      )}
+
+      {openSimilar && (
+        <BrowseListScreen
+          source={{ type: 'similar', movieId: movie.id, movieTitle: title, mediaType: movie.media_type }}
+          watchedIds={propWatchedIds ?? new Set()}
+          watchlistIds={propWatchlistIds}
+          likedIds={propLikedIds}
+          getPersonalRating={getPersonalRatingFull}
+          onMarkWatched={onMarkWatchedFull}
+          onUnmarkWatched={onUnmarkWatchedFull}
+          onUpdateRating={onUpdateRatingFull}
+          onToggleLiked={onToggleLikedFull}
+          onIncrementRewatch={onIncrementRewatch}
+          onAddToWatchlist={onAddToWatchlistFull}
+          onRemoveFromWatchlist={onRemoveFromWatchlistFull}
+          onBack={() => setOpenSimilar(false)}
+          zIndex={96}
         />
       )}
 
