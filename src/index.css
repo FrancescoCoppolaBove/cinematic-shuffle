@@ -12,7 +12,9 @@
   *, *::before, *::after { box-sizing: border-box; }
 
   html {
+    /* Use fill-available for iOS Safari PWA — fills exact visible viewport */
     height: 100dvh;
+    height: -webkit-fill-available;
     overflow: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -23,7 +25,9 @@
   body {
     @apply bg-film-black text-film-text font-body;
     margin: 0;
+    /* Match html height */
     height: 100%;
+    height: -webkit-fill-available;
     overflow: hidden;
     overscroll-behavior: none;
   }

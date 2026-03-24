@@ -321,7 +321,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col bg-film-black text-film-text" style={{ height: '100dvh' }}>
+    <div className="flex flex-col bg-film-black text-film-text" style={{ height: '100dvh', minHeight: '-webkit-fill-available' }}>
       <div className="fixed inset-0 pointer-events-none opacity-30 bg-grain z-50" />
 
       {/* PWA update banner */}
@@ -482,6 +482,11 @@ export default function App() {
           </div>
         </nav>
       )}
+      {/* iOS PWA safe area fill — extends nav background into home indicator zone */}
+      <div
+        className="shrink-0 bg-film-black/95"
+        style={{ height: 'env(safe-area-inset-bottom, 0px)' }}
+      />
 
       {/* Profile tab is now in bottom nav — no separate back button needed */}
 
