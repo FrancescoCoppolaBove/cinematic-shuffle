@@ -88,6 +88,27 @@ export default function App() {
 
   // Navigation stack for movie detail fullscreen
   const navStack = useNavigationStack();
+  const headerRef = useRef<HTMLElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+
+  // Measure real header/nav heights and expose as CSS custom properties
+  // This handles safe-area-inset variations across all devices automatically
+  useEffect(() => {
+    const root = document.documentElement;
+    const updateSizes = () => {
+      if (headerRef.current) {
+        root.style.setProperty('--header-h', headerRef.current.offsetHeight + 'px');
+      }
+      if (navRef.current) {
+        root.style.setProperty('--nav-h', navRef.current.offsetHeight + 'px');
+      }
+    };
+    updateSizes();
+    const ro = new ResizeObserver(updateSizes);
+    if (headerRef.current) ro.observe(headerRef.current);
+    if (navRef.current) ro.observe(navRef.current);
+    return () => ro.disconnect();
+  }, []);
   const [detailMovie, setDetailMovie] = useState<TMDBMovieDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
@@ -345,9 +366,9 @@ export default function App() {
 
       {/* ── Header: FIXED con padding-top safe-area — pattern corretto per iOS PWA ── */}
       <header
+        ref={headerRef}
         className="absolute top-0 left-0 right-0 z-40 border-b border-film-border bg-film-black/95 backdrop-blur-md"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
-        id="app-header"
       >
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-center">
           <div className="flex items-center gap-2">
@@ -366,8 +387,8 @@ export default function App() {
             : 'overflow-y-auto px-4 py-4'
         )}
         style={{
-          top: 'calc(env(safe-area-inset-top) + 52px)',
-          bottom: 'calc(env(safe-area-inset-bottom) + 56px)',
+          top: 'var(--header-h, 52px)',
+          bottom: 'var(--nav-h, 60px)',
           WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'contain',
         }}
@@ -434,7 +455,9 @@ export default function App() {
 
       {/* ── Bottom nav ── */}
       {true && (
-        <nav className="absolute bottom-0 left-0 right-0 z-40 border-t border-film-border bg-film-black/95 backdrop-blur-md"
+        <nav
+          ref={navRef}
+          className="absolute bottom-0 left-0 right-0 z-40 border-t border-film-border bg-film-black/95 backdrop-blur-md"
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <div className="max-w-3xl mx-auto px-4 flex">
             {NAV.map(({ view: v, icon: Icon, label }) => {
