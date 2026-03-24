@@ -300,7 +300,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-film-black text-film-text" >
+    <div className="h-screen overflow-hidden bg-film-black text-film-text" >
       <div className="fixed inset-0 pointer-events-none opacity-30 bg-grain z-50" />
 
       {/* PWA update banner */}
@@ -359,18 +359,17 @@ export default function App() {
       {/* ── Main content — padding-top compensa l'header fixed ── */}
       <main
         className={
-          view === 'shuffle' ? "max-w-3xl mx-auto" :
           (view === 'search' || view === 'profile') ?
-            "max-w-3xl mx-auto px-4 overflow-hidden" :
-            "max-w-3xl mx-auto px-4 py-4 pb-24"
+            "max-w-3xl mx-auto px-4 overflow-hidden flex flex-col" :
+          view === 'shuffle' ?
+            "max-w-3xl mx-auto overflow-hidden" :
+            "max-w-3xl mx-auto px-4 py-4 pb-24 overflow-y-auto"
         }
         style={{
           paddingTop: view === 'shuffle' ? 0 : 'calc(env(safe-area-inset-top) + 52px)',
-          ...(view === 'search' || view === 'profile' ? {
-            height: 'calc(100dvh - env(safe-area-inset-top) - 52px - 56px - env(safe-area-inset-bottom))',
-            display: 'flex',
-            flexDirection: 'column' as const,
-          } : {}),
+          height: (view === 'search' || view === 'profile' || view === 'shuffle')
+            ? 'calc(100dvh - env(safe-area-inset-bottom))'
+            : undefined,
         }}
       >
         {view === 'tonight' && (

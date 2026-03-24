@@ -117,11 +117,16 @@ export function SearchView({
     if (query.trim()) setTimeout(() => doSearch(query, t), 100);
   }
 
-  function handleFocus() { setIsFocused(true); }
+  const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleFocus() {
+    if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+    setIsFocused(true);
+  }
 
   function handleBlur() {
-    // Delay so taps on results register before blur hides them
-    setTimeout(() => setIsFocused(false), 150);
+    // Delay to let tap targets register; cancelled if focus returns immediately
+    blurTimerRef.current = setTimeout(() => setIsFocused(false), 200);
   }
 
   function handleCancel() {
@@ -198,7 +203,9 @@ export function SearchView({
         {showSearch && (
           <div className="flex gap-0 mt-3 border-b border-film-border">
             {(['films', 'people'] as SearchTab[]).map(t => (
-              <button key={t} onClick={() => handleTabChange(t)}
+              <button key={t}
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => handleTabChange(t)}
                 className={cn('px-4 py-2.5 text-sm font-medium transition-colors relative shrink-0',
                   tab === t ? 'text-film-text' : 'text-film-muted')}>
                 {tabLabel[t]}
