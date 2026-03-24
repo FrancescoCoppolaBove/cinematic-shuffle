@@ -112,6 +112,8 @@ export function SearchView({
 
   function handleTabChange(t: SearchTab) {
     setTab(t);
+    // Keep focus on input when switching tabs
+    setTimeout(() => inputRef.current?.focus(), 0);
     if (query.trim()) setTimeout(() => doSearch(query, t), 100);
   }
 
@@ -158,9 +160,9 @@ export function SearchView({
   const providers = getPopularProviders().slice(0, 12);
 
   return (
-    <div className="flex flex-col min-h-full -mt-2 -mx-4">
+    <div className="flex flex-col h-full -mx-4">
       {/* ── Search bar ── */}
-      <div className="px-4 pt-3 pb-0 bg-film-black sticky top-0 z-10">
+      <div className="px-4 pt-5 pb-0 bg-film-black sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div className="flex-1 flex items-center gap-2 bg-film-surface border border-film-border rounded-xl px-3 py-2 focus-within:border-film-accent/60 transition-colors">
             {loading

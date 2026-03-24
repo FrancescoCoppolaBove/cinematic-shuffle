@@ -73,7 +73,7 @@ export function ProfileView({
   };
 
   return (
-    <div>
+    <div className="flex flex-col h-full">
       {/* ── Top tab bar ── */}
       <div className="flex border-b border-film-border mb-0">
         {TABS.map(({ key, label, count }) => (

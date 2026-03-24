@@ -358,8 +358,20 @@ export default function App() {
 
       {/* ── Main content — padding-top compensa l'header fixed ── */}
       <main
-        className={view === 'shuffle' ? "max-w-3xl mx-auto" : "max-w-3xl mx-auto px-4 py-4 pb-24"}
-        style={{ paddingTop: view === 'shuffle' ? 0 : 'calc(env(safe-area-inset-top) + 52px)' }}
+        className={
+          view === 'shuffle' ? "max-w-3xl mx-auto" :
+          (view === 'search' || view === 'profile') ?
+            "max-w-3xl mx-auto px-4 overflow-hidden" :
+            "max-w-3xl mx-auto px-4 py-4 pb-24"
+        }
+        style={{
+          paddingTop: view === 'shuffle' ? 0 : 'calc(env(safe-area-inset-top) + 52px)',
+          ...(view === 'search' || view === 'profile' ? {
+            height: 'calc(100dvh - env(safe-area-inset-top) - 52px - 56px - env(safe-area-inset-bottom))',
+            display: 'flex',
+            flexDirection: 'column' as const,
+          } : {}),
+        }}
       >
         {view === 'tonight' && (
           <TonightView

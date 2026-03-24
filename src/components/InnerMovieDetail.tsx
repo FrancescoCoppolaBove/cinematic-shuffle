@@ -54,13 +54,26 @@ export function InnerMovieDetail({
       .finally(() => setLoading(false));
   }, [id, mediaType]);
 
+  // ALL hooks must be before any conditional return (Rules of Hooks)
+  // localRewatchCount: initializes to 0, updated when movie loads via useEffect
+  const [localRewatchCount, setLocalRewatchCount] = useState(0);
+
+  // Sync localRewatchCount when movie changes
+  useEffect(() => {
+    if (movie) setLocalRewatchCount(getRewatchCount?.(movie.id) ?? 0);
+  }, [movie?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleIncrementRewatch = useCallback(async (movieId: number, delta: number) => {
+    setLocalRewatchCount(prev => Math.max(0, prev + delta));
+    await onIncrementRewatch?.(movieId, delta);
+  }, [onIncrementRewatch]);
+
   if (loading || !movie) {
     return (
       <div
         className="fixed inset-0 z-[95] bg-film-black flex flex-col"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        {/* Header minimo mentre carica */}
         <div
           className="shrink-0 bg-film-black/95 backdrop-blur-md border-b border-film-border"
           style={{ paddingTop: 'env(safe-area-inset-top)' }}
@@ -85,17 +98,6 @@ export function InnerMovieDetail({
   const isOnWatchlist = watchlistIds.has(movie.id);
   const isLiked = likedIds.has(movie.id);
   const personalRating = getPersonalRating?.(movie.id) ?? null;
-
-  // Local rewatch state — initializes from getRewatchCount, updates immediately on click
-  // without waiting for parent re-render (which doesn't happen in InnerMovieDetail)
-  const [localRewatchCount, setLocalRewatchCount] = useState(() => getRewatchCount?.(movie.id) ?? 0);
-
-  // Wrap onIncrementRewatch to update local state immediately
-  const handleIncrementRewatch = useCallback(async (id: number, delta: number) => {
-    const newCount = Math.max(0, localRewatchCount + delta);
-    setLocalRewatchCount(newCount);   // immediate UI update
-    await onIncrementRewatch?.(id, delta); // persist to Firestore
-  }, [localRewatchCount, onIncrementRewatch]);
 
   return (
     <div className="fixed inset-0 z-[95]">
