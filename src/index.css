@@ -11,24 +11,19 @@
 
   *, *::before, *::after { box-sizing: border-box; }
 
-  html {
-    /* -webkit-fill-available = exact visual viewport height on iOS Safari/PWA */
-    height: -webkit-fill-available;
-    height: 100dvh;
-    overflow: hidden;
+  html, body {
+    margin: 0;
+    padding: 0;
+    /* NO height, NO overflow — let the fixed root div handle everything */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    overscroll-behavior: none;
   }
 
   body {
     @apply bg-film-black text-film-text font-body;
-    margin: 0;
-    /* Inherit exact height from html */
-    height: 100%;
-    overflow: hidden;
-    overscroll-behavior: none;
   }
 
   /* Prevent tap highlight on mobile */

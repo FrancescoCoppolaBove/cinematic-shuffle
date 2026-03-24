@@ -321,7 +321,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col bg-film-black text-film-text" style={{ height: '100%' }}>
+    <div className="flex flex-col bg-film-black text-film-text" style={{ position: 'fixed', inset: 0 }}>
       <div className="fixed inset-0 pointer-events-none opacity-30 bg-grain z-50" />
 
       {/* PWA update banner */}
@@ -384,7 +384,7 @@ export default function App() {
           'flex-1 min-h-0 w-full max-w-3xl mx-auto flex flex-col',
           (view === 'shuffle' || view === 'search' || view === 'profile')
             ? 'overflow-hidden'
-            : 'overflow-y-auto px-4 py-4'
+            : 'overflow-y-auto px-4 py-4 pb-6'
         )}
         style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
       >
