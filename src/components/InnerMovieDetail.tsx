@@ -5,7 +5,7 @@
  * Garantisce coerenza totale: stesse CTA, stessa grafica, stessi tab.
  * z-index 95 → sta sopra PersonDetailScreen (88) e GenreMoviesScreen (89).
  */
-import { useState, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { getMovieDetail } from '../services/tmdb';
 import type { TMDBMovieDetail } from '../types';
@@ -85,12 +85,19 @@ export function InnerMovieDetail({
   const isOnWatchlist = watchlistIds.has(movie.id);
   const isLiked = likedIds.has(movie.id);
   const personalRating = getPersonalRating?.(movie.id) ?? null;
-  const rewatchCount = getRewatchCount?.(movie.id) ?? 0;
+
+  // Local rewatch state — initializes from getRewatchCount, updates immediately on click
+  // without waiting for parent re-render (which doesn't happen in InnerMovieDetail)
+  const [localRewatchCount, setLocalRewatchCount] = useState(() => getRewatchCount?.(movie.id) ?? 0);
+
+  // Wrap onIncrementRewatch to update local state immediately
+  const handleIncrementRewatch = useCallback(async (id: number, delta: number) => {
+    const newCount = Math.max(0, localRewatchCount + delta);
+    setLocalRewatchCount(newCount);   // immediate UI update
+    await onIncrementRewatch?.(id, delta); // persist to Firestore
+  }, [localRewatchCount, onIncrementRewatch]);
 
   return (
-    // Container fisso a z-95 che wrappa MovieDetailScreen (z-80)
-    // MovieDetailScreen usa fixed inset-0 z-[80] ma dentro questo container
-    // il suo z-index è relativo — usiamo un portale di posizione con z-[95]
     <div className="fixed inset-0 z-[95]">
       <MovieDetailScreen
         movie={movie}
@@ -98,14 +105,14 @@ export function InnerMovieDetail({
         isOnWatchlist={isOnWatchlist}
         personalRating={personalRating}
         isLiked={isLiked}
-        rewatchCount={rewatchCount}
+        rewatchCount={localRewatchCount}
         backLabel="Indietro"
         onBack={onBack}
         onMarkWatched={(rating) => onMarkWatched?.(movie, rating) ?? Promise.resolve()}
         onUnmarkWatched={() => onUnmarkWatched?.(movie.id) ?? Promise.resolve()}
         onUpdateRating={(r) => onUpdateRating?.(movie.id, r) ?? Promise.resolve()}
         onToggleLiked={onToggleLiked}
-        onIncrementRewatch={onIncrementRewatch}
+        onIncrementRewatch={handleIncrementRewatch}
         onAddToWatchlist={() => onAddToWatchlist?.(movie) ?? Promise.resolve()}
         onRemoveFromWatchlist={() => onRemoveFromWatchlist?.(movie.id) ?? Promise.resolve()}
         onOpenMovie={(mid, mt) => setInnerMovie({ id: mid, mediaType: mt })}

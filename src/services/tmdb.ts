@@ -373,6 +373,37 @@ export async function getMovieSimilarPaged(
   };
 }
 
+// ─── TV Season Episodes ────────────────────────────────────────────
+export interface TVEpisode {
+  id: number;
+  name: string;
+  episode_number: number;
+  season_number: number;
+  overview: string;
+  air_date: string | null;
+  runtime: number | null;
+  still_path: string | null;
+  vote_average: number;
+}
+
+export async function getTVSeasonEpisodes(
+  seriesId: number,
+  seasonNumber: number
+): Promise<{ episodes: TVEpisode[]; name: string; overview: string; air_date: string | null }> {
+  const data = await apiFetch<{
+    name: string;
+    overview: string;
+    air_date: string | null;
+    episodes: TVEpisode[];
+  }>(`/tv/${seriesId}/season/${seasonNumber}`);
+  return {
+    name: data.name ?? `Season ${seasonNumber}`,
+    overview: data.overview ?? '',
+    air_date: data.air_date ?? null,
+    episodes: (data.episodes ?? []).sort((a, b) => a.episode_number - b.episode_number),
+  };
+}
+
 // ─── Browse By — general discover with flexible params ────────────
 export interface BrowseFilters {
   mediaType?: 'movie' | 'tv';

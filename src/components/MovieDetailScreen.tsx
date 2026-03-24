@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  ChevronLeft, Star, Clock, Play,
+  ChevronLeft, ChevronRight, Star, Clock, Play,
   Eye, Bookmark, BookmarkCheck, Heart,
   Tv, Film, MapPin, Shuffle,
 } from 'lucide-react';
@@ -69,6 +69,7 @@ export function MovieDetailScreen({
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [openPerson, setOpenPerson] = useState<{id: number; name: string} | null>(null);
   const [openSimilar, setOpenSimilar] = useState(false);
+  const [openSeason, setOpenSeason] = useState<{ seriesId: number; seasonNumber: number; seasonName: string } | null>(null);
   const [openGenre, setOpenGenre] = useState<{id: number; name: string; type: 'genre'|'keyword'; mediaType: 'movie'|'tv'} | null>(null);
   const [collectionParts, setCollectionParts] = useState<TMDBMovieBasic[] | null>(null);
   const [collectionName, setCollectionName] = useState('');
@@ -567,7 +568,7 @@ export function MovieDetailScreen({
                       const year = s.air_date ? new Date(s.air_date).getFullYear() : null;
                       const isLatest = s.season_number === (movie.number_of_seasons ?? 0);
                       return (
-                        <div key={s.id} className="flex items-center gap-3 py-2 border-b border-film-border/40 last:border-0">
+                        <button key={s.id} onClick={() => setOpenSeason({ seriesId: movie.id, seasonNumber: s.season_number, seasonName: s.name })} className="w-full flex items-center gap-3 py-2 border-b border-film-border/40 last:border-0 active:bg-film-surface/50 transition-colors text-left">
                           {s.poster_path ? (
                             <img
                               src={`https://image.tmdb.org/t/p/w92${s.poster_path}`}
@@ -590,7 +591,8 @@ export function MovieDetailScreen({
                               {s.episode_count} episodi{year ? ` · ${year}` : ''}
                             </p>
                           </div>
-                        </div>
+                          <ChevronRight size={14} className="text-film-subtle/50 shrink-0" />
+                        </button>
                       );
                     })}
                 </div>
@@ -701,6 +703,15 @@ export function MovieDetailScreen({
           onAddToWatchlist={onAddToWatchlistFull}
           onRemoveFromWatchlist={onRemoveFromWatchlistFull}
           onBack={() => setOpenGenre(null)}
+        />
+      )}
+
+      {openSeason && (
+        <SeasonDetailOverlay
+          seriesId={openSeason.seriesId}
+          seasonNumber={openSeason.seasonNumber}
+          seasonName={openSeason.seasonName}
+          onBack={() => setOpenSeason(null)}
         />
       )}
 
@@ -827,5 +838,131 @@ function RelatedCard({ item, isCurrent, mediaType, onClick, isWatched = false }:
         <p className="text-film-accent text-xs mt-0.5">★ {item.vote_average.toFixed(1)}</p>
       )}
     </button>
+  );
+}
+
+// ── SeasonDetailOverlay — episodi di una stagione ─────────────────
+function SeasonDetailOverlay({
+  seriesId, seasonNumber, seasonName, onBack,
+}: {
+  seriesId: number;
+  seasonNumber: number;
+  seasonName: string;
+  onBack: () => void;
+}) {
+  const [data, setData] = useState<{
+    episodes: import('../services/tmdb').TVEpisode[];
+    overview: string;
+    air_date: string | null;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    import('../services/tmdb').then(({ getTVSeasonEpisodes }) =>
+      getTVSeasonEpisodes(seriesId, seasonNumber)
+    ).then(res => setData(res))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [seriesId, seasonNumber]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[97] bg-film-black flex flex-col"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      {/* Header */}
+      <div
+        className="shrink-0 bg-film-black/95 backdrop-blur-md border-b border-film-border"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
+        <div className="flex items-center gap-3 px-4 py-3">
+          <button onClick={onBack} className="active:opacity-60">
+            <div className="w-9 h-9 rounded-full bg-film-surface border border-film-border flex items-center justify-center">
+              <ChevronLeft size={18} className="text-film-text" />
+            </div>
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-film-text font-semibold truncate">{seasonName}</p>
+            {data && (
+              <p className="text-film-subtle text-xs">{data.episodes.length} episodi</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto">
+        {loading && (
+          <div className="flex items-center justify-center py-20">
+            <div className="w-10 h-10 border-2 border-film-accent border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+
+        {data && (
+          <>
+            {data.overview && (
+              <div className="px-4 py-3 border-b border-film-border/50">
+                <p className="text-film-text/70 text-sm leading-relaxed">{data.overview}</p>
+              </div>
+            )}
+
+            <div className="divide-y divide-film-border/40">
+              {data.episodes.map(ep => (
+                <div key={ep.id} className="flex gap-3 px-4 py-3">
+                  {/* Still image */}
+                  {ep.still_path ? (
+                    <img
+                      src={`https://image.tmdb.org/t/p/w185${ep.still_path}`}
+                      alt={ep.name}
+                      className="shrink-0 w-24 h-14 rounded-lg object-cover border border-film-border"
+                    />
+                  ) : (
+                    <div className="shrink-0 w-24 h-14 rounded-lg bg-film-surface border border-film-border flex items-center justify-center">
+                      <Tv size={18} className="text-film-subtle" />
+                    </div>
+                  )}
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-film-subtle text-xs">Ep. {ep.episode_number}</p>
+                        <p className="text-film-text text-sm font-medium leading-tight">{ep.name}</p>
+                      </div>
+                      {ep.vote_average > 0 && (
+                        <span className="text-film-accent text-xs font-mono shrink-0">
+                          ★ {ep.vote_average.toFixed(1)}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      {ep.air_date && (
+                        <span className="text-film-subtle text-xs">
+                          {new Date(ep.air_date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                      )}
+                      {ep.runtime && (
+                        <>
+                          <span className="text-film-border text-xs">·</span>
+                          <span className="text-film-subtle text-xs flex items-center gap-0.5">
+                            <Clock size={10} />{ep.runtime} min
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    {ep.overview && (
+                      <p className="text-film-text/60 text-xs leading-relaxed mt-1 line-clamp-2">
+                        {ep.overview}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

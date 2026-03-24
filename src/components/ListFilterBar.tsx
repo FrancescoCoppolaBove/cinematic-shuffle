@@ -168,9 +168,10 @@ export function ListFilterBar({
         </div>
       )}
 
-      {/* Expanded filter panel */}
+      {/* Expanded filter panel — scrollable */}
       {open && (
-        <div className="px-4 pb-4 space-y-4 border-t border-film-border pt-3">
+        <div className="overflow-y-auto border-t border-film-border" style={{ maxHeight: "60vh" }}>
+          <div className="px-4 pb-4 space-y-4 pt-3">
 
           {/* Sort By */}
           <FilterRow label="Sort By">
@@ -357,6 +358,7 @@ export function ListFilterBar({
               Reset all filters
             </button>
           )}
+          </div>
         </div>
       )}
     </div>
