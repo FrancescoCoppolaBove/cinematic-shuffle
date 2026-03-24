@@ -44,6 +44,7 @@ interface MovieDetailScreenProps {
   watchlistIds?: Set<number>;
   likedIds?: Set<number>;
   getPersonalRatingFull?: (id: number) => number | null;
+  getRewatchCountFull?: (id: number) => number;
   onMarkWatchedFull?: (movie: import('../types').TMDBMovieDetail, rating: number | null) => Promise<void>;
   onUnmarkWatchedFull?: (id: number) => Promise<void>;
   onUpdateRatingFull?: (id: number, rating: number | null) => Promise<void>;
@@ -61,7 +62,7 @@ export function MovieDetailScreen({
   onAddToWatchlist, onRemoveFromWatchlist,
   onShuffle, onOpenMovie, onIncrementRewatch, onToggleLiked, isLiked = false, rewatchCount = 0,
   watchedIds: propWatchedIds, watchlistIds: propWatchlistIds, likedIds: propLikedIds,
-  getPersonalRatingFull, onMarkWatchedFull, onUnmarkWatchedFull, onUpdateRatingFull,
+  getPersonalRatingFull, getRewatchCountFull, onMarkWatchedFull, onUnmarkWatchedFull, onUpdateRatingFull,
   onToggleLikedFull, onAddToWatchlistFull, onRemoveFromWatchlistFull, loading,
 }: MovieDetailScreenProps) {
   const [posterError, setPosterError] = useState(false);
@@ -668,6 +669,7 @@ export function MovieDetailScreen({
           watchlistIds={propWatchlistIds}
           likedIds={propLikedIds}
           getPersonalRating={getPersonalRatingFull}
+          getRewatchCount={getRewatchCountFull}
           onMarkWatched={onMarkWatchedFull}
           onUnmarkWatched={onUnmarkWatchedFull}
           onUpdateRating={onUpdateRatingFull}
@@ -690,6 +692,7 @@ export function MovieDetailScreen({
           watchlistIds={propWatchlistIds}
           likedIds={propLikedIds}
           getPersonalRating={getPersonalRatingFull}
+          getRewatchCount={getRewatchCountFull}
           onMarkWatched={onMarkWatchedFull}
           onUnmarkWatched={onUnmarkWatchedFull}
           onUpdateRating={onUpdateRatingFull}

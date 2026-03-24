@@ -1,17 +1,15 @@
 /**
  * GenreMoviesScreen — lista film/serie per genere o keyword.
- * Con filtri e modalità Card.
+ * Con ListFilterBar universale e infinite scroll.
  */
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { ChevronLeft, LayoutGrid, Rows3, SlidersHorizontal, X } from 'lucide-react';
+import { ChevronLeft, Star } from 'lucide-react';
 import { InnerMovieDetail } from './InnerMovieDetail';
+import { ListFilterBar, DEFAULT_CLIENT_FILTERS } from './ListFilterBar';
+import type { ClientFilters } from './ListFilterBar';
 import type { TMDBMovieBasic, TMDBMovieDetail } from '../types';
-import { COMMON_LANGUAGES, COMMON_COUNTRIES } from '../types';
-import { discoverByGenre, discoverByKeyword, getImageUrl, getTitle, getReleaseDate } from '../services/tmdb';
+import { discoverByGenre, discoverByKeyword, getImageUrl, getEnglishTitle, getReleaseDate } from '../services/tmdb';
 import { formatYear, formatRating, cn } from '../utils';
-import { CardView } from './CardView';
-
-type ViewMode = 'grid' | 'card';
 
 interface GenreMoviesScreenProps {
   id: number;
@@ -32,8 +30,6 @@ interface GenreMoviesScreenProps {
   onOpenMovie?: (id: number, mediaType: 'movie' | 'tv') => void;
 }
 
-type SortBy = 'rating' | 'year_desc' | 'year_asc';
-
 export function GenreMoviesScreen({
   id, name, type, mediaType,
   watchedIds, watchlistIds = new Set(), likedIds = new Set(),
@@ -44,29 +40,20 @@ export function GenreMoviesScreen({
   const [movies, setMovies] = useState<TMDBMovieBasic[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(2);
   const [totalPages, setTotalPages] = useState(1);
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'card'>('grid');
   const [innerMovie, setInnerMovie] = useState<{id: number; mediaType: 'movie'|'tv'} | null>(null);
-  const [sortBy, setSortBy] = useState<SortBy>('rating');
-  const [showFilters, setShowFilters] = useState(false);
-  const [minRating, setMinRating] = useState(0);
-  const [onlyUnseen, setOnlyUnseen] = useState(false);
-  const [language, setLanguage] = useState('');
-  const [originCountry, setOriginCountry] = useState('');
+  const [clientFilters, setClientFilters] = useState<ClientFilters>(DEFAULT_CLIENT_FILTERS);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Carica pagina iniziale + pagina 2 subito per avere ~40 film
-  // Ri-fetcha quando cambiano language o originCountry
+  // Initial load: 2 pages in parallel (~40 items)
   useEffect(() => {
     setLoading(true);
     setMovies([]);
     setPage(2);
     const fn = type === 'genre' ? discoverByGenre : discoverByKeyword;
-    const extra: Record<string, string> = {};
-    if (language) extra['with_original_language'] = language;
-    if (originCountry) extra['with_origin_country'] = originCountry;
-    Promise.all([fn(id, mediaType, 1, extra), fn(id, mediaType, 2, extra)])
+    Promise.all([fn(id, mediaType, 1), fn(id, mediaType, 2)])
       .then(([r1, r2]) => {
         const combined = [...r1.items, ...r2.items];
         const seen = new Set<number>();
@@ -75,7 +62,7 @@ export function GenreMoviesScreen({
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [id, type, mediaType, language, originCountry]);
+  }, [id, type, mediaType]);
 
   const loadMore = useCallback(async () => {
     const nextPage = page + 1;
@@ -83,13 +70,10 @@ export function GenreMoviesScreen({
     setLoadingMore(true);
     try {
       const fn = type === 'genre' ? discoverByGenre : discoverByKeyword;
-      const extra: Record<string, string> = {};
-      if (language) extra['with_original_language'] = language;
-      if (originCountry) extra['with_origin_country'] = originCountry;
-      const res = await fn(id, mediaType, nextPage, extra);
+      const res = await fn(id, mediaType, nextPage);
       setMovies(prev => {
-        const existingIds = new Set(prev.map(m => m.id));
-        return [...prev, ...res.items.filter(m => !existingIds.has(m.id))];
+        const existing = new Set(prev.map(m => m.id));
+        return [...prev, ...res.items.filter(m => !existing.has(m.id))];
       });
       setPage(nextPage);
     } catch { /* silent */ }
@@ -98,24 +82,27 @@ export function GenreMoviesScreen({
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
-    if (!el) return;
+    if (!el || loadingMore) return;
     if (el.scrollTop + el.clientHeight >= el.scrollHeight - 400) loadMore();
-  }, [loadMore]);
+  }, [loadMore, loadingMore]);
 
+  // Client-side filtering
   const filtered = useMemo(() => {
     let list = [...movies];
-    if (minRating > 0) list = list.filter(m => m.vote_average >= minRating);
-    if (onlyUnseen) list = list.filter(m => !watchedIds.has(m.id));
-    switch (sortBy) {
-      case 'year_desc': list.sort((a, b) => (b.release_date || b.first_air_date || '').localeCompare(a.release_date || a.first_air_date || '')); break;
-      case 'year_asc': list.sort((a, b) => (a.release_date || a.first_air_date || '').localeCompare(b.release_date || b.first_air_date || '')); break;
-      default: list.sort((a, b) => b.vote_average - a.vote_average);
+    if (clientFilters.search) {
+      const q = clientFilters.search.toLowerCase();
+      list = list.filter(m => getEnglishTitle(m).toLowerCase().includes(q));
     }
+    if (clientFilters.watchedStatus === 'watched') list = list.filter(m => watchedIds.has(m.id));
+    if (clientFilters.watchedStatus === 'unwatched') list = list.filter(m => !watchedIds.has(m.id));
+    if (clientFilters.likedStatus === 'liked') list = list.filter(m => likedIds.has(m.id));
+    if (clientFilters.likedStatus === 'not_liked') list = list.filter(m => !likedIds.has(m.id));
+    if (clientFilters.watchlistStatus === 'watchlist') list = list.filter(m => watchlistIds.has(m.id));
+    if (clientFilters.watchlistStatus === 'not_watchlist') list = list.filter(m => !watchlistIds.has(m.id));
     return list;
-  }, [movies, sortBy, minRating, onlyUnseen, watchedIds]);
+  }, [movies, clientFilters, watchedIds, likedIds, watchlistIds]);
 
   const watchedCount = movies.filter(m => watchedIds.has(m.id)).length;
-  const activeFilters = [minRating > 0, onlyUnseen].filter(Boolean).length;
 
   return (
     <div
@@ -142,173 +129,146 @@ export function GenreMoviesScreen({
               )}
             </p>
           </div>
-
-          {/* View mode toggle */}
-          <div className="flex bg-film-surface border border-film-border rounded-xl overflow-hidden">
-            <button onClick={() => setViewMode('grid')}
-              className={cn('p-2', viewMode === 'grid' ? 'bg-film-accent text-film-black' : 'text-film-muted')}>
-              <LayoutGrid size={14} />
-            </button>
-            <button onClick={() => setViewMode('card')}
-              className={cn('p-2', viewMode === 'card' ? 'bg-film-accent text-film-black' : 'text-film-muted')}>
-              <Rows3 size={14} />
-            </button>
-          </div>
-
-          {/* Filter button */}
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={cn('p-2 rounded-xl border transition-all',
-              showFilters || activeFilters > 0
-                ? 'bg-film-accent/10 border-film-accent text-film-accent'
-                : 'bg-film-surface border-film-border text-film-muted'
-            )}
-          >
-            {showFilters ? <X size={16} /> : <SlidersHorizontal size={16} />}
-          </button>
         </div>
-
-        {/* Filter panel */}
-        {showFilters && (
-          <div className="px-4 pb-3 space-y-3 border-t border-film-border/50 pt-3 animate-slide-up">
-            {/* Sort */}
-            <div>
-              <p className="text-film-subtle text-xs uppercase tracking-wider mb-2">Ordina per</p>
-              <div className="flex gap-2">
-                {([['rating', 'Voto'], ['year_desc', 'Anno ↓'], ['year_asc', 'Anno ↑']] as [SortBy, string][]).map(([v, l]) => (
-                  <button key={v} onClick={() => setSortBy(v)}
-                    className={cn('flex-1 py-1.5 rounded-xl text-xs border transition-all',
-                      sortBy === v ? 'bg-film-accent text-film-black border-film-accent' : 'bg-film-card border-film-border text-film-muted')}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Min rating */}
-            <div>
-              <div className="flex justify-between mb-1">
-                <p className="text-film-subtle text-xs uppercase tracking-wider">Voto minimo IMDB</p>
-                <span className={cn('text-xs font-mono', minRating > 0 ? 'text-film-accent' : 'text-film-subtle')}>
-                  {minRating > 0 ? `≥ ${minRating.toFixed(1)}` : 'Qualsiasi'}
-                </span>
-              </div>
-              <input type="range" min={0} max={9} step={0.5} value={minRating}
-                onChange={e => setMinRating(parseFloat(e.target.value))}
-                className="w-full accent-film-accent" />
-            </div>
-
-            {/* Only unseen */}
-            <div className="flex items-center justify-between">
-              <span className="text-film-text text-sm">Solo non visti</span>
-              <button onClick={() => setOnlyUnseen(!onlyUnseen)}
-                className={cn('relative w-11 h-6 rounded-full transition-colors', onlyUnseen ? 'bg-film-accent' : 'bg-film-border')}>
-                <span className={cn('absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform', onlyUnseen ? 'translate-x-5' : 'translate-x-0')} />
-              </button>
-            </div>
-
-            {/* Lingua */}
-            <div>
-              <p className="text-film-subtle text-xs uppercase tracking-wider mb-1.5">Lingua</p>
-              <select value={language} onChange={e => setLanguage(e.target.value)}
-                className="w-full bg-film-card border border-film-border rounded-lg px-3 py-2 text-sm text-film-text appearance-none focus:outline-none focus:border-film-accent">
-                <option value="">Qualsiasi</option>
-                {COMMON_LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
-              </select>
-            </div>
-
-            {/* Paese */}
-            <div>
-              <p className="text-film-subtle text-xs uppercase tracking-wider mb-1.5">Paese</p>
-              <select value={originCountry} onChange={e => setOriginCountry(e.target.value)}
-                className="w-full bg-film-card border border-film-border rounded-lg px-3 py-2 text-sm text-film-text appearance-none focus:outline-none focus:border-film-accent">
-                <option value="">Qualsiasi</option>
-                {COMMON_COUNTRIES.map(co => <option key={co.code} value={co.code}>{co.name}</option>)}
-              </select>
-            </div>
-
-            {activeFilters > 0 && (
-              <button onClick={() => { setMinRating(0); setOnlyUnseen(false); setSortBy('rating'); setLanguage(''); setOriginCountry(''); }}
-                className="w-full py-1.5 text-film-red text-xs border border-film-red/30 rounded-xl">
-                Reset filtri
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* Counter */}
-      <div className="shrink-0 px-4 py-2 flex items-center gap-2 border-b border-film-border/30">
-        <span className="text-film-subtle text-xs">{filtered.length} risultati</span>
-        {filtered.length < movies.length && (
-          <span className="text-film-subtle text-xs">su {movies.length}</span>
-        )}
-      </div>
+      {/* Universal filter bar */}
+      <ListFilterBar
+        apiFilters={{ sortBy: 'popularity.desc', mediaType: mediaType === 'tv' ? 'tv' : 'movie', releaseStatus: 'any' }}
+        clientFilters={clientFilters}
+        onApiFiltersChange={() => { /* genre/keyword doesn't re-fetch on api filter change */ }}
+        onClientFiltersChange={setClientFilters}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        totalCount={movies.length}
+        filteredCount={filtered.length}
+      />
 
       {/* Content */}
       <div ref={scrollRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto">
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="w-10 h-10 border-2 border-film-accent border-t-transparent rounded-full animate-spin" />
+          <div className="grid grid-cols-3 gap-2 p-4">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="aspect-[2/3] rounded-xl bg-film-surface animate-pulse border border-film-border" />
+            ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-film-muted px-4">
-            <p>Nessun risultato con questi filtri</p>
+          <div className="flex flex-col items-center justify-center py-20 text-film-muted">
+            <p className="text-sm">Nessun film trovato</p>
           </div>
-        ) : viewMode === 'card' ? (
-          <CardView
-            items={filtered.map(m => ({ ...m, media_type: m.media_type ?? mediaType }))}
-            watchedIds={watchedIds}
-            watchlistIds={watchlistIds}
-            likedIds={likedIds}
-            getPersonalRating={getPersonalRating ?? (() => null)}
-            onMarkWatched={onMarkWatched ?? (async () => {})}
-            onUnmarkWatched={onUnmarkWatched ?? (async () => {})}
-            onUpdateRating={onUpdateRating ?? (async () => {})}
-            onToggleLiked={onToggleLiked}
-            onAddToWatchlist={onAddToWatchlist ?? (async () => {})}
-            onRemoveFromWatchlist={onRemoveFromWatchlist ?? (async () => {})}
-            onOpenFull={(id, mt) => setInnerMovie({ id, mediaType: mt })}
-            onClose={() => setViewMode('grid')}
-          />
-        ) : (
-          <div className="grid grid-cols-3 gap-2.5 p-4">
-            {filtered.map(m => {
-              const mt = (m.media_type ?? mediaType) as 'movie' | 'tv';
-              return (
-                <button key={m.id} onClick={() => setInnerMovie({ id: m.id, mediaType: mt })}
-                  className="relative aspect-[2/3] rounded-xl overflow-hidden border border-film-border bg-film-card active:scale-[0.97] transition-transform text-left">
-                  {m.poster_path ? (
-                    <img src={getImageUrl(m.poster_path, 'w342') || ''} alt={getTitle(m)} className={`w-full h-full object-cover ${watchedIds.has(m.id) ? 'opacity-40 grayscale' : ''}`} />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-2xl text-film-subtle">
-                      {mt === 'tv' ? '📺' : '🎬'}
-                    </div>
-                  )}
+        ) : viewMode === 'grid' ? (
+          <div className="p-4">
+            <div className="grid grid-cols-3 gap-2">
+              {filtered.map(m => (
+                <button
+                  key={m.id}
+                  onClick={() => setInnerMovie({ id: m.id, mediaType: m.media_type ?? mediaType })}
+                  className="relative aspect-[2/3] rounded-xl overflow-hidden border border-film-border bg-film-card active:scale-[0.97] transition-transform"
+                >
+                  {m.poster_path
+                    ? <img
+                        src={getImageUrl(m.poster_path, 'w342') || ''}
+                        alt={getEnglishTitle(m)}
+                        className={cn("w-full h-full object-cover",
+                          watchedIds.has(m.id) && clientFilters.fadeWatched && "opacity-40 grayscale")}
+                      />
+                    : <div className="w-full h-full flex items-center justify-center text-2xl text-film-subtle">
+                        {mediaType === 'tv' ? '📺' : '🎬'}
+                      </div>
+                  }
                   {watchedIds.has(m.id) && (
-                    <div className="absolute top-1.5 right-1.5 bg-green-500/90 rounded-full w-5 h-5 flex items-center justify-center">
-                      <span className="text-white text-[9px] font-bold">✓</span>
+                    <div className="absolute top-1.5 right-1.5 bg-green-500/90 rounded-full w-4 h-4 flex items-center justify-center">
+                      <span className="text-white text-[8px] font-bold">✓</span>
                     </div>
                   )}
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-film-black/90 to-transparent px-1.5 pt-6 pb-1.5 pointer-events-none">
-                    <p className="text-white text-xs font-medium line-clamp-2 leading-tight">{getTitle(m)}</p>
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-film-black/90 to-transparent px-1.5 pt-5 pb-1.5 pointer-events-none">
+                    <p className="text-white text-xs font-medium line-clamp-2 leading-tight">{getEnglishTitle(m)}</p>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <span className="text-white/50 text-xs">{formatYear(getReleaseDate(m))}</span>
-                      {m.vote_average > 0 && <span className="text-film-accent text-xs">★ {formatRating(m.vote_average)}</span>}
+                      {m.vote_average > 0 && (
+                        <span className="flex items-center gap-0.5 text-film-accent text-xs ml-auto">
+                          <Star size={8} fill="currentColor" />{formatRating(m.vote_average)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </button>
-              );
-            })}
+              ))}
+            </div>
+            {loadingMore && (
+              <div className="flex justify-center py-6">
+                <div className="w-8 h-8 border-2 border-film-accent border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            {!loadingMore && page < totalPages && (
+              <div className="flex justify-center py-4">
+                <button onClick={loadMore} className="text-film-accent text-sm active:opacity-60">
+                  Carica altri
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Card view — compact list rows */
+          <div className="divide-y divide-film-border/40">
+            {filtered.map(m => (
+              <button
+                key={m.id}
+                onClick={() => setInnerMovie({ id: m.id, mediaType: m.media_type ?? mediaType })}
+                className="w-full flex items-center gap-3 px-4 py-3 active:bg-film-surface/50 text-left"
+              >
+                <div className="relative shrink-0 w-11 h-16 rounded-lg overflow-hidden bg-film-surface">
+                  {m.poster_path
+                    ? <img
+                        src={getImageUrl(m.poster_path, 'w92') || ''}
+                        alt={getEnglishTitle(m)}
+                        className={cn("w-full h-full object-cover",
+                          watchedIds.has(m.id) && clientFilters.fadeWatched && "opacity-40 grayscale")}
+                      />
+                    : <div className="w-full h-full flex items-center justify-center text-base">{mediaType === 'tv' ? '📺' : '🎬'}</div>
+                  }
+                  {watchedIds.has(m.id) && (
+                    <div className="absolute top-1 right-1 w-3.5 h-3.5 bg-green-900/80 rounded-full flex items-center justify-center">
+                      <span className="text-green-300 text-[7px] font-bold">✓</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-film-text text-sm font-medium truncate">{getEnglishTitle(m)}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="text-film-muted text-xs">{formatYear(getReleaseDate(m))}</span>
+                    {m.vote_average > 0 && (
+                      <><span className="text-film-border text-xs">·</span>
+                      <span className="text-film-accent text-xs">★ {formatRating(m.vote_average)}</span></>
+                    )}
+                  </div>
+                </div>
+              </button>
+            ))}
+            {loadingMore && (
+              <div className="flex justify-center py-4">
+                <div className="w-8 h-8 border-2 border-film-accent border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
           </div>
         )}
       </div>
+
       {/* Inner movie detail */}
       {innerMovie && (
         <InnerMovieDetail
           id={innerMovie.id}
           mediaType={innerMovie.mediaType}
           watchedIds={watchedIds}
+          watchlistIds={watchlistIds}
+          likedIds={likedIds}
+          getPersonalRating={getPersonalRating}
+          onMarkWatched={onMarkWatched}
+          onUnmarkWatched={onUnmarkWatched}
+          onUpdateRating={onUpdateRating}
+          onToggleLiked={onToggleLiked}
+          onAddToWatchlist={onAddToWatchlist}
+          onRemoveFromWatchlist={onRemoveFromWatchlist}
           onBack={() => setInnerMovie(null)}
         />
       )}

@@ -259,6 +259,7 @@ export default function App() {
     watchedIds, watchlistIds, watchedMovies,
     likedIds,
     getPersonalRating,
+    getRewatchCount: (id: number) => watchedMovies.find(m => m.id === id)?.rewatchCount ?? 0,
     onMarkWatched: markWatched,
     onUnmarkWatched: unmarkWatched,
     onUpdateRating: updateRating,
@@ -482,6 +483,7 @@ export default function App() {
           watchlistIds={watchlistIds}
           likedIds={likedIds}
           getPersonalRatingFull={getPersonalRating}
+          getRewatchCountFull={(id) => watchedMovies.find(m => m.id === id)?.rewatchCount ?? 0}
           onMarkWatchedFull={markWatched}
           onUnmarkWatchedFull={unmarkWatched}
           onUpdateRatingFull={updateRating}
