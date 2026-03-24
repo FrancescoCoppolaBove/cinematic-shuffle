@@ -321,7 +321,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col bg-film-black text-film-text" style={{ height: '100dvh' }}>
+    <div className="flex flex-col bg-film-black text-film-text" style={{ height: '100%' }}>
       <div className="fixed inset-0 pointer-events-none opacity-30 bg-grain z-50" />
 
       {/* PWA update banner */}
