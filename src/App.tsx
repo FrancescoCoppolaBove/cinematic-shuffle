@@ -321,7 +321,7 @@ export default function App() {
   }
 
   return (
-    <div className="fixed inset-0 bg-film-black text-film-text" id="app-root">
+    <div className="flex flex-col bg-film-black text-film-text" style={{ height: '100dvh' }}>
       <div className="fixed inset-0 pointer-events-none opacity-30 bg-grain z-50" />
 
       {/* PWA update banner */}
@@ -367,7 +367,7 @@ export default function App() {
       {/* ── Header: FIXED con padding-top safe-area — pattern corretto per iOS PWA ── */}
       <header
         ref={headerRef}
-        className="fixed top-0 left-0 right-0 z-40 border-b border-film-border bg-film-black/95 backdrop-blur-md"
+        className="shrink-0 z-40 border-b border-film-border bg-film-black/95 backdrop-blur-md"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-center">
@@ -381,17 +381,12 @@ export default function App() {
       {/* ── Main content — padding-top compensa l'header fixed ── */}
       <main
         className={cn(
-          'fixed left-0 right-0 max-w-3xl mx-auto flex flex-col',
+          'flex-1 min-h-0 w-full max-w-3xl mx-auto flex flex-col',
           (view === 'shuffle' || view === 'search' || view === 'profile')
             ? 'overflow-hidden'
             : 'overflow-y-auto px-4 py-4'
         )}
-        style={{
-          top: 'var(--header-h)',
-          bottom: 'var(--nav-h)',
-          WebkitOverflowScrolling: 'touch',
-          overscrollBehavior: 'contain',
-        }}
+        style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
       >
         {view === 'tonight' && (
           <TonightView
@@ -457,7 +452,7 @@ export default function App() {
       {true && (
         <nav
           ref={navRef}
-          className="fixed bottom-0 left-0 right-0 z-40 border-t border-film-border bg-film-black/95 backdrop-blur-md"
+          className="shrink-0 z-40 border-t border-film-border bg-film-black/95 backdrop-blur-md"
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <div className="max-w-3xl mx-auto px-4 flex">
             {NAV.map(({ view: v, icon: Icon, label }) => {

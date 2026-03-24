@@ -11,20 +11,21 @@
 
   *, *::before, *::after { box-sizing: border-box; }
 
-  html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    /* No overflow:hidden here — iOS Safari bug: clips children scroll */
+  html {
+    height: 100dvh;
+    overflow: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
-    overscroll-behavior: none; /* Prevents page bounce on non-Safari */
   }
 
   body {
     @apply bg-film-black text-film-text font-body;
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
   }
 
   /* Prevent tap highlight on mobile */
