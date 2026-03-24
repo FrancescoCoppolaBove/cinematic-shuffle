@@ -120,9 +120,55 @@ export interface MovieFilters {
   directorName?: string;
   minImdbRating?: number;
   mediaType: MediaType;
-  withProviders?: number[];    // TMDB watch provider IDs
-  withAwards?: boolean;        // candidature/vincite Oscar
+  withProviders?: number[];       // TMDB watch provider IDs
+  withAwards?: boolean;           // candidature/vittorie Oscar
+  language?: string;              // ISO 639-1 (es. 'en', 'it', 'ja', 'ko', 'fr')
+  originCountry?: string;         // ISO 3166-1 (es. 'US', 'IT', 'JP', 'KR', 'FR')
 }
+
+// Languages più comuni per il filtro
+export const COMMON_LANGUAGES = [
+  { code: 'en', name: 'English' },
+  { code: 'it', name: 'Italiano' },
+  { code: 'fr', name: 'Français' },
+  { code: 'de', name: 'Deutsch' },
+  { code: 'es', name: 'Español' },
+  { code: 'ja', name: '日本語 (Giapponese)' },
+  { code: 'ko', name: '한국어 (Coreano)' },
+  { code: 'zh', name: '中文 (Cinese)' },
+  { code: 'pt', name: 'Português' },
+  { code: 'ru', name: 'Русский (Russo)' },
+  { code: 'ar', name: 'العربية (Arabo)' },
+  { code: 'hi', name: 'हिन्दी (Hindi)' },
+  { code: 'sv', name: 'Svenska (Svedese)' },
+  { code: 'da', name: 'Dansk (Danese)' },
+  { code: 'pl', name: 'Polski (Polacco)' },
+  { code: 'tr', name: 'Türkçe (Turco)' },
+] as const;
+
+// Countries più rilevanti per il filtro
+export const COMMON_COUNTRIES = [
+  { code: 'US', name: 'United States' },
+  { code: 'IT', name: 'Italia' },
+  { code: 'FR', name: 'France' },
+  { code: 'DE', name: 'Germany' },
+  { code: 'GB', name: 'United Kingdom' },
+  { code: 'JP', name: 'Japan' },
+  { code: 'KR', name: 'South Korea' },
+  { code: 'CN', name: 'China' },
+  { code: 'ES', name: 'Spain' },
+  { code: 'IN', name: 'India' },
+  { code: 'MX', name: 'Mexico' },
+  { code: 'BR', name: 'Brazil' },
+  { code: 'AU', name: 'Australia' },
+  { code: 'CA', name: 'Canada' },
+  { code: 'DK', name: 'Denmark' },
+  { code: 'SE', name: 'Sweden' },
+  { code: 'RU', name: 'Russia' },
+  { code: 'IR', name: 'Iran' },
+  { code: 'AR', name: 'Argentina' },
+  { code: 'PL', name: 'Poland' },
+] as const;
 
 export interface WatchedMovie {
   id: number;
@@ -135,7 +181,8 @@ export interface WatchedMovie {
   liked: boolean;
   rewatchCount: number;
   genre_ids: number[];
-  runtime?: number | null;         // durata in minuti
+  runtime?: number | null;
+  original_language?: string;      // ISO 639-1
   addedAt: string;
   media_type: 'movie' | 'tv';
 }
@@ -148,7 +195,8 @@ export interface WatchlistItem {
   release_date: string;
   vote_average: number;
   genre_ids: number[];
-  runtime?: number | null;         // durata in minuti
+  runtime?: number | null;
+  original_language?: string;      // ISO 639-1
   addedAt: string;
   media_type: 'movie' | 'tv';
 }

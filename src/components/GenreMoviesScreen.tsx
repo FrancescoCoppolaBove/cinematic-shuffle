@@ -6,6 +6,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { ChevronLeft, LayoutGrid, Rows3, SlidersHorizontal, X } from 'lucide-react';
 import { InnerMovieDetail } from './InnerMovieDetail';
 import type { TMDBMovieBasic, TMDBMovieDetail } from '../types';
+import { COMMON_LANGUAGES, COMMON_COUNTRIES } from '../types';
 import { discoverByGenre, discoverByKeyword, getImageUrl, getTitle, getReleaseDate } from '../services/tmdb';
 import { formatYear, formatRating, cn } from '../utils';
 import { CardView } from './CardView';
@@ -51,15 +52,21 @@ export function GenreMoviesScreen({
   const [showFilters, setShowFilters] = useState(false);
   const [minRating, setMinRating] = useState(0);
   const [onlyUnseen, setOnlyUnseen] = useState(false);
+  const [language, setLanguage] = useState('');
+  const [originCountry, setOriginCountry] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Carica pagina iniziale + pagina 2 subito per avere ~40 film
+  // Ri-fetcha quando cambiano language o originCountry
   useEffect(() => {
     setLoading(true);
     setMovies([]);
     setPage(2);
     const fn = type === 'genre' ? discoverByGenre : discoverByKeyword;
-    Promise.all([fn(id, mediaType, 1), fn(id, mediaType, 2)])
+    const extra: Record<string, string> = {};
+    if (language) extra['with_original_language'] = language;
+    if (originCountry) extra['with_origin_country'] = originCountry;
+    Promise.all([fn(id, mediaType, 1, extra), fn(id, mediaType, 2, extra)])
       .then(([r1, r2]) => {
         const combined = [...r1.items, ...r2.items];
         const seen = new Set<number>();
@@ -68,7 +75,7 @@ export function GenreMoviesScreen({
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [id, type, mediaType]);
+  }, [id, type, mediaType, language, originCountry]);
 
   const loadMore = useCallback(async () => {
     const nextPage = page + 1;
@@ -76,7 +83,10 @@ export function GenreMoviesScreen({
     setLoadingMore(true);
     try {
       const fn = type === 'genre' ? discoverByGenre : discoverByKeyword;
-      const res = await fn(id, mediaType, nextPage);
+      const extra: Record<string, string> = {};
+      if (language) extra['with_original_language'] = language;
+      if (originCountry) extra['with_origin_country'] = originCountry;
+      const res = await fn(id, mediaType, nextPage, extra);
       setMovies(prev => {
         const existingIds = new Set(prev.map(m => m.id));
         return [...prev, ...res.items.filter(m => !existingIds.has(m.id))];
@@ -197,8 +207,28 @@ export function GenreMoviesScreen({
               </button>
             </div>
 
+            {/* Lingua */}
+            <div>
+              <p className="text-film-subtle text-xs uppercase tracking-wider mb-1.5">Lingua</p>
+              <select value={language} onChange={e => setLanguage(e.target.value)}
+                className="w-full bg-film-card border border-film-border rounded-lg px-3 py-2 text-sm text-film-text appearance-none focus:outline-none focus:border-film-accent">
+                <option value="">Qualsiasi</option>
+                {COMMON_LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
+              </select>
+            </div>
+
+            {/* Paese */}
+            <div>
+              <p className="text-film-subtle text-xs uppercase tracking-wider mb-1.5">Paese</p>
+              <select value={originCountry} onChange={e => setOriginCountry(e.target.value)}
+                className="w-full bg-film-card border border-film-border rounded-lg px-3 py-2 text-sm text-film-text appearance-none focus:outline-none focus:border-film-accent">
+                <option value="">Qualsiasi</option>
+                {COMMON_COUNTRIES.map(co => <option key={co.code} value={co.code}>{co.name}</option>)}
+              </select>
+            </div>
+
             {activeFilters > 0 && (
-              <button onClick={() => { setMinRating(0); setOnlyUnseen(false); setSortBy('rating'); }}
+              <button onClick={() => { setMinRating(0); setOnlyUnseen(false); setSortBy('rating'); setLanguage(''); setOriginCountry(''); }}
                 className="w-full py-1.5 text-film-red text-xs border border-film-red/30 rounded-xl">
                 Reset filtri
               </button>

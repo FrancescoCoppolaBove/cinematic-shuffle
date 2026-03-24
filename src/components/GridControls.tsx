@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import { SlidersHorizontal, X, LayoutGrid, Rows3 } from 'lucide-react';
 import { cn } from '../utils';
+import { COMMON_LANGUAGES, COMMON_COUNTRIES } from '../types';
 
 export type ViewMode = 'grid' | 'card';
 
 export interface GridFilters {
   search: string;
   mediaType: 'all' | 'movie' | 'tv';
-  minRating: number;          // 0 = qualsiasi
-  onlyRated: boolean;         // solo quelli con voto personale
-  sortBy: 'date' | 'rating' | 'title' | 'tmdb_rating';
+  minRating: number;
+  onlyRated: boolean;
+  sortBy: 'date' | 'rating' | 'title' | 'tmdb_rating' | 'personal_rating';
+  language?: string;
+  originCountry?: string;
 }
 
 export const DEFAULT_GRID_FILTERS: GridFilters = {
@@ -43,10 +46,12 @@ export function GridControls({
     filters.minRating > 0,
     filters.onlyRated,
     filters.sortBy !== 'date',
+    filters.language,
+    filters.originCountry,
   ].filter(Boolean).length;
 
   function reset() {
-    onFiltersChange({ ...DEFAULT_GRID_FILTERS, search: filters.search });
+    onFiltersChange({ ...DEFAULT_GRID_FILTERS, search: filters.search, language: undefined, originCountry: undefined });
   }
 
   return (
@@ -206,6 +211,26 @@ export function GridControls({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Lingua */}
+          <div className="space-y-1">
+            <p className="text-film-subtle text-xs uppercase tracking-wider">Lingua</p>
+            <select value={filters.language || ''} onChange={e => onFiltersChange({ ...filters, language: e.target.value || undefined })}
+              className="w-full bg-film-card border border-film-border rounded-lg px-3 py-2 text-sm text-film-text appearance-none focus:outline-none focus:border-film-accent">
+              <option value="">Qualsiasi</option>
+              {COMMON_LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
+            </select>
+          </div>
+
+          {/* Paese */}
+          <div className="space-y-1">
+            <p className="text-film-subtle text-xs uppercase tracking-wider">Paese</p>
+            <select value={filters.originCountry || ''} onChange={e => onFiltersChange({ ...filters, originCountry: e.target.value || undefined })}
+              className="w-full bg-film-card border border-film-border rounded-lg px-3 py-2 text-sm text-film-text appearance-none focus:outline-none focus:border-film-accent">
+              <option value="">Qualsiasi</option>
+              {COMMON_COUNTRIES.map(co => <option key={co.code} value={co.code}>{co.name}</option>)}
+            </select>
           </div>
 
           {/* Reset */}

@@ -41,9 +41,12 @@ onOpenMovieGlobal,
     if (filters.search) list = list.filter(m => getEnglishTitle(m).toLowerCase().includes(filters.search.toLowerCase()));
     if (filters.mediaType !== 'all') list = list.filter(m => m.media_type === filters.mediaType);
     if (filters.minRating > 0) list = list.filter(m => m.vote_average >= filters.minRating);
+    if (filters.language) list = list.filter(m => m.original_language === filters.language);
+    if (filters.originCountry) list = list.filter(m => (m as { origin_country?: string[] }).origin_country?.includes(filters.originCountry!) ?? true);
     switch (filters.sortBy) {
       case 'title': list.sort((a, b) => getEnglishTitle(a).localeCompare(getEnglishTitle(b))); break;
       case 'tmdb_rating': list.sort((a, b) => b.vote_average - a.vote_average); break;
+      case 'personal_rating': list.sort((a, b) => ((b as { personal_rating?: number | null }).personal_rating ?? 0) - ((a as { personal_rating?: number | null }).personal_rating ?? 0)); break;
       default: break;
     }
     return list;

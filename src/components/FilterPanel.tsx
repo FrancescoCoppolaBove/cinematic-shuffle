@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, ChevronDown, Search, Star, Calendar, Clapperboard, User, Film } from 'lucide-react';
+import { X, ChevronDown, Search, Star, Calendar, Clapperboard, User, Film, Globe } from 'lucide-react';
 import type { MovieFilters } from '../types';
-import { TMDB_MOVIE_GENRES, TMDB_TV_GENRES, DECADES } from '../types';
+import { TMDB_MOVIE_GENRES, TMDB_TV_GENRES, DECADES, COMMON_LANGUAGES, COMMON_COUNTRIES } from '../types';
 import { searchPersons, getPopularProviders } from '../services/tmdb';
 import { cn } from '../utils';
 
@@ -88,12 +88,14 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
     filters.minImdbRating,
     (filters.withProviders?.length || 0) > 0,
     filters.withAwards,
+    filters.language,
+    filters.originCountry,
   ].filter(Boolean).length;
 
   function resetAll() {
     setDirectorQuery('');
     setActorQuery('');
-    onChange({ watchedStatus: 'all', mediaType: filters.mediaType, withProviders: [], withAwards: false, decade: undefined });
+    onChange({ watchedStatus: 'all', mediaType: filters.mediaType, withProviders: [], withAwards: false, decade: undefined, language: undefined, originCountry: undefined });
   }
 
   return (
@@ -326,6 +328,40 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
               </button>
             );
           })}
+        </div>
+      </FilterSection>
+
+      {/* Lingua originale */}
+      <FilterSection icon={<Globe size={14} />} label="Lingua originale">
+        <div className="relative">
+          <select
+            value={filters.language || ''}
+            onChange={e => onChange({ ...filters, language: e.target.value || undefined })}
+            className="w-full bg-film-card border border-film-border rounded-lg px-3 py-2 text-sm text-film-text appearance-none cursor-pointer focus:outline-none focus:border-film-accent transition-colors"
+          >
+            <option value="">Qualsiasi lingua</option>
+            {COMMON_LANGUAGES.map(l => (
+              <option key={l.code} value={l.code}>{l.name}</option>
+            ))}
+          </select>
+          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-film-muted pointer-events-none" />
+        </div>
+      </FilterSection>
+
+      {/* Paese di produzione */}
+      <FilterSection icon={<Globe size={14} />} label="Paese">
+        <div className="relative">
+          <select
+            value={filters.originCountry || ''}
+            onChange={e => onChange({ ...filters, originCountry: e.target.value || undefined })}
+            className="w-full bg-film-card border border-film-border rounded-lg px-3 py-2 text-sm text-film-text appearance-none cursor-pointer focus:outline-none focus:border-film-accent transition-colors"
+          >
+            <option value="">Qualsiasi paese</option>
+            {COMMON_COUNTRIES.map(co => (
+              <option key={co.code} value={co.code}>{co.name}</option>
+            ))}
+          </select>
+          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-film-muted pointer-events-none" />
         </div>
       </FilterSection>
 

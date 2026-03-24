@@ -63,7 +63,9 @@ async function tmdbDiscover(
   if (filters.minImdbRating)         p.set('vote_average.gte', String(filters.minImdbRating));
   if (filters.withProviders?.length) { p.set('with_watch_providers', filters.withProviders.join('|')); p.set('watch_region', 'IT'); }
   if (filters.actorIds?.length)      p.set('with_cast', filters.actorIds.join(','));
-  if (filters.withAwards)            p.set('with_keywords', '207317|210024');
+  if (filters.withAwards)            p.set('with_keywords', '210024|155477|9748');
+  if (filters.language)              p.set('with_original_language', filters.language);
+  if (filters.originCountry)         p.set('with_origin_country', filters.originCountry);
   if (filters.year) {
     p.set(mediaType === 'tv' ? 'first_air_date_year' : 'primary_release_year', String(filters.year));
   } else if (filters.decade) {

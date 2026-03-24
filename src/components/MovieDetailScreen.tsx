@@ -300,15 +300,7 @@ export function MovieDetailScreen({
               </div>
             )}
 
-            {/* Trailer play */}
-            {trailerUrl && (
-              <a href={trailerUrl} target="_blank" rel="noopener noreferrer"
-                className="absolute inset-0 flex items-center justify-center">
-                <div className="w-16 h-16 rounded-full bg-film-black/50 backdrop-blur-sm border border-white/20 flex items-center justify-center active:scale-90 transition-transform">
-                  <Play size={26} className="text-white ml-1" fill="white" />
-                </div>
-              </a>
-            )}
+            {/* Play button removed — Trailer CTA in buttons below */}
 
             {/* Swipe progress indicator — dots strip under backdrop */}
             {hasPlaylist && playlist!.length <= 20 && (
@@ -518,25 +510,7 @@ export function MovieDetailScreen({
             )}
 
             {allProviders.length > 0 && (
-              <Section label="Dove guardarlo" icon={<MapPin size={13} className="text-film-accent" />}>
-                <div className="flex flex-wrap gap-2">
-                  {allProviders.map(p => (
-                    <div key={p.provider_id}
-                      className="flex items-center gap-2 bg-film-surface border border-film-border rounded-xl px-2.5 py-1.5">
-                      <div className="w-6 h-6 rounded-md overflow-hidden shrink-0">
-                        <img src={getProviderLogoUrl(p.logo_path)} alt={p.provider_name} className="w-full h-full object-cover" />
-                      </div>
-                      <span className="text-film-text text-xs font-medium">{p.provider_name}</span>
-                    </div>
-                  ))}
-                </div>
-                {providers?.link && (
-                  <a href={providers.link} target="_blank" rel="noopener noreferrer"
-                    className="inline-block mt-2 text-film-accent text-xs hover:underline">
-                    Vedi tutte le opzioni →
-                  </a>
-                )}
-              </Section>
+              <ProvidersSection providers={allProviders} tmdbLink={providers?.link ?? null} />
             )}
 
             {/* Cast section moved to MovieDetailTabs below */}
@@ -686,6 +660,45 @@ export function MovieDetailScreen({
         />
       )}
     </div>
+  );
+}
+
+
+// ── ProvidersSection: first 5 visible, rest collapsed, each links to platform ──
+function ProvidersSection({ providers, tmdbLink }: {
+  providers: { provider_id: number; provider_name: string; logo_path: string }[];
+  tmdbLink: string | null;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? providers : providers.slice(0, 5);
+  const hasMore = providers.length > 5;
+
+  return (
+    <Section label="Dove guardarlo" icon={<MapPin size={13} className="text-film-accent" />}>
+      <div className="flex flex-wrap gap-2">
+        {visible.map(p => (
+          <a
+            key={p.provider_id}
+            href={tmdbLink ?? `https://www.justwatch.com/it/cerca?q=${encodeURIComponent(p.provider_name)}`}
+            target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 bg-film-surface border border-film-border rounded-xl px-2.5 py-1.5 active:opacity-70 transition-opacity"
+          >
+            <div className="w-6 h-6 rounded-md overflow-hidden shrink-0">
+              <img src={getProviderLogoUrl(p.logo_path)} alt={p.provider_name} className="w-full h-full object-cover" />
+            </div>
+            <span className="text-film-text text-xs font-medium">{p.provider_name}</span>
+          </a>
+        ))}
+      </div>
+      {hasMore && (
+        <button
+          onClick={() => setExpanded(e => !e)}
+          className="text-film-accent text-xs mt-1 active:opacity-60"
+        >
+          {expanded ? 'Mostra meno ↑' : `Mostra altri ${providers.length - 5} →`}
+        </button>
+      )}
+    </Section>
   );
 }
 

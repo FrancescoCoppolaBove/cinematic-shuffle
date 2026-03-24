@@ -238,9 +238,9 @@ export async function discoverContent(filters: MovieFilters, page = 1): Promise<
     params['with_watch_providers'] = filters.withProviders.join('|');
     params['watch_region'] = 'IT';
   }
-  // Awards: TMDB keyword IDs for Oscar winner (207317) and nominee (207317 + 210024)
+  // Awards: TMDB keyword IDs — 210024=academy award, 155477=best picture, 9748=oscar winner
   if (filters.withAwards) {
-    params['with_keywords'] = '207317|210024';
+    params['with_keywords'] = '210024|155477|9748';
   }
 
   if (filters.directorName) {
@@ -339,6 +339,147 @@ export async function getCompanyMovies(
     total_pages: res.total_pages ?? 1,
     total_results: res.total_results ?? 0,
   };
+}
+
+// ─── Browse By — general discover with flexible params ────────────
+export interface BrowseFilters {
+  mediaType?: 'movie' | 'tv';
+  sortBy?: string;
+  year?: number;
+  decade?: string;
+  genreIds?: number[];
+  language?: string;
+  originCountry?: string;
+  withProviders?: number[];
+  minVoteCount?: number;
+  minRating?: number;
+}
+
+export async function browseDiscover(
+  filters: BrowseFilters,
+  page = 1
+): Promise<DiscoverPageResult> {
+  const mediaType = filters.mediaType ?? 'movie';
+  const params: Record<string, string> = {
+    sort_by: filters.sortBy ?? 'popularity.desc',
+    'vote_count.gte': String(filters.minVoteCount ?? 50),
+    page: String(page),
+  };
+
+  if (filters.genreIds?.length) params['with_genres'] = filters.genreIds.join(',');
+  if (filters.language) params['with_original_language'] = filters.language;
+  if (filters.originCountry) params['with_origin_country'] = filters.originCountry;
+  if (filters.minRating) params['vote_average.gte'] = String(filters.minRating);
+  if (filters.withProviders?.length) {
+    params['with_watch_providers'] = filters.withProviders.join('|');
+    params['watch_region'] = 'IT';
+  }
+  if (filters.year) {
+    const k = mediaType === 'tv' ? 'first_air_date_year' : 'primary_release_year';
+    params[k] = String(filters.year);
+  } else if (filters.decade) {
+    const ranges: Record<string, [number, number]> = {
+      '1870s':[1870,1879],'1880s':[1880,1889],'1890s':[1890,1899],
+      '1900s':[1900,1909],'1910s':[1910,1919],'1920s':[1920,1929],
+      '1930s':[1930,1939],'1940s':[1940,1949],'1950s':[1950,1959],
+      '1960s':[1960,1969],'1970s':[1970,1979],'1980s':[1980,1989],
+      '1990s':[1990,1999],'2000s':[2000,2009],'2010s':[2010,2019],'2020s':[2020,2029],
+    };
+    const r = ranges[filters.decade];
+    if (r) {
+      const k = mediaType === 'tv' ? 'first_air_date' : 'primary_release_date';
+      params[`${k}.gte`] = `${r[0]}-01-01`;
+      params[`${k}.lte`] = `${r[1]}-12-31`;
+    }
+  }
+
+  const data = await apiFetch<{ results: TMDBMovieBasic[]; total_pages: number; total_results: number }>(
+    `/discover/${mediaType}`, params
+  );
+  return {
+    items: (data.results ?? []).map(m => ({ ...m, media_type: mediaType })),
+    totalPages: data.total_pages ?? 1,
+    totalResults: data.total_results ?? 0,
+  };
+}
+
+// Upcoming movies (release_date.gte = today)
+export async function getUpcoming(page = 1): Promise<DiscoverPageResult> {
+  const today = new Date().toISOString().split('T')[0];
+  const data = await apiFetch<{ results: TMDBMovieBasic[]; total_pages: number; total_results: number }>(
+    '/discover/movie', {
+      sort_by: 'popularity.desc',
+      'primary_release_date.gte': today,
+      'vote_count.gte': '0',
+      page: String(page),
+    }
+  );
+  return {
+    items: (data.results ?? []).map(m => ({ ...m, media_type: 'movie' as const })),
+    totalPages: data.total_pages ?? 1,
+    totalResults: data.total_results ?? 0,
+  };
+}
+
+// Top 500 narrative features (popular, high quality)
+export async function getTop500(page = 1): Promise<DiscoverPageResult> {
+  const pageNum = Math.min(page, 25); // 25 pages × 20 = 500
+  const data = await apiFetch<{ results: TMDBMovieBasic[]; total_pages: number; total_results: number }>(
+    '/discover/movie', {
+      sort_by: 'vote_average.desc',
+      'vote_count.gte': '5000',
+      'vote_average.gte': '7.0',
+      page: String(pageNum),
+    }
+  );
+  return {
+    items: (data.results ?? []).map(m => ({ ...m, media_type: 'movie' as const })),
+    totalPages: Math.min(data.total_pages ?? 1, 25),
+    totalResults: Math.min(data.total_results ?? 0, 500),
+  };
+}
+
+// Most anticipated (upcoming + high popularity)
+export async function getMostAnticipated(page = 1): Promise<DiscoverPageResult> {
+  const today = new Date().toISOString().split('T')[0];
+  const sixMonths = new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString().split('T')[0];
+  const data = await apiFetch<{ results: TMDBMovieBasic[]; total_pages: number; total_results: number }>(
+    '/discover/movie', {
+      sort_by: 'popularity.desc',
+      'primary_release_date.gte': today,
+      'primary_release_date.lte': sixMonths,
+      page: String(page),
+    }
+  );
+  return {
+    items: (data.results ?? []).map(m => ({ ...m, media_type: 'movie' as const })),
+    totalPages: data.total_pages ?? 1,
+    totalResults: data.total_results ?? 0,
+  };
+}
+
+// Fetch available TMDB genres for movies or TV
+export async function getTmdbGenres(mediaType: 'movie' | 'tv' = 'movie'): Promise<{ id: number; name: string }[]> {
+  const data = await apiFetch<{ genres: { id: number; name: string }[] }>(`/genre/${mediaType}/list`);
+  return data.genres ?? [];
+}
+
+// Fetch available TMDB countries
+export async function getTmdbCountries(): Promise<{ iso_3166_1: string; english_name: string }[]> {
+  try {
+    const data = await apiFetch<{ iso_3166_1: string; english_name: string }[]>('/configuration/countries');
+    return (Array.isArray(data) ? data : []).sort((a, b) => a.english_name.localeCompare(b.english_name));
+  } catch { return []; }
+}
+
+// Fetch available TMDB languages
+export async function getTmdbLanguages(): Promise<{ iso_639_1: string; english_name: string }[]> {
+  try {
+    const data = await apiFetch<{ iso_639_1: string; english_name: string; name: string }[]>('/configuration/languages');
+    return (Array.isArray(data) ? data : [])
+      .filter(l => l.iso_639_1 && l.english_name)
+      .sort((a, b) => a.english_name.localeCompare(b.english_name));
+  } catch { return []; }
 }
 
 // ─── Shuffle ──────────────────────────────────────────────────────
@@ -549,7 +690,8 @@ export interface DiscoverPageResult {
 export async function discoverByKeyword(
   keywordId: number,
   mediaType: 'movie' | 'tv' = 'movie',
-  page = 1
+  page = 1,
+  extraParams: Record<string, string> = {}
 ): Promise<DiscoverPageResult> {
   const data = await apiFetch<{ results: TMDBMovieBasic[]; total_pages: number; total_results: number }>(
     `/discover/${mediaType}`, {
@@ -557,6 +699,7 @@ export async function discoverByKeyword(
       sort_by: 'vote_average.desc',
       'vote_count.gte': '50',
       page: String(page),
+      ...extraParams,
     }
   );
   return {
@@ -571,7 +714,8 @@ export async function discoverByKeyword(
 export async function discoverByGenre(
   genreId: number,
   mediaType: 'movie' | 'tv' = 'movie',
-  page = 1
+  page = 1,
+  extraParams: Record<string, string> = {}
 ): Promise<DiscoverPageResult> {
   const data = await apiFetch<{ results: TMDBMovieBasic[]; total_pages: number; total_results: number }>(
     `/discover/${mediaType}`, {
@@ -579,6 +723,7 @@ export async function discoverByGenre(
       sort_by: 'vote_average.desc',
       'vote_count.gte': '100',
       page: String(page),
+      ...extraParams,
     }
   );
   return {

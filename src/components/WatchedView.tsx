@@ -41,10 +41,13 @@ onOpenMovieGlobal,
     if (filters.search) list = list.filter(m => m.title.toLowerCase().includes(filters.search.toLowerCase()));
     if (filters.mediaType !== 'all') list = list.filter(m => m.media_type === filters.mediaType);
     if (filters.minRating > 0) list = list.filter(m => m.vote_average >= filters.minRating);
+    if (filters.language) list = list.filter(m => m.original_language === filters.language);
+    if (filters.originCountry) list = list.filter(m => (m as { origin_country?: string[] }).origin_country?.includes(filters.originCountry!) ?? true);
     if (filters.onlyRated) list = list.filter(m => m.personal_rating !== null);
     switch (filters.sortBy) {
       case 'title': list.sort((a, b) => a.title.localeCompare(b.title)); break;
       case 'tmdb_rating': list.sort((a, b) => b.vote_average - a.vote_average); break;
+      case 'personal_rating': list.sort((a, b) => ((b as { personal_rating?: number | null }).personal_rating ?? 0) - ((a as { personal_rating?: number | null }).personal_rating ?? 0)); break;
       case 'rating': list.sort((a, b) => (b.personal_rating ?? 0) - (a.personal_rating ?? 0)); break;
       default: break; // date — already sorted by addedAt from Firestore
     }
