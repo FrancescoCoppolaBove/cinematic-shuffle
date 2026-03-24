@@ -14,12 +14,11 @@
   html, body {
     margin: 0;
     padding: 0;
-    /* NO height, NO overflow — let the fixed root div handle everything */
+    overscroll-behavior: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
-    overscroll-behavior: none;
   }
 
   body {
