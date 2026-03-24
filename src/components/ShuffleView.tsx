@@ -90,14 +90,9 @@ export function ShuffleView({
   const textColor = filters.mediaType === 'tv' ? 'text-white' : 'text-film-black';
 
   return (
-    // Occupa tutto lo spazio tra header fixed e nav fixed
+    // Main gestisce già l'altezza — ShuffleView riempie tutto lo spazio disponibile
     <div
-      className="flex flex-col bg-film-black"
-      style={{
-        marginTop: 'calc(env(safe-area-inset-top) + 52px)',
-        height: 'calc(100dvh - env(safe-area-inset-top) - 52px - 56px - env(safe-area-inset-bottom))',
-        minHeight: 0,
-      }}
+      className="flex flex-col bg-film-black h-full min-h-0"
     >
       {/* ── Top bar: media type + shuffle + filters ── */}
       <div className="shrink-0 px-4 pt-3 pb-2 space-y-2">

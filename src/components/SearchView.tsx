@@ -165,9 +165,9 @@ export function SearchView({
   const providers = getPopularProviders().slice(0, 12);
 
   return (
-    <div className="flex flex-col h-full -mx-4">
+    <div className="flex flex-col h-full">
       {/* ── Search bar ── */}
-      <div className="px-4 pt-5 pb-0 bg-film-black sticky top-0 z-10">
+      <div className="px-4 pt-5 pb-0 bg-film-black shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex-1 flex items-center gap-2 bg-film-surface border border-film-border rounded-xl px-3 py-2 focus-within:border-film-accent/60 transition-colors">
             {loading

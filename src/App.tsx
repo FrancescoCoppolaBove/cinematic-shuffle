@@ -359,15 +359,13 @@ export default function App() {
       {/* ── Main content — padding-top compensa l'header fixed ── */}
       <main
         className={
-          (view === 'search' || view === 'profile') ?
-            "max-w-3xl mx-auto px-4 overflow-hidden flex flex-col" :
-          view === 'shuffle' ?
-            "max-w-3xl mx-auto overflow-hidden" :
-            "max-w-3xl mx-auto px-4 py-4 pb-24 overflow-y-auto"
+          (view === 'shuffle' || view === 'search' || view === 'profile')
+            ? "max-w-3xl mx-auto overflow-hidden flex flex-col"
+            : "max-w-3xl mx-auto px-4 py-4 pb-24 overflow-y-auto"
         }
         style={{
-          paddingTop: view === 'shuffle' ? 0 : 'calc(env(safe-area-inset-top) + 52px)',
-          height: (view === 'search' || view === 'profile' || view === 'shuffle')
+          paddingTop: 'calc(env(safe-area-inset-top) + 52px)',
+          height: (view === 'shuffle' || view === 'search' || view === 'profile')
             ? 'calc(100dvh - env(safe-area-inset-bottom))'
             : undefined,
         }}

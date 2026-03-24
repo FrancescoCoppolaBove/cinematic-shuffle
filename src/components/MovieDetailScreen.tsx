@@ -542,15 +542,11 @@ export function MovieDetailScreen({
             {/* TV Seasons info — only for TV shows */}
             {isTV && (movie.seasons?.length ?? 0) > 0 && (
               <Section label="Stagioni">
-                {/* Status badge */}
+                {/* Status badge — solo se in produzione */}
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  {movie.in_production !== undefined && (
-                    <span className={`px-2.5 py-1 rounded-xl text-xs font-medium ${
-                      movie.in_production
-                        ? 'bg-green-900/40 text-green-400 border border-green-700/50'
-                        : 'bg-film-surface text-film-muted border border-film-border'
-                    }`}>
-                      {movie.in_production ? '🟢 In produzione' : '⬛ Terminata'}
+                  {movie.in_production && (
+                    <span className="px-2.5 py-1 rounded-xl text-xs font-medium bg-green-900/40 text-green-400 border border-green-700/50">
+                      🟢 In produzione
                     </span>
                   )}
                   {movie.next_episode_to_air && (
@@ -561,14 +557,24 @@ export function MovieDetailScreen({
                 </div>
 
                 {/* Seasons list */}
-                <div className="space-y-2">
+                <div className="space-y-0">
                   {movie.seasons
-                    ?.filter(s => s.season_number > 0) // exclude "Specials" season 0
+                    ?.filter(s => s.season_number > 0)
                     .map(s => {
                       const year = s.air_date ? new Date(s.air_date).getFullYear() : null;
-                      const isLatest = s.season_number === (movie.number_of_seasons ?? 0);
-                      return (
-                        <button key={s.id} onClick={() => setOpenSeason({ seriesId: movie.id, seasonNumber: s.season_number, seasonName: s.name })} className="w-full flex items-center gap-3 py-2 border-b border-film-border/40 last:border-0 active:bg-film-surface/50 transition-colors text-left">
+                      const isCurrentSeason = movie.next_episode_to_air?.season_number === s.season_number;
+                      const hasNoEpisodes = (s.episode_count ?? 0) === 0;
+                      // Stagione senza episodi: determina stato
+                      const noEpLabel = !s.air_date
+                        ? 'In lavorazione'
+                        : year && year > new Date().getFullYear()
+                          ? `Annunciata · ${year}`
+                          : year
+                            ? `In arrivo · ${year}`
+                            : 'Annunciata';
+
+                      const inner = (
+                        <>
                           {s.poster_path ? (
                             <img
                               src={`https://image.tmdb.org/t/p/w92${s.poster_path}`}
@@ -576,22 +582,40 @@ export function MovieDetailScreen({
                               className="w-10 h-14 rounded-lg object-cover shrink-0 border border-film-border"
                             />
                           ) : (
-                            <div className="w-10 h-14 rounded-lg bg-film-surface border border-film-border shrink-0 flex items-center justify-center text-film-subtle text-xs">
+                            <div className="w-10 h-14 rounded-lg bg-film-surface border border-film-border shrink-0 flex items-center justify-center text-film-subtle text-xs font-mono">
                               {s.season_number}
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="text-film-text text-sm font-medium">{s.name}</p>
-                              {isLatest && movie.in_production && (
-                                <span className="text-film-accent text-xs">●</span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className={`text-sm font-medium ${hasNoEpisodes ? 'text-film-muted' : 'text-film-text'}`}>{s.name}</p>
+                              {isCurrentSeason && (
+                                <span className="text-film-accent text-xs font-medium">● In corso</span>
                               )}
                             </div>
-                            <p className="text-film-subtle text-xs">
-                              {s.episode_count} episodi{year ? ` · ${year}` : ''}
+                            <p className="text-film-subtle text-xs mt-0.5">
+                              {hasNoEpisodes
+                                ? noEpLabel
+                                : `${s.episode_count} episodi${year ? ` · ${year}` : ''}`}
                             </p>
                           </div>
-                          <ChevronRight size={14} className="text-film-subtle/50 shrink-0" />
+                          {!hasNoEpisodes && (
+                            <ChevronRight size={14} className="text-film-subtle/50 shrink-0" />
+                          )}
+                        </>
+                      );
+
+                      return hasNoEpisodes ? (
+                        <div key={s.id} className="flex items-center gap-3 py-2 border-b border-film-border/40 last:border-0 opacity-60">
+                          {inner}
+                        </div>
+                      ) : (
+                        <button
+                          key={s.id}
+                          onClick={() => setOpenSeason({ seriesId: movie.id, seasonNumber: s.season_number, seasonName: s.name })}
+                          className="w-full flex items-center gap-3 py-2 border-b border-film-border/40 last:border-0 active:bg-film-surface/50 transition-colors text-left"
+                        >
+                          {inner}
                         </button>
                       );
                     })}
