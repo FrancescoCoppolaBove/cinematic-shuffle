@@ -3,6 +3,12 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Initial layout values — overridden by ResizeObserver after first paint */
+    --header-h: calc(env(safe-area-inset-top) + 52px);
+    --nav-h: calc(env(safe-area-inset-bottom) + 60px);
+  }
+
   *, *::before, *::after { box-sizing: border-box; }
 
   html, body {
