@@ -99,7 +99,7 @@ export function ProfileView({
       </div>
 
       {/* Scrollable tab content */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
 
       {/* ── Tab: Profilo ── */}
       {tab === 'profilo' && (

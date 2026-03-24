@@ -6,9 +6,11 @@
   *, *::before, *::after { box-sizing: border-box; }
 
   html {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* Prevent font size inflation on mobile */
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
   }
@@ -16,8 +18,9 @@
   body {
     @apply bg-film-black text-film-text font-body;
     margin: 0;
-    /* Safe area bottom — top gestito dall'header fixed */
-    padding-bottom: env(safe-area-inset-bottom);
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
   }
 
   /* Prevent tap highlight on mobile */

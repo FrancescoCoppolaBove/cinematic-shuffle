@@ -300,7 +300,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col bg-film-black text-film-text" style={{ height: '100dvh' }}>
+    <div className="flex flex-col bg-film-black text-film-text h-full">
       <div className="fixed inset-0 pointer-events-none opacity-30 bg-grain z-50" />
 
       {/* PWA update banner */}
@@ -364,7 +364,7 @@ export default function App() {
             ? 'overflow-hidden'
             : 'overflow-y-auto px-4 py-4 pb-6'
         )}
-        style={{ WebkitOverflowScrolling: 'touch' }}
+        style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
       >
         {view === 'tonight' && (
           <TonightView

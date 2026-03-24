@@ -153,13 +153,13 @@ export function ShuffleView({
 
       {/* Filter panel — slides in below top bar */}
       {showFilters && (
-        <div className="shrink-0 px-4 pb-2 overflow-y-auto max-h-[40vh] animate-slide-up">
+        <div className="shrink-0 px-4 pb-2 overflow-y-auto max-h-[40vh] animate-slide-up" style={{ overscrollBehavior: 'contain' }}>
           <FilterPanel filters={filters} onChange={setFilters} />
         </div>
       )}
 
       {/* ── Main content area ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
         {/* Error */}
         {error && (
           <div className="mx-4 mt-2 bg-film-red/10 border border-film-red/30 rounded-2xl px-4 py-3 text-film-red text-sm">
