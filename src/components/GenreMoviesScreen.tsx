@@ -106,13 +106,12 @@ export function GenreMoviesScreen({
 
   return (
     <div
-      className="fixed inset-0 z-[89] bg-film-black flex flex-col"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      className="fixed left-0 right-0 z-[89] bg-film-black flex flex-col"
+      style={{ top: 'var(--header-h, 52px)', bottom: 'var(--nav-h, 60px)' }}
     >
       {/* Header */}
       <div
         className="shrink-0 bg-film-black/95 backdrop-blur-md border-b border-film-border"
-        style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="flex items-center gap-3 px-4 py-3">
           <button onClick={onBack} className="active:opacity-60">
