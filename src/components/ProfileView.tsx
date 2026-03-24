@@ -98,6 +98,9 @@ export function ProfileView({
         ))}
       </div>
 
+      {/* Scrollable tab content */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+
       {/* ── Tab: Profilo ── */}
       {tab === 'profilo' && (
         <div className="px-4 pt-5 pb-6 space-y-5">
@@ -175,6 +178,7 @@ export function ProfileView({
           />
         </div>
       )}
+      </div>{/* end scroll wrapper */}
     </div>
   );
 }
