@@ -487,7 +487,7 @@ export default function App() {
               const active = view === v;
               return (
                 <button key={v} onClick={() => handleNavChange(v)}
-                  className={cn('flex-1 flex flex-col items-center gap-1 py-3 pt-4 transition-all relative',
+                  className={cn('flex-1 flex flex-col items-center gap-1 py-3 transition-all relative',
                     active ? 'text-film-accent' : 'text-film-subtle hover:text-film-muted')}>
                   {active && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-film-accent rounded-full" />}
                   {v === 'profile' ? (
