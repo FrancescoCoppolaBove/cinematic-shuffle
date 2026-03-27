@@ -110,11 +110,22 @@ export default function App() {
     return () => ro.disconnect();
   }, []);
 
-  // --app-height: window.innerHeight bypasses ALL iOS/Android CSS viewport bugs
-  // This is the REAL physical screen height, works perfectly in PWA standalone
+  // --app-height = window.innerHeight + safe-area-inset-bottom
+  // On iOS PWA, window.innerHeight excludes the home indicator zone (~34px).
+  // We measure it with a probe div and add it back so the root div covers
+  // the full physical screen and the nav sits flush at the bottom.
   useEffect(() => {
+    // Create a probe div to measure safe-area-inset-bottom in pixels
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;bottom:0;height:env(safe-area-inset-bottom,0px);pointer-events:none;opacity:0';
+    document.body.appendChild(probe);
+
     const setAppHeight = () => {
-      document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+      const safeBottom = probe.offsetHeight;
+      document.documentElement.style.setProperty(
+        '--app-height',
+        `${window.innerHeight + safeBottom}px`
+      );
     };
     setAppHeight();
     window.addEventListener('resize', setAppHeight);
@@ -122,6 +133,7 @@ export default function App() {
     return () => {
       window.removeEventListener('resize', setAppHeight);
       window.removeEventListener('orientationchange', setAppHeight);
+      probe.remove();
     };
   }, []);
 
