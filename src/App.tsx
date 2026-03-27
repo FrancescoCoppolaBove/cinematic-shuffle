@@ -14,6 +14,8 @@ import { SearchView } from './components/SearchView';
 import { ProfileView } from './components/ProfileView';
 import { InstallPrompt } from './components/InstallPrompt';
 import { MovieDetailScreen } from './components/MovieDetailScreen';
+import { CardQuickView } from './components/CardQuickView';
+import type { TMDBMovieBasic } from './types';
 import { useUpdatePrompt } from './hooks/useUpdatePrompt';
 import { cn } from './utils';
 import { getTitle } from './services/tmdb';
@@ -84,6 +86,7 @@ interface Toast { id: number; message: string; type: 'success' | 'info' }
 // ─── App ────────────────────────────────────────────────────────
 export default function App() {
   const [view, setView] = useState<AppView>('home');
+  const [cardQuickView, setCardQuickView] = useState<{ movie: TMDBMovieBasic; mediaType: 'movie' | 'tv' } | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   // Navigation stack for movie detail fullscreen
@@ -173,6 +176,10 @@ export default function App() {
     addToWatchlist, removeFromWatchlist,
   } = useWatched(user);
   const { showUpdate, applyUpdate, dismissUpdate } = useUpdatePrompt();
+
+  const handleCardQuickView = useCallback((movie: TMDBMovieBasic, mediaType: 'movie' | 'tv') => {
+    setCardQuickView({ movie, mediaType });
+  }, []);
 
   const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
     const id = Date.now();
@@ -474,6 +481,7 @@ export default function App() {
           <SearchView
             {...sharedProps}
             onOpenMovieGlobal={(id: number, mt: 'movie' | 'tv', playlist?: PlaylistItem[], index?: number) => openWithPlaylist(id, mt, playlist, index, 'Cerca')}
+            onCardQuickView={handleCardQuickView}
           />
         )}
 
@@ -584,6 +592,29 @@ export default function App() {
       )}
 
       {user && <InstallPrompt />}
+
+      {/* CardQuickView — rendered as direct child of root, no overflow/stacking issues */}
+      {cardQuickView && (
+        <CardQuickView
+          movie={cardQuickView.movie}
+          mediaType={cardQuickView.mediaType}
+          isWatched={watchedIds.has(cardQuickView.movie.id)}
+          isLiked={likedIds.has(cardQuickView.movie.id)}
+          isOnWatchlist={watchlistIds.has(cardQuickView.movie.id)}
+          personalRating={getPersonalRating(cardQuickView.movie.id)}
+          onClose={() => setCardQuickView(null)}
+          onOpenFull={() => {
+            const { movie, mediaType } = cardQuickView;
+            setCardQuickView(null);
+            openMovieDetail(movie.id, mediaType);
+          }}
+          onMarkWatched={markWatched}
+          onUnmarkWatched={unmarkWatched}
+          onToggleLiked={toggleLiked}
+          onAddToWatchlist={addToWatchlist}
+          onRemoveFromWatchlist={removeFromWatchlist}
+        />
+      )}
     </div>
   );
 }

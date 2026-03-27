@@ -8,14 +8,13 @@
 import { useState, useRef } from 'react';
 import { Search, X, Star, ChevronRight, Building2, Clock, Film, Calendar,
          Globe, Tv, TrendingUp, Award, Gem, BookOpen } from 'lucide-react';
-import type { TMDBMovieDetail } from '../types';
+import type { TMDBMovieBasic, TMDBMovieDetail, SearchResult } from '../types';
 import {
   searchContent, searchPeople, searchCompanies,
   getImageUrl, getEnglishTitle, getOriginalTitle, getReleaseDate,
   getProviderLogoUrl, getPopularProviders,
 } from '../services/tmdb';
 import type { PersonSearchResult, CompanySearchResult } from '../services/tmdb';
-import type { SearchResult } from '../types';
 import { TMDB_MOVIE_GENRES, COMMON_LANGUAGES, COMMON_COUNTRIES } from '../types';
 import { formatYear, formatRating, cn } from '../utils';
 import { InnerMovieDetail } from './InnerMovieDetail';
@@ -36,6 +35,7 @@ interface SearchViewProps {
   onAddToWatchlist?: (movie: TMDBMovieDetail) => Promise<void>;
   onRemoveFromWatchlist?: (id: number) => Promise<void>;
   onOpenMovieGlobal?: (id: number, mediaType: 'movie' | 'tv') => void;
+  onCardQuickView?: (movie: TMDBMovieBasic, mediaType: 'movie' | 'tv') => void;
 }
 
 type SearchTab = 'films' | 'people';
@@ -67,6 +67,7 @@ export function SearchView({
   getPersonalRating, onMarkWatched, onUnmarkWatched, onUpdateRating,
   onToggleLiked, onIncrementRewatch, onAddToWatchlist, onRemoveFromWatchlist,
   onOpenMovieGlobal: _onOpenMovieGlobal,
+  onCardQuickView,
 }: SearchViewProps) {
   const [tab, setTab] = useState<SearchTab>('films');
   const [query, setQuery] = useState('');
@@ -499,6 +500,7 @@ export function SearchView({
           onIncrementRewatch={onIncrementRewatch}
           onAddToWatchlist={onAddToWatchlist} onRemoveFromWatchlist={onRemoveFromWatchlist}
           onBack={() => setBrowseSource(null)}
+          onCardQuickView={onCardQuickView}
           zIndex={95}
         />
       )}

@@ -18,7 +18,6 @@ import {
 import type { BrowseFilters, DiscoverPageResult } from '../services/tmdb';
 import { formatYear, formatRating, cn } from '../utils';
 import { InnerMovieDetail } from './InnerMovieDetail';
-import { CardQuickView } from './CardQuickView';
 
 export type BrowseSource =
   | { type: 'browse'; filters: BrowseFilters; title: string }
@@ -48,6 +47,7 @@ interface BrowseListScreenProps {
   onRemoveFromWatchlist?: (id: number) => Promise<void>;
   onBack: () => void;
   zIndex?: number;
+  onCardQuickView?: (movie: TMDBMovieBasic, mediaType: 'movie' | 'tv') => void;
 }
 
 function getSourceTitle(source: BrowseSource): string {
@@ -118,6 +118,7 @@ export function BrowseListScreen({
   source, watchedIds, watchlistIds = new Set(), likedIds = new Set(),
   getPersonalRating, onMarkWatched, onUnmarkWatched, onUpdateRating,
   onToggleLiked, onIncrementRewatch, onAddToWatchlist, onRemoveFromWatchlist,
+  onCardQuickView,
   onBack, zIndex = 95,
 }: BrowseListScreenProps) {
   const [movies, setMovies] = useState<TMDBMovieBasic[]>([]);
@@ -128,7 +129,6 @@ export function BrowseListScreen({
   const [loadingMore, setLoadingMore] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'card'>('grid');
   const [innerMovie, setInnerMovie] = useState<{ id: number; mediaType: 'movie' | 'tv' } | null>(null);
-  const [cardQuickMovie, setCardQuickMovie] = useState<{ id: number; mediaType: 'movie' | 'tv' } | null>(null);
   const [apiFilters, setApiFilters] = useState<ApiFilters>(DEFAULT_API_FILTERS);
   const [clientFilters, setClientFilters] = useState<ClientFilters>(DEFAULT_CLIENT_FILTERS);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -276,7 +276,7 @@ export function BrowseListScreen({
           // Card view — lista compatta con poster + info + tap per scheda
           <div className="divide-y divide-film-border/40">
             {displayedMovies.map(m => (
-              <button key={m.id} onClick={() => setCardQuickMovie({ id: m.id, mediaType: m.media_type ?? mediaType })}
+              <button key={m.id} onClick={() => onCardQuickView ? onCardQuickView(m, m.media_type ?? mediaType) : setInnerMovie({ id: m.id, mediaType: m.media_type ?? mediaType })}
                 className="w-full flex items-center gap-3 px-4 py-3 active:bg-film-surface/50 text-left">
                 <div className="relative shrink-0 w-11 h-16 rounded-lg overflow-hidden bg-film-surface">
                   {m.poster_path
@@ -317,30 +317,6 @@ export function BrowseListScreen({
         />
       )}
 
-      {cardQuickMovie && (() => {
-        const m = movies.find(x => x.id === cardQuickMovie.id);
-        if (!m) return null;
-        return (
-          <CardQuickView
-            movie={m}
-            mediaType={cardQuickMovie.mediaType}
-            isWatched={watchedIds.has(m.id)}
-            isLiked={likedIds.has(m.id)}
-            isOnWatchlist={watchlistIds.has(m.id)}
-            personalRating={getPersonalRating?.(m.id) ?? null}
-            onClose={() => setCardQuickMovie(null)}
-            onOpenFull={() => {
-              setCardQuickMovie(null);
-              setInnerMovie({ id: m.id, mediaType: cardQuickMovie.mediaType });
-            }}
-            onMarkWatched={onMarkWatched}
-            onUnmarkWatched={onUnmarkWatched}
-            onToggleLiked={onToggleLiked}
-            onAddToWatchlist={onAddToWatchlist}
-            onRemoveFromWatchlist={onRemoveFromWatchlist}
-          />
-        );
-      })()}
     </div>
   );
 }
