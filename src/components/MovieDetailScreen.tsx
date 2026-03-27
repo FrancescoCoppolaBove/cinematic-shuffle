@@ -54,6 +54,10 @@ interface MovieDetailScreenProps {
   onAddToWatchlistFull?: (movie: import('../types').TMDBMovieDetail) => Promise<void>;
   onRemoveFromWatchlistFull?: (id: number) => Promise<void>;
   loading?: boolean;
+  tvSeriesStatus?: 'following' | 'completed' | null;
+  onSetFollowing?: () => Promise<void>;
+  onSetCompleted?: () => Promise<void>;
+  onUnsetTVStatus?: () => Promise<void>;
 }
 
 export function MovieDetailScreen({
@@ -66,6 +70,7 @@ export function MovieDetailScreen({
   watchedIds: propWatchedIds, watchlistIds: propWatchlistIds, likedIds: propLikedIds,
   getPersonalRatingFull, getRewatchCountFull, onMarkWatchedFull, onUnmarkWatchedFull, onUpdateRatingFull,
   onToggleLikedFull, onAddToWatchlistFull, onRemoveFromWatchlistFull, loading,
+  tvSeriesStatus, onSetFollowing, onSetCompleted, onUnsetTVStatus,
 }: MovieDetailScreenProps) {
   const [posterError, setPosterError] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
@@ -464,22 +469,66 @@ export function MovieDetailScreen({
                   <Play size={14} fill="currentColor" />Trailer
                 </a>
               )}
-              {/* "Già visto" — apre sempre il modal, sia per aggiungere che per modificare */}
-              <button
-                onClick={() => setShowRatingModal(true)}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border transition-all active:scale-95',
-                  isWatched
-                    ? 'border-green-600/50 bg-green-950/30 text-green-400'
-                    : 'border-film-border bg-film-surface text-film-muted'
-                )}
-              >
-                <Eye size={14} />
-                {isWatched ? 'Visto ✓' : 'Già visto'}
-              </button>
+              {/* Watch CTA — film vs serie TV */}
+              {movie.media_type === 'tv' ? (
+                <>
+                  {/* "Visto" — segna tutto come completato */}
+                  <button
+                    onClick={async () => {
+                      if (tvSeriesStatus === 'completed') {
+                        await onUnsetTVStatus?.();
+                      } else {
+                        await onSetCompleted?.();
+                      }
+                    }}
+                    className={cn(
+                      'flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border transition-all active:scale-95',
+                      tvSeriesStatus === 'completed'
+                        ? 'border-green-600/50 bg-green-950/30 text-green-400'
+                        : 'border-film-border bg-film-surface text-film-muted'
+                    )}
+                  >
+                    <Eye size={14} />
+                    {tvSeriesStatus === 'completed' ? 'Completata ✓' : 'Già vista'}
+                  </button>
+                  {/* "Sto seguendo" */}
+                  <button
+                    onClick={async () => {
+                      if (tvSeriesStatus === 'following') {
+                        await onUnsetTVStatus?.();
+                      } else {
+                        await onSetFollowing?.();
+                      }
+                    }}
+                    className={cn(
+                      'flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border transition-all active:scale-95',
+                      tvSeriesStatus === 'following'
+                        ? 'border-blue-500/50 bg-blue-950/30 text-blue-400'
+                        : 'border-film-border bg-film-surface text-film-muted'
+                    )}
+                  >
+                    <Tv size={14} />
+                    {tvSeriesStatus === 'following' ? 'In corso 📺' : 'Sto seguendo'}
+                  </button>
+                </>
+              ) : (
+                /* Film: singolo bottone "Già visto" */
+                <button
+                  onClick={() => setShowRatingModal(true)}
+                  className={cn(
+                    'flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border transition-all active:scale-95',
+                    isWatched
+                      ? 'border-green-600/50 bg-green-950/30 text-green-400'
+                      : 'border-film-border bg-film-surface text-film-muted'
+                  )}
+                >
+                  <Eye size={14} />
+                  {isWatched ? 'Visto ✓' : 'Già visto'}
+                </button>
+              )}
 
               {/* Liked badge — tap apre il modal */}
-              {isWatched && (
+              {(isWatched || tvSeriesStatus) && (
                 <button
                   onClick={() => setShowRatingModal(true)}
                   className={cn(
@@ -495,13 +544,13 @@ export function MovieDetailScreen({
               )}
 
               {/* Watchlist */}
-              {!isOnWatchlist && !isWatched && (
+              {!isOnWatchlist && !isWatched && !tvSeriesStatus && (
                 <button onClick={onAddToWatchlist}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border border-film-border bg-film-surface text-film-muted active:scale-95 transition-all">
                   <Bookmark size={14} />Watchlist
                 </button>
               )}
-              {isOnWatchlist && !isWatched && (
+              {isOnWatchlist && !isWatched && !tvSeriesStatus && (
                 <button onClick={onRemoveFromWatchlist}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border border-purple-500/40 bg-purple-900/20 text-purple-300 active:scale-95 transition-all">
                   <BookmarkCheck size={14} />In watchlist

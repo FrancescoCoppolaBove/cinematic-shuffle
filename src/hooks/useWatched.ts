@@ -7,26 +7,31 @@ import {
   updatePersonalRating as updateRatingFs, updateLiked as updateLikedFs,
   updateRewatchCount as updateRewatchCountFs,
   fetchWatchlist, addToWatchlistFirestore, removeFromWatchlistFirestore,
+  fetchAllTVStatus, setTVStatus, markAllEpisodesCompleted, clearAllEpisodes,
+  type TVSeriesStatus,
 } from '../services/firestore';
 
 export function useWatched(user: User | null) {
   const [watchedMovies, setWatchedMovies] = useState<WatchedMovie[]>([]);
   const [watchedIds, setWatchedIds] = useState<Set<number>>(new Set());
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
+  const [tvStatus, setTvStatus] = useState<Map<number, TVSeriesStatus>>(new Map());
   const [watchlistIds, setWatchlistIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
   const prevUid = useRef<string | null>(null);
 
   const loadAll = useCallback(async (uid: string) => {
     setLoading(true);
-    const [watched, wl] = await Promise.all([
+    const [watched, wl, tvStat] = await Promise.all([
       fetchWatchedMovies(uid),
       fetchWatchlist(uid),
+      fetchAllTVStatus(uid),
     ]);
     setWatchedMovies(watched);
     setWatchedIds(new Set(watched.map(m => m.id)));
     setWatchlist(wl);
     setWatchlistIds(new Set(wl.map(m => m.id)));
+    setTvStatus(tvStat);
     setLoading(false);
   }, []);
 
@@ -124,10 +129,50 @@ export function useWatched(user: User | null) {
     await refresh();
   }, [user, refresh]);
 
+  const setFollowing = useCallback(async (seriesId: number) => {
+    if (!user) return;
+    await setTVStatus(user.uid, seriesId, 'following');
+    setTvStatus(prev => new Map(prev).set(seriesId, 'following'));
+  }, [user]);
+
+  const setCompleted = useCallback(async (
+    movie: import('../types').TMDBMovieDetail,
+    seasons: { season_number: number; episode_count: number }[]
+  ) => {
+    if (!user) return;
+    await markAllEpisodesCompleted(user.uid, movie.id, seasons);
+    setTvStatus(prev => new Map(prev).set(movie.id, 'completed'));
+    // Also mark in watchedMovies if not already there
+    const entry: Omit<import('../types').WatchedMovie, 'addedAt'> = {
+      id: movie.id,
+      title: getTitle(movie),
+      original_title: movie.original_title || movie.original_name,
+      poster_path: movie.poster_path,
+      release_date: getReleaseDate(movie),
+      vote_average: movie.vote_average,
+      personal_rating: null,
+      liked: false,
+      rewatchCount: 0,
+      genre_ids: movie.genres?.map(g => g.id) ?? [],
+      runtime: movie.episode_run_time?.[0] ?? null,
+      media_type: 'tv',
+    };
+    await addWatchedToFirestore(user.uid, entry);
+    await refresh();
+  }, [user, refresh]);
+
+  const unsetTVStatus = useCallback(async (seriesId: number) => {
+    if (!user) return;
+    await setTVStatus(user.uid, seriesId, null);
+    await clearAllEpisodes(user.uid, seriesId);
+    setTvStatus(prev => { const m = new Map(prev); m.delete(seriesId); return m; });
+  }, [user]);
+
   return {
     watchedMovies, watchedIds, watchlist, watchlistIds,
     loading, refresh,
     markWatched, unmarkWatched, updateRating, toggleLiked, incrementRewatch,
     addToWatchlist, removeFromWatchlist,
+    tvStatus, setFollowing, setCompleted, unsetTVStatus,
   };
 }

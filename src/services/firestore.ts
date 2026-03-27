@@ -152,3 +152,57 @@ export async function markAllEpisodesInSeason(
   await setDoc(episodesRef(uid, seriesId), { episodes: Array.from(next) }, { merge: false });
   return next;
 }
+
+// ── TV Series Status ──────────────────────────────────────────────
+export type TVSeriesStatus = 'following' | 'completed';
+
+const tvStatusRef = (uid: string, seriesId: number) =>
+  doc(db, 'users', uid, 'tvStatus', String(seriesId));
+const tvStatusCol = (uid: string) =>
+  collection(db, 'users', uid, 'tvStatus');
+
+export async function fetchAllTVStatus(uid: string): Promise<Map<number, TVSeriesStatus>> {
+  const snap = await getDocs(tvStatusCol(uid));
+  const map = new Map<number, TVSeriesStatus>();
+  snap.docs.forEach(d => {
+    const data = d.data();
+    if (data.status) map.set(Number(d.id), data.status as TVSeriesStatus);
+  });
+  return map;
+}
+
+export async function setTVStatus(uid: string, seriesId: number, status: TVSeriesStatus | null): Promise<void> {
+  if (status === null) {
+    await deleteDoc(tvStatusRef(uid, seriesId));
+  } else {
+    await setDoc(tvStatusRef(uid, seriesId), { status });
+  }
+}
+
+export async function markAllEpisodesCompleted(
+  uid: string,
+  seriesId: number,
+  seasons: { season_number: number; episode_count: number }[]
+): Promise<Set<string>> {
+  // Build all episode keys for all valid seasons (season_number > 0)
+  const allKeys: string[] = [];
+  seasons
+    .filter(s => s.season_number > 0 && s.episode_count > 0)
+    .forEach(s => {
+      for (let ep = 1; ep <= s.episode_count; ep++) {
+        allKeys.push(`${s.season_number}_${ep}`);
+      }
+    });
+  const epSet = new Set(allKeys);
+  await setDoc(
+    doc(db, 'users', uid, 'watchedEpisodes', String(seriesId)),
+    { episodes: Array.from(epSet) },
+    { merge: false }
+  );
+  await setTVStatus(uid, seriesId, 'completed');
+  return epSet;
+}
+
+export async function clearAllEpisodes(uid: string, seriesId: number): Promise<void> {
+  await deleteDoc(doc(db, 'users', uid, 'watchedEpisodes', String(seriesId)));
+}

@@ -174,6 +174,7 @@ export default function App() {
     watchedMovies, watchedIds, watchlist, watchlistIds,
     markWatched, unmarkWatched, updateRating, toggleLiked, incrementRewatch,
     addToWatchlist, removeFromWatchlist,
+    tvStatus, setFollowing, setCompleted, unsetTVStatus,
   } = useWatched(user);
   const { showUpdate, applyUpdate, dismissUpdate } = useUpdatePrompt();
 
@@ -348,6 +349,11 @@ export default function App() {
     onAddToWatchlist: addToWatchlist,
     onRemoveFromWatchlist: removeFromWatchlist,
     onOpenMovie: (id: number, mt: 'movie' | 'tv') => openMovieDetail(id, mt),
+    // TV status
+    tvStatus,
+    onSetFollowing: (seriesId: number) => setFollowing(seriesId),
+    onSetCompleted: (movie: TMDBMovieDetail, seasons: { season_number: number; episode_count: number }[]) => setCompleted(movie, seasons),
+    onUnsetTVStatus: (seriesId: number) => unsetTVStatus(seriesId),
   };
 
   // Extended opener that supports playlist context (for grids)

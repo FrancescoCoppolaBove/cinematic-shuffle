@@ -29,6 +29,10 @@ interface InnerMovieDetailProps {
   onAddToWatchlist?: (movie: TMDBMovieDetail) => Promise<void>;
   onRemoveFromWatchlist?: (id: number) => Promise<void>;
   onBack: () => void;
+  tvStatus?: Map<number, 'following' | 'completed'>;
+  onSetFollowing?: (seriesId: number) => Promise<void>;
+  onSetCompleted?: (movie: TMDBMovieDetail, seasons: { season_number: number; episode_count: number }[]) => Promise<void>;
+  onUnsetTVStatus?: (seriesId: number) => Promise<void>;
 }
 
 export function InnerMovieDetail({
@@ -38,6 +42,7 @@ export function InnerMovieDetail({
   onToggleLiked, onIncrementRewatch,
   onAddToWatchlist, onRemoveFromWatchlist,
   onBack,
+  tvStatus, onSetFollowing, onSetCompleted, onUnsetTVStatus,
 }: InnerMovieDetailProps) {
   const [movie, setMovie] = useState<TMDBMovieDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -117,6 +122,10 @@ export function InnerMovieDetail({
         onIncrementRewatch={handleIncrementRewatch}
         onAddToWatchlist={() => onAddToWatchlist?.(movie) ?? Promise.resolve()}
         onRemoveFromWatchlist={() => onRemoveFromWatchlist?.(movie.id) ?? Promise.resolve()}
+        tvSeriesStatus={movie.media_type === 'tv' ? (tvStatus?.get(movie.id) ?? null) : undefined}
+        onSetFollowing={movie.media_type === 'tv' && onSetFollowing ? () => onSetFollowing(movie.id) : undefined}
+        onSetCompleted={movie.media_type === 'tv' && onSetCompleted ? () => onSetCompleted(movie, movie.seasons ?? []) : undefined}
+        onUnsetTVStatus={movie.media_type === 'tv' && onUnsetTVStatus ? () => onUnsetTVStatus(movie.id) : undefined}
         onOpenMovie={(mid, mt) => setInnerMovie({ id: mid, mediaType: mt })}
         // Passa tutti i propWatchedIds per i tab Cast/Crew/Generi
         watchedIds={watchedIds}
@@ -173,6 +182,10 @@ export function PersonInner(props: {
   onAddToWatchlist?: (movie: TMDBMovieDetail) => Promise<void>;
   onRemoveFromWatchlist?: (id: number) => Promise<void>;
   onBack: () => void;
+  tvStatus?: Map<number, 'following' | 'completed'>;
+  onSetFollowing?: (seriesId: number) => Promise<void>;
+  onSetCompleted?: (movie: TMDBMovieDetail, seasons: { season_number: number; episode_count: number }[]) => Promise<void>;
+  onUnsetTVStatus?: (seriesId: number) => Promise<void>;
 }) {
   const [innerMovie, setInnerMovie] = useState<{ id: number; mediaType: 'movie' | 'tv' } | null>(null);
   return (
@@ -228,6 +241,10 @@ export function GenreInner(props: {
   onAddToWatchlist?: (movie: TMDBMovieDetail) => Promise<void>;
   onRemoveFromWatchlist?: (id: number) => Promise<void>;
   onBack: () => void;
+  tvStatus?: Map<number, 'following' | 'completed'>;
+  onSetFollowing?: (seriesId: number) => Promise<void>;
+  onSetCompleted?: (movie: TMDBMovieDetail, seasons: { season_number: number; episode_count: number }[]) => Promise<void>;
+  onUnsetTVStatus?: (seriesId: number) => Promise<void>;
 }) {
   const [innerMovie, setInnerMovie] = useState<{ id: number; mediaType: 'movie' | 'tv' } | null>(null);
   return (
