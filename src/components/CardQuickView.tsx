@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Eye, EyeOff, Heart, Star, BookmarkPlus, BookmarkMinus } from 'lucide-react';
 import type { TMDBMovieBasic, TMDBMovieDetail } from '../types';
 import { getMovieDetail, getImageUrl, getEnglishTitle, getReleaseDate } from '../services/tmdb';
@@ -59,8 +60,8 @@ export function CardQuickView({
     else await onAddToWatchlist?.(detail);
   });
 
-  return (
-    // Full-screen overlay — uses var(--app-height) to match root div physical height
+  return createPortal(
+    // Full-screen overlay via Portal — renders directly on body, bypasses all containers
     <div
       className="fixed left-0 right-0 z-[110] flex flex-col"
       style={{ top: 0, height: 'var(--app-height, 100dvh)', background: 'rgba(0,0,0,0.92)' }}
@@ -197,5 +198,5 @@ export function CardQuickView({
         </button>
       </div>
     </div>
-  );
+  , document.body);
 }
