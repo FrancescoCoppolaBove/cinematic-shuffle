@@ -426,7 +426,7 @@ export default function App() {
       {/* ── Header: FIXED con padding-top safe-area — pattern corretto per iOS PWA ── */}
       <header
         ref={headerRef}
-        className="relative shrink-0 z-40 border-b border-film-border bg-film-black/95 backdrop-blur-md"
+        className="relative shrink-0 z-40 border-b border-film-border bg-film-black"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-center">
@@ -512,7 +512,7 @@ export default function App() {
       {true && (
         <nav
           ref={navRef}
-          className="relative shrink-0 z-[100] border-t border-film-border bg-film-black/95 backdrop-blur-md"
+          className="relative shrink-0 z-[100] border-t border-film-border bg-film-black"
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <div className="max-w-3xl mx-auto px-4 flex">
             {NAV.map(({ view: v, icon: Icon, label }) => {
