@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ChevronLeft, ChevronRight, Star, Clock, Play,
   Eye, Bookmark, BookmarkCheck, Heart,
-  Tv, Film, MapPin, Shuffle,
+  Tv, Film, MapPin, Shuffle, Check,
 } from 'lucide-react';
 import type { TMDBMovieDetail, TMDBMovieBasic } from '../types';
 import {
@@ -10,6 +10,8 @@ import {
   getBestTrailer, getWatchProviders, getCollection,
 } from '../services/tmdb';
 import { formatRuntime, formatYear, formatRating, cn } from '../utils';
+import { getAuth } from 'firebase/auth';
+import { fetchWatchedEpisodes, toggleWatchedEpisode, markAllEpisodesInSeason } from '../services/firestore';
 import { RatingModal } from './RatingModal';
 import type { RatingResult } from './RatingModal';
 import { MovieDetailTabs } from './MovieDetailTabs';
@@ -865,6 +867,27 @@ function RelatedCard({ item, isCurrent, mediaType, onClick, isWatched = false }:
   );
 }
 
+// ── Episode overview expand/collapse ─────────────────────────────
+function EpisodeOverview({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = text.length > 120;
+  return (
+    <div className="mt-1">
+      <p className={cn('text-film-text/60 text-xs leading-relaxed', !expanded && isLong && 'line-clamp-2')}>
+        {text}
+      </p>
+      {isLong && (
+        <button
+          onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
+          className="text-film-accent text-xs mt-0.5 active:opacity-60"
+        >
+          {expanded ? 'Mostra meno ↑' : 'Mostra tutto ↓'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ── SeasonDetailOverlay — episodi di una stagione ─────────────────
 function SeasonDetailOverlay({
   seriesId, seasonNumber, seasonName, onBack,
@@ -880,7 +903,17 @@ function SeasonDetailOverlay({
     air_date: string | null;
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [overviewExpanded, setOverviewExpanded] = useState(false);
+  const [watchedEps, setWatchedEps] = useState<Set<string>>(new Set());
+  const [uid, setUid] = useState<string | null>(null);
 
+  // Get current user uid
+  useEffect(() => {
+    const auth = getAuth();
+    setUid(auth.currentUser?.uid ?? null);
+  }, []);
+
+  // Load episodes
   useEffect(() => {
     import('../services/tmdb').then(({ getTVSeasonEpisodes }) =>
       getTVSeasonEpisodes(seriesId, seasonNumber)
@@ -889,6 +922,31 @@ function SeasonDetailOverlay({
       .finally(() => setLoading(false));
   }, [seriesId, seasonNumber]);
 
+  // Load watched episodes from Firestore
+  useEffect(() => {
+    if (!uid) return;
+    fetchWatchedEpisodes(uid, seriesId).then(setWatchedEps).catch(() => {});
+  }, [uid, seriesId]);
+
+  const epKey = (epNum: number) => `${seasonNumber}_${epNum}`;
+
+  const handleToggleEp = async (epNum: number) => {
+    if (!uid) return;
+    const next = await toggleWatchedEpisode(uid, seriesId, epKey(epNum), watchedEps);
+    setWatchedEps(next);
+  };
+
+  const handleToggleSeason = async () => {
+    if (!uid || !data) return;
+    const keys = data.episodes.map(ep => epKey(ep.episode_number));
+    const next = await markAllEpisodesInSeason(uid, seriesId, keys, watchedEps);
+    setWatchedEps(next);
+  };
+
+  const seasonKeys = data?.episodes.map(ep => epKey(ep.episode_number)) ?? [];
+  const watchedCount = seasonKeys.filter(k => watchedEps.has(k)).length;
+  const allWatched = seasonKeys.length > 0 && watchedCount === seasonKeys.length;
+
   return (
     <div
       className="fixed left-0 right-0 z-[97] bg-film-black flex flex-col"
@@ -896,7 +954,7 @@ function SeasonDetailOverlay({
     >
       {/* Header */}
       <div
-        className="shrink-0 bg-film-black/95 backdrop-blur-md border-b border-film-border"
+        className="shrink-0 bg-film-black border-b border-film-border"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="flex items-center gap-3 px-4 py-3">
@@ -908,14 +966,31 @@ function SeasonDetailOverlay({
           <div className="flex-1 min-w-0">
             <p className="text-film-text font-semibold truncate">{seasonName}</p>
             {data && (
-              <p className="text-film-subtle text-xs">{data.episodes.length} episodi</p>
+              <p className="text-film-subtle text-xs">
+                {watchedCount}/{data.episodes.length} episodi visti
+              </p>
             )}
           </div>
+          {/* Mark all season button */}
+          {data && data.episodes.length > 0 && (
+            <button
+              onClick={handleToggleSeason}
+              className={cn(
+                'shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors active:opacity-60',
+                allWatched
+                  ? 'bg-film-accent/20 border-film-accent text-film-accent'
+                  : 'bg-film-surface border-film-border text-film-muted'
+              )}
+            >
+              <Check size={12} />
+              {allWatched ? 'Vista' : 'Segna tutta'}
+            </button>
+          )}
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
         {loading && (
           <div className="flex items-center justify-center py-20">
             <div className="w-10 h-10 border-2 border-film-accent border-t-transparent rounded-full animate-spin" />
@@ -926,63 +1001,94 @@ function SeasonDetailOverlay({
           <>
             {data.overview && (
               <div className="px-4 py-3 border-b border-film-border/50">
-                <p className="text-film-text/70 text-sm leading-relaxed">{data.overview}</p>
+                <p className={cn('text-film-text/70 text-sm leading-relaxed', !overviewExpanded && 'line-clamp-3')}>
+                  {data.overview}
+                </p>
+                {data.overview.length > 180 && (
+                  <button
+                    onClick={() => setOverviewExpanded(v => !v)}
+                    className="text-film-accent text-xs mt-1 active:opacity-60"
+                  >
+                    {overviewExpanded ? 'Mostra meno ↑' : 'Mostra tutto ↓'}
+                  </button>
+                )}
               </div>
             )}
 
             <div className="divide-y divide-film-border/40">
-              {data.episodes.map(ep => (
-                <div key={ep.id} className="flex gap-3 px-4 py-3">
-                  {/* Still image */}
-                  {ep.still_path ? (
-                    <img
-                      src={`https://image.tmdb.org/t/p/w185${ep.still_path}`}
-                      alt={ep.name}
-                      className="shrink-0 w-24 h-14 rounded-lg object-cover border border-film-border"
-                    />
-                  ) : (
-                    <div className="shrink-0 w-24 h-14 rounded-lg bg-film-surface border border-film-border flex items-center justify-center">
-                      <Tv size={18} className="text-film-subtle" />
+              {data.episodes.map(ep => {
+                const key = epKey(ep.episode_number);
+                const isWatched = watchedEps.has(key);
+                return (
+                  <div key={ep.id} className={cn('flex gap-3 px-4 py-3 transition-colors', isWatched && 'bg-film-surface/30')}>
+                    {/* Still image */}
+                    <div className="relative shrink-0">
+                      {ep.still_path ? (
+                        <img
+                          src={`https://image.tmdb.org/t/p/w185${ep.still_path}`}
+                          alt={ep.name}
+                          className={cn('w-24 h-14 rounded-lg object-cover border border-film-border', isWatched && 'opacity-50 grayscale')}
+                        />
+                      ) : (
+                        <div className="w-24 h-14 rounded-lg bg-film-surface border border-film-border flex items-center justify-center">
+                          <Tv size={18} className="text-film-subtle" />
+                        </div>
+                      )}
+                      {isWatched && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-6 h-6 rounded-full bg-film-accent flex items-center justify-center">
+                            <Check size={13} className="text-film-black" strokeWidth={3} />
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-film-subtle text-xs">Ep. {ep.episode_number}</p>
-                        <p className="text-film-text text-sm font-medium leading-tight">{ep.name}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-film-subtle text-xs">Ep. {ep.episode_number}</p>
+                          <p className={cn('text-sm font-medium leading-tight', isWatched ? 'text-film-subtle' : 'text-film-text')}>{ep.name}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {ep.vote_average > 0 && (
+                            <span className="text-film-accent text-xs font-mono">★ {ep.vote_average.toFixed(1)}</span>
+                          )}
+                          {/* Watch toggle button */}
+                          <button
+                            onClick={() => handleToggleEp(ep.episode_number)}
+                            className={cn(
+                              'w-7 h-7 rounded-full border flex items-center justify-center transition-colors active:opacity-60',
+                              isWatched
+                                ? 'bg-film-accent border-film-accent'
+                                : 'bg-film-surface border-film-border'
+                            )}
+                          >
+                            <Check size={13} className={isWatched ? 'text-film-black' : 'text-film-subtle'} strokeWidth={3} />
+                          </button>
+                        </div>
                       </div>
-                      {ep.vote_average > 0 && (
-                        <span className="text-film-accent text-xs font-mono shrink-0">
-                          ★ {ep.vote_average.toFixed(1)}
-                        </span>
-                      )}
-                    </div>
 
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      {ep.air_date && (
-                        <span className="text-film-subtle text-xs">
-                          {new Date(ep.air_date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </span>
-                      )}
-                      {ep.runtime && (
-                        <>
-                          <span className="text-film-border text-xs">·</span>
-                          <span className="text-film-subtle text-xs flex items-center gap-0.5">
-                            <Clock size={10} />{ep.runtime} min
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        {ep.air_date && (
+                          <span className="text-film-subtle text-xs">
+                            {new Date(ep.air_date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </span>
-                        </>
-                      )}
-                    </div>
+                        )}
+                        {ep.runtime && (
+                          <>
+                            <span className="text-film-border text-xs">·</span>
+                            <span className="text-film-subtle text-xs flex items-center gap-0.5">
+                              <Clock size={10} />{ep.runtime} min
+                            </span>
+                          </>
+                        )}
+                      </div>
 
-                    {ep.overview && (
-                      <p className="text-film-text/60 text-xs leading-relaxed mt-1 line-clamp-2">
-                        {ep.overview}
-                      </p>
-                    )}
+                      {ep.overview && <EpisodeOverview text={ep.overview} />}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </>
         )}

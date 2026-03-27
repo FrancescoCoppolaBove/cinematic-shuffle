@@ -121,3 +121,34 @@ export async function fetchUserPreferences(uid: string): Promise<UserPreferences
 export async function saveUserPreferences(uid: string, prefs: UserPreferences): Promise<void> {
   await setDoc(prefsRef(uid), prefs, { merge: true });
 }
+
+// ── Episode tracking ──────────────────────────────────────────────
+const episodesRef = (uid: string, seriesId: number) =>
+  doc(db, 'users', uid, 'watchedEpisodes', String(seriesId));
+
+export async function fetchWatchedEpisodes(uid: string, seriesId: number): Promise<Set<string>> {
+  const snap = await getDoc(episodesRef(uid, seriesId));
+  if (!snap.exists()) return new Set();
+  const data = snap.data();
+  return new Set<string>(data.episodes ?? []);
+}
+
+export async function toggleWatchedEpisode(
+  uid: string, seriesId: number, key: string, allKeys: Set<string>
+): Promise<Set<string>> {
+  const next = new Set(allKeys);
+  if (next.has(key)) next.delete(key); else next.add(key);
+  await setDoc(episodesRef(uid, seriesId), { episodes: Array.from(next) }, { merge: false });
+  return next;
+}
+
+export async function markAllEpisodesInSeason(
+  uid: string, seriesId: number, seasonKeys: string[], allKeys: Set<string>
+): Promise<Set<string>> {
+  const next = new Set(allKeys);
+  const allWatched = seasonKeys.every(k => next.has(k));
+  if (allWatched) seasonKeys.forEach(k => next.delete(k));
+  else seasonKeys.forEach(k => next.add(k));
+  await setDoc(episodesRef(uid, seriesId), { episodes: Array.from(next) }, { merge: false });
+  return next;
+}
