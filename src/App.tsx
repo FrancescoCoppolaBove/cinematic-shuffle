@@ -138,7 +138,7 @@ export default function App() {
   useEffect(() => {
     // Create a probe div to measure safe-area-inset-bottom in pixels
     const probe = document.createElement('div');
-    probe.style.cssText = 'position:fixed;bottom:0;height:env(safe-area-inset-bottom,0px);pointer-events:none;opacity:0';
+    probe.style.cssText = 'position:fixed;bottom:0;height:env(safe-area-inset-bottom,0px);pointer-events:none;opacity:0;z-index:-1';
     document.body.appendChild(probe);
 
     const setAppHeight = () => {
@@ -148,10 +148,13 @@ export default function App() {
         `${window.innerHeight + safeBottom}px`
       );
     };
+    // Run immediately and again after 100ms to catch iOS late safe-area computation
     setAppHeight();
+    const t = setTimeout(setAppHeight, 100);
     window.addEventListener('resize', setAppHeight);
     window.addEventListener('orientationchange', setAppHeight);
     return () => {
+      clearTimeout(t);
       window.removeEventListener('resize', setAppHeight);
       window.removeEventListener('orientationchange', setAppHeight);
       probe.remove();

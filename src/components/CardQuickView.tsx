@@ -60,10 +60,10 @@ export function CardQuickView({
   });
 
   return (
-    // Full-screen overlay — z-[110] to sit above nav (z-100) for this one case
+    // Full-screen overlay — uses var(--app-height) to match root div physical height
     <div
-      className="fixed inset-0 z-[110] flex flex-col"
-      style={{ background: 'rgba(0,0,0,0.92)' }}
+      className="fixed left-0 right-0 z-[110] flex flex-col"
+      style={{ top: 0, height: 'var(--app-height, 100dvh)', background: 'rgba(0,0,0,0.92)' }}
     >
       {/* Blurred poster background */}
       {poster && (
@@ -87,7 +87,7 @@ export function CardQuickView({
         </div>
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 mt-[env(safe-area-inset-top)] w-9 h-9 flex items-center justify-center rounded-full bg-film-surface/80 active:opacity-60"
+          className="absolute right-5 top-4 w-9 h-9 flex items-center justify-center rounded-full bg-film-surface/80 active:opacity-60"
         >
           <X size={18} className="text-film-text" />
         </button>
