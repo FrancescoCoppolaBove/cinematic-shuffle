@@ -217,7 +217,7 @@ export function SearchView({
       </div>
 
       {/* ── Content ── */}
-      <div className="flex-1 overflow-y-auto scroll-container">
+      <div className="flex-1 overflow-y-auto" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
 
         {/* ── SEARCH MODE ── */}
         {showSearch && (

@@ -110,7 +110,26 @@ export default function App() {
     return () => ro.disconnect();
   }, []);
 
-  // iOS scroll: handled via CSS overscroll-behavior + touch-action on containers
+  // Prevent iOS rubber-band scroll on the root container
+  // Uses passive:false touchmove listener — the only reliable fix for iOS Safari
+  useEffect(() => {
+    const prevent = (e: TouchEvent) => {
+      // Allow scroll if touch started inside a scrollable element
+      const target = e.target as HTMLElement;
+      let node: HTMLElement | null = target;
+      while (node && node !== document.body) {
+        const style = window.getComputedStyle(node);
+        const overflow = style.overflowY;
+        if ((overflow === 'auto' || overflow === 'scroll') && node.scrollHeight > node.clientHeight) {
+          return; // Let the child scroll
+        }
+        node = node.parentElement;
+      }
+      e.preventDefault();
+    };
+    document.addEventListener('touchmove', prevent, { passive: false });
+    return () => document.removeEventListener('touchmove', prevent);
+  }, []);
 
   // --app-height = window.innerHeight + safe-area-inset-bottom
   // On iOS PWA, window.innerHeight excludes the home indicator zone (~34px).
@@ -416,7 +435,7 @@ export default function App() {
             ? 'overflow-hidden'
             : 'overflow-y-auto px-4 py-4 pb-6'
         )}
-        style={{ WebkitOverflowScrolling: 'touch' }}
+        style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
       >
         {view === 'tonight' && (
           <TonightView
