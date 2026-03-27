@@ -110,6 +110,27 @@ export default function App() {
     return () => ro.disconnect();
   }, []);
 
+  // Prevent iOS rubber-band scroll on the root container
+  // Uses passive:false touchmove listener — the only reliable fix for iOS Safari
+  useEffect(() => {
+    const prevent = (e: TouchEvent) => {
+      // Allow scroll if touch started inside a scrollable element
+      const target = e.target as HTMLElement;
+      let node: HTMLElement | null = target;
+      while (node && node !== document.body) {
+        const style = window.getComputedStyle(node);
+        const overflow = style.overflowY;
+        if ((overflow === 'auto' || overflow === 'scroll') && node.scrollHeight > node.clientHeight) {
+          return; // Let the child scroll
+        }
+        node = node.parentElement;
+      }
+      e.preventDefault();
+    };
+    document.addEventListener('touchmove', prevent, { passive: false });
+    return () => document.removeEventListener('touchmove', prevent);
+  }, []);
+
   // --app-height = window.innerHeight + safe-area-inset-bottom
   // On iOS PWA, window.innerHeight excludes the home indicator zone (~34px).
   // We measure it with a probe div and add it back so the root div covers
@@ -349,7 +370,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col bg-film-black text-film-text overflow-hidden" style={{ height: 'var(--app-height, 100dvh)', touchAction: 'none', overscrollBehavior: 'none' }}>
+    <div className="flex flex-col bg-film-black text-film-text overflow-hidden" style={{ height: 'var(--app-height, 100dvh)', overscrollBehavior: 'none' }}>
       <div className="fixed inset-0 pointer-events-none opacity-30 bg-grain z-50" />
 
       {/* PWA update banner */}
@@ -414,7 +435,7 @@ export default function App() {
             ? 'overflow-hidden'
             : 'overflow-y-auto px-4 py-4 pb-6'
         )}
-        style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', touchAction: view === 'home' || view === 'tonight' ? 'pan-y' : 'none' }}
+        style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
       >
         {view === 'tonight' && (
           <TonightView
