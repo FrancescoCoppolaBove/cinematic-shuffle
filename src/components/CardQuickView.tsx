@@ -63,7 +63,7 @@ export function CardQuickView({
   return createPortal(
     // Full-screen overlay via Portal — renders directly on body, bypasses all containers
     <div
-      className="fixed left-0 right-0 z-[110] flex flex-col"
+      className="fixed left-0 right-0 z-[9999] flex flex-col"
       style={{ top: 0, height: 'var(--app-height, 100dvh)', background: 'rgba(0,0,0,0.92)' }}
     >
       {/* Blurred poster background */}
