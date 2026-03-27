@@ -12,8 +12,6 @@ import {
 import { formatRuntime, formatYear, formatRating, cn } from '../utils';
 import { getAuth } from 'firebase/auth';
 import { fetchWatchedEpisodes, toggleWatchedEpisode, markAllEpisodesInSeason } from '../services/firestore';
-import { RatingModal } from './RatingModal';
-import type { RatingResult } from './RatingModal';
 import { MovieDetailTabs } from './MovieDetailTabs';
 import { PersonInner, GenreInner } from './InnerMovieDetail';
 import { BrowseListScreen } from './BrowseListScreen';
@@ -58,22 +56,23 @@ interface MovieDetailScreenProps {
   onSetFollowing?: () => Promise<void>;
   onSetCompleted?: () => Promise<void>;
   onUnsetTVStatus?: () => Promise<void>;
+  onRequestRating?: () => void;
 }
 
 export function MovieDetailScreen({
   movie, isWatched, isOnWatchlist, personalRating,
   showShuffleBtn = false, backLabel = 'Indietro',
   playlist, playlistIndex = 0, onSwipeToIndex,
-  onBack, onMarkWatched, onUnmarkWatched, onUpdateRating: _onUpdateRating,
+  onBack, onMarkWatched: _onMarkWatched, onUnmarkWatched: _onUnmarkWatched, onUpdateRating: _onUpdateRating,
   onAddToWatchlist, onRemoveFromWatchlist,
-  onShuffle, onOpenMovie, onIncrementRewatch, onToggleLiked, isLiked = false, rewatchCount = 0,
+  onShuffle, onOpenMovie, onIncrementRewatch, onToggleLiked: _onToggleLiked, isLiked = false, rewatchCount = 0,
   watchedIds: propWatchedIds, watchlistIds: propWatchlistIds, likedIds: propLikedIds,
   getPersonalRatingFull, getRewatchCountFull, onMarkWatchedFull, onUnmarkWatchedFull, onUpdateRatingFull,
   onToggleLikedFull, onAddToWatchlistFull, onRemoveFromWatchlistFull, loading,
-  tvSeriesStatus, onSetFollowing, onSetCompleted, onUnsetTVStatus,
+  tvSeriesStatus, onSetFollowing, onSetCompleted: _onSetCompleted, onUnsetTVStatus,
+  onRequestRating,
 }: MovieDetailScreenProps) {
   const [posterError, setPosterError] = useState(false);
-  const [showRatingModal, setShowRatingModal] = useState(false);
   const [openPerson, setOpenPerson] = useState<{id: number; name: string} | null>(null);
   const [openSimilar, setOpenSimilar] = useState(false);
   const [openSeason, setOpenSeason] = useState<{ seriesId: number; seasonNumber: number; seasonName: string } | null>(null);
@@ -472,15 +471,9 @@ export function MovieDetailScreen({
               {/* Watch CTA — film vs serie TV */}
               {movie.media_type === 'tv' ? (
                 <>
-                  {/* "Visto" — segna tutto come completato */}
+                  {/* "Già vista" — apre il modal di rating (same as film) */}
                   <button
-                    onClick={async () => {
-                      if (tvSeriesStatus === 'completed') {
-                        await onUnsetTVStatus?.();
-                      } else {
-                        await onSetCompleted?.();
-                      }
-                    }}
+                    onClick={() => onRequestRating?.()}
                     className={cn(
                       'flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border transition-all active:scale-95',
                       tvSeriesStatus === 'completed'
@@ -514,7 +507,7 @@ export function MovieDetailScreen({
               ) : (
                 /* Film: singolo bottone "Già visto" */
                 <button
-                  onClick={() => setShowRatingModal(true)}
+                  onClick={() => onRequestRating?.()}
                   className={cn(
                     'flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border transition-all active:scale-95',
                     isWatched
@@ -530,7 +523,7 @@ export function MovieDetailScreen({
               {/* Liked badge — tap apre il modal */}
               {(isWatched || tvSeriesStatus) && (
                 <button
-                  onClick={() => setShowRatingModal(true)}
+                  onClick={() => onRequestRating?.()}
                   className={cn(
                     'flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border transition-all active:scale-95',
                     isLiked
@@ -810,30 +803,7 @@ export function MovieDetailScreen({
       )}
 
       {/* Rating modal */}
-      {showRatingModal && (
-        <RatingModal
-          movie={movie}
-          initialWatched={isWatched}
-          initialRating={personalRating ?? null}
-          initialLiked={isLiked}
-          initialWatchlist={isOnWatchlist}
-          showWatchlistBtn={!isWatched}
-          onConfirm={(result: RatingResult) => {
-            setShowRatingModal(false);
-            if (result.watched) {
-              // Segna come visto (o aggiorna rating/liked)
-              onMarkWatched(result.rating);
-              if (result.liked && onToggleLiked && !isLiked) onToggleLiked(movie.id);
-              if (!result.liked && onToggleLiked && isLiked) onToggleLiked(movie.id);
-            } else if (isWatched) {
-              // Era visto, ora deselezionato → rimuovi
-              onUnmarkWatched();
-            }
-          }}
-          onToggleWatchlist={isOnWatchlist ? onRemoveFromWatchlist : onAddToWatchlist}
-          onCancel={() => setShowRatingModal(false)}
-        />
-      )}
+
     </div>
   );
 }

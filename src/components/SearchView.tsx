@@ -10,7 +10,7 @@ import { Search, X, Star, ChevronRight, Building2, Clock, Film, Calendar,
          Globe, Tv, TrendingUp, Award, Gem, BookOpen } from 'lucide-react';
 import type { TMDBMovieBasic, TMDBMovieDetail, SearchResult } from '../types';
 import {
-  searchContent, searchPeople, searchCompanies,
+  searchPeople, searchCompanies, searchMoviesOnly, searchTVOnly,
   getImageUrl, getEnglishTitle, getOriginalTitle, getReleaseDate,
   getProviderLogoUrl, getPopularProviders,
 } from '../services/tmdb';
@@ -38,7 +38,7 @@ interface SearchViewProps {
   onCardQuickView?: (movie: TMDBMovieBasic, mediaType: 'movie' | 'tv') => void;
 }
 
-type SearchTab = 'films' | 'people';
+type SearchTab = 'films' | 'tv' | 'people';
 type BrowseSection = 'date' | 'genre_country_lang' | 'service' | null;
 type GenreTab = 'genre' | 'country' | 'language';
 
@@ -88,7 +88,7 @@ export function SearchView({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const hasResults = tab === 'films' ? filmResults.length > 0 : (peopleResults.length > 0 || companyResults.length > 0);
+  const hasResults = tab === 'people' ? (peopleResults.length > 0 || companyResults.length > 0) : filmResults.length > 0;
   const showSearch = isFocused || !!query;
   const showBrowse = !showSearch;
 
@@ -96,7 +96,8 @@ export function SearchView({
     if (!q.trim()) { setFilmResults([]); setPeopleResults([]); setCompanyResults([]); return; }
     setLoading(true);
     try {
-      if (t === 'films') { setFilmResults(await searchContent(q)); }
+      if (t === 'films') { setFilmResults(await searchMoviesOnly(q)); }
+      else if (t === 'tv') { setFilmResults(await searchTVOnly(q)); }
       else {
         const [people, companies] = await Promise.all([searchPeople(q), searchCompanies(q)]);
         setPeopleResults(people); setCompanyResults(companies);
@@ -138,7 +139,7 @@ export function SearchView({
   }
 
   function handleSelectFilm(id: number, mediaType: 'movie' | 'tv') {
-    saveRecent(query, 'films'); setRecent(loadRecent());
+    saveRecent(query, tab === 'tv' ? 'tv' : 'films'); setRecent(loadRecent());
     setOpenMovie({ id, mediaType });
   }
 
@@ -162,7 +163,7 @@ export function SearchView({
     setBrowseSource(source);
   }
 
-  const tabLabel: Record<SearchTab, string> = { films: 'Films', people: 'Cast, Crew or Studios' };
+  const tabLabel: Record<SearchTab, string> = { films: 'Films', tv: 'TV Shows', people: 'Cast, Crew & Studios' };
   const providers = getPopularProviders().slice(0, 12);
 
   return (
@@ -178,7 +179,7 @@ export function SearchView({
               ref={inputRef}
               type="text"
               inputMode="search"
-              placeholder={tab === 'films' ? 'Find films, series...' : 'Find cast, crew or studios...'}
+              placeholder={tab === 'films' ? 'Find films...' : tab === 'tv' ? 'Find TV shows...' : 'Find cast, crew or studios...'}
               value={query}
               onChange={e => handleInput(e.target.value)}
               onFocus={handleFocus}
@@ -203,7 +204,7 @@ export function SearchView({
         {/* Tabs — only when focused */}
         {showSearch && (
           <div className="flex gap-0 mt-3 border-b border-film-border">
-            {(['films', 'people'] as SearchTab[]).map(t => (
+            {(['films', 'tv', 'people'] as SearchTab[]).map(t => (
               <button key={t}
                 onMouseDown={e => e.preventDefault()}
                 onClick={() => handleTabChange(t)}
@@ -246,7 +247,7 @@ export function SearchView({
             )}
 
             {/* Film results */}
-            {tab === 'films' && filmResults.length > 0 && (
+            {(tab === 'films' || tab === 'tv') && filmResults.length > 0 && (
               <div className="pt-2">
                 {filmResults.map((r, i) => (
                   <button key={r.id} onClick={() => handleSelectFilm(r.id, r.media_type)}

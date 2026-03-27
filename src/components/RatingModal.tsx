@@ -74,7 +74,7 @@ export function RatingModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[90]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <div className="fixed inset-0 z-[110]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* Blurred backdrop */}
       <div className="absolute inset-0">
         {backdrop

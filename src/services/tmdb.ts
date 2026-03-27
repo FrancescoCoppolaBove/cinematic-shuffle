@@ -289,6 +289,38 @@ export async function searchContent(query: string): Promise<SearchResult[]> {
 
 export const searchMovies = searchContent;
 
+export async function searchMoviesOnly(query: string): Promise<SearchResult[]> {
+  if (!query.trim()) return [];
+  const res = await apiFetch<{ results: (TMDBMovieBasic & { media_type?: string })[] }>(
+    '/search/movie', { query }
+  );
+  return res.results.slice(0, 12).map(m => ({
+    id: m.id,
+    title: getTitle(m),
+    poster_path: m.poster_path,
+    release_date: getReleaseDate(m),
+    vote_average: m.vote_average,
+    genre_ids: m.genre_ids || [],
+    media_type: 'movie' as const,
+  }));
+}
+
+export async function searchTVOnly(query: string): Promise<SearchResult[]> {
+  if (!query.trim()) return [];
+  const res = await apiFetch<{ results: (TMDBMovieBasic & { media_type?: string })[] }>(
+    '/search/tv', { query }
+  );
+  return res.results.slice(0, 12).map(m => ({
+    id: m.id,
+    title: getTitle(m),
+    poster_path: m.poster_path,
+    release_date: getReleaseDate(m),
+    vote_average: m.vote_average,
+    genre_ids: m.genre_ids || [],
+    media_type: 'tv' as const,
+  }));
+}
+
 // ─── Search: People ──────────────────────────────────────────────
 
 export interface PersonSearchResult {

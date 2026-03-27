@@ -14,6 +14,8 @@ import { SearchView } from './components/SearchView';
 import { ProfileView } from './components/ProfileView';
 import { InstallPrompt } from './components/InstallPrompt';
 import { MovieDetailScreen } from './components/MovieDetailScreen';
+import { RatingModal } from './components/RatingModal';
+import type { RatingResult } from './components/RatingModal';
 import { CardQuickView } from './components/CardQuickView';
 import type { TMDBMovieBasic } from './types';
 import { useUpdatePrompt } from './hooks/useUpdatePrompt';
@@ -87,6 +89,7 @@ interface Toast { id: number; message: string; type: 'success' | 'info' }
 export default function App() {
   const [view, setView] = useState<AppView>('home');
   const [cardQuickView, setCardQuickView] = useState<{ movie: TMDBMovieBasic; mediaType: 'movie' | 'tv' } | null>(null);
+  const [showRatingModal, setShowRatingModal] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   // Navigation stack for movie detail fullscreen
@@ -624,6 +627,11 @@ export default function App() {
           onAddToWatchlistFull={addToWatchlist}
           onRemoveFromWatchlistFull={removeFromWatchlist}
           loading={detailLoading}
+          tvSeriesStatus={detailMovie.media_type === 'tv' ? (tvStatus.get(detailMovie.id) ?? null) : undefined}
+          onSetFollowing={detailMovie.media_type === 'tv' ? async () => { await setFollowing(detailMovie.id); } : undefined}
+          onSetCompleted={detailMovie.media_type === 'tv' ? async () => { await setCompleted(detailMovie, detailMovie.seasons ?? []); } : undefined}
+          onUnsetTVStatus={detailMovie.media_type === 'tv' ? async () => { await unsetTVStatus(detailMovie.id); } : undefined}
+          onRequestRating={() => setShowRatingModal(true)}
         />
       )}
 
@@ -636,7 +644,39 @@ export default function App() {
 
       {user && <InstallPrompt />}
 
-
+      {/* RatingModal — direct child of root div, z-[110] above everything including nav z-[100] */}
+      {showRatingModal && detailMovie && (
+        <RatingModal
+          movie={detailMovie}
+          initialWatched={watchedIds.has(detailMovie.id)}
+          initialRating={getPersonalRating(detailMovie.id)}
+          initialLiked={likedIds.has(detailMovie.id)}
+          initialWatchlist={watchlistIds.has(detailMovie.id)}
+          showWatchlistBtn={!watchedIds.has(detailMovie.id)}
+          onConfirm={async (result: RatingResult) => {
+            setShowRatingModal(false);
+            if (result.watched) {
+              await markWatched(detailMovie, result.rating);
+              if (detailMovie.media_type === 'tv') {
+                await setCompleted(detailMovie, detailMovie.seasons ?? []);
+              }
+              if (result.liked && !likedIds.has(detailMovie.id)) await toggleLiked(detailMovie.id);
+              if (!result.liked && likedIds.has(detailMovie.id)) await toggleLiked(detailMovie.id);
+            } else {
+              if (watchedIds.has(detailMovie.id)) await unmarkWatched(detailMovie.id);
+              if (detailMovie.media_type === 'tv' && tvStatus.get(detailMovie.id)) {
+                await unsetTVStatus(detailMovie.id);
+              }
+            }
+          }}
+          onToggleWatchlist={
+            watchlistIds.has(detailMovie.id)
+              ? () => removeFromWatchlist(detailMovie.id)
+              : () => addToWatchlist(detailMovie)
+          }
+          onCancel={() => setShowRatingModal(false)}
+        />
+      )}
     </div>
   );
 }
