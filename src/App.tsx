@@ -349,7 +349,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col bg-film-black text-film-text overflow-hidden" style={{ height: 'var(--app-height, 100dvh)' }}>
+    <div className="flex flex-col bg-film-black text-film-text overflow-hidden" style={{ height: 'var(--app-height, 100dvh)', touchAction: 'none', overscrollBehavior: 'none' }}>
       <div className="fixed inset-0 pointer-events-none opacity-30 bg-grain z-50" />
 
       {/* PWA update banner */}
@@ -414,7 +414,7 @@ export default function App() {
             ? 'overflow-hidden'
             : 'overflow-y-auto px-4 py-4 pb-6'
         )}
-        style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
+        style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', touchAction: view === 'home' || view === 'tonight' ? 'pan-y' : 'none' }}
       >
         {view === 'tonight' && (
           <TonightView
@@ -480,14 +480,14 @@ export default function App() {
       {true && (
         <nav
           ref={navRef}
-          className="shrink-0 z-40 border-t border-film-border bg-film-black/95 backdrop-blur-md"
+          className="shrink-0 z-[100] border-t border-film-border bg-film-black/95 backdrop-blur-md"
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <div className="max-w-3xl mx-auto px-4 flex">
             {NAV.map(({ view: v, icon: Icon, label }) => {
               const active = view === v;
               return (
                 <button key={v} onClick={() => handleNavChange(v)}
-                  className={cn('flex-1 flex flex-col items-center gap-1 py-3 transition-all relative',
+                  className={cn('flex-1 flex flex-col items-center gap-1 py-3 pt-4 transition-all relative',
                     active ? 'text-film-accent' : 'text-film-subtle hover:text-film-muted')}>
                   {active && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-film-accent rounded-full" />}
                   {v === 'profile' ? (

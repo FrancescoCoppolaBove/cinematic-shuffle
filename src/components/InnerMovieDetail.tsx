@@ -71,8 +71,8 @@ export function InnerMovieDetail({
   if (loading || !movie) {
     return (
       <div
-        className="fixed inset-0 z-[95] bg-film-black flex flex-col"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        className="fixed left-0 right-0 z-[95] bg-film-black flex flex-col"
+        style={{ top: 0, bottom: 'var(--nav-h, 60px)' }}
       >
         <div
           className="shrink-0 bg-film-black/95 backdrop-blur-md border-b border-film-border"
@@ -100,7 +100,7 @@ export function InnerMovieDetail({
   const personalRating = getPersonalRating?.(movie.id) ?? null;
 
   return (
-    <div className="fixed inset-0 z-[95]">
+    <div className="fixed left-0 right-0 z-[95]" style={{ top: 0, bottom: 'var(--nav-h, 60px)' }}>
       <MovieDetailScreen
         movie={movie}
         isWatched={isWatched}
@@ -176,7 +176,7 @@ export function PersonInner(props: {
 }) {
   const [innerMovie, setInnerMovie] = useState<{ id: number; mediaType: 'movie' | 'tv' } | null>(null);
   return (
-    <div className="fixed inset-0 z-[98]">
+    <div className="fixed left-0 right-0 z-[98]" style={{ top: 0, bottom: 'var(--nav-h, 60px)' }}>
       <PersonDetailScreen
         personId={props.personId}
         personName={props.personName}
@@ -231,7 +231,7 @@ export function GenreInner(props: {
 }) {
   const [innerMovie, setInnerMovie] = useState<{ id: number; mediaType: 'movie' | 'tv' } | null>(null);
   return (
-    <div className="fixed inset-0 z-[98]">
+    <div className="fixed left-0 right-0 z-[98]" style={{ top: 0, bottom: 'var(--nav-h, 60px)' }}>
       <GenreMoviesScreen
         id={props.id}
         name={props.name}

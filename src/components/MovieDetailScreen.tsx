@@ -891,8 +891,8 @@ function SeasonDetailOverlay({
 
   return (
     <div
-      className="fixed inset-0 z-[97] bg-film-black flex flex-col"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      className="fixed left-0 right-0 z-[97] bg-film-black flex flex-col"
+      style={{ top: 0, bottom: 'var(--nav-h, 60px)' }}
     >
       {/* Header */}
       <div
