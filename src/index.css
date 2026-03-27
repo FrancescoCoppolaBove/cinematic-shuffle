@@ -15,6 +15,8 @@
     margin: 0;
     padding: 0;
     overscroll-behavior: none;
+    /* Prevent iOS rubber-band on root — no JS needed */
+    touch-action: pan-y;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-text-size-adjust: 100%;
@@ -23,6 +25,16 @@
 
   body {
     @apply bg-film-black text-film-text font-body;
+  }
+
+  /* Every scrollable container: native momentum + contain overscroll */
+  .scroll-container {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+    /* Force GPU-accelerated scrolling */
+    will-change: scroll-position;
   }
 
   /* Prevent tap highlight on mobile */
