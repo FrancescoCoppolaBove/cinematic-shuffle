@@ -735,16 +735,8 @@ export function MovieDetailScreen({
           <div className="mb-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs uppercase tracking-widest text-film-subtle font-medium">Recensioni</h3>
-              {isWatched && (
-                <button
-                  onClick={() => setShowReviewEditor(true)}
-                  className="text-film-accent text-xs active:opacity-60"
-                >
-                  {existingReview ? '✏️ Modifica' : '+ Scrivi'}
-                </button>
-              )}
             </div>
-            {reviews.length > 0 && (
+            {reviews.length > 0 ? (
               <PopularReviews
                 reviews={reviews}
                 myVotes={myVotes}
@@ -753,8 +745,16 @@ export function MovieDetailScreen({
                 onOpenUser={setOpenReviewUser}
                 onShowAll={() => setShowAllReviews(true)}
                 totalCount={reviews.length}
+                currentUserId={getAuth().currentUser?.uid ?? null}
               />
-            )}
+            ) : isWatched ? (
+              <button
+                onClick={() => setShowReviewEditor(true)}
+                className="w-full py-4 text-xs text-center text-film-accent active:opacity-60 border border-dashed border-film-border/50 rounded-xl"
+              >
+                + Scrivi la prima recensione
+              </button>
+            ) : null}
           </div>
 
             <div className="h-8" />
@@ -869,6 +869,15 @@ export function MovieDetailScreen({
           onBack={() => setOpenReview(null)}
           onOpenMovie={(id, mt) => { setOpenReview(null); onOpenMovie?.(id, mt); }}
           onOpenUser={uid => { setOpenReview(null); setOpenReviewUser(uid); }}
+          onEdit={() => {
+            setOpenReview(null);
+            setShowReviewEditor(true);
+          }}
+          onDelete={() => {
+            setReviews(prev => prev.filter(r => r.id !== openReview?.id));
+            setExistingReview(null);
+            setOpenReview(null);
+          }}
         />
       )}
 
@@ -916,12 +925,8 @@ export function MovieDetailScreen({
               ...draft,
             });
             setExistingReview(saved);
-            setReviews(prev => {
-              const idx = prev.findIndex(r => r.id === saved.id);
-              return idx >= 0
-                ? prev.map((r, i) => i === idx ? saved : r)
-                : [saved, ...prev];
-            });
+            // Reload full list from Firestore to ensure correct IDs and order
+            fetchReviewsForMovie(movie.id, 'popular', 20).then(setReviews).catch(() => {});
             // Sync rating ONLY after successful save
             if (draft.rating !== null && draft.rating !== personalRating) {
               onUpdateRatingFull?.(movie.id, draft.rating);

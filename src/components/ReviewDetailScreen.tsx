@@ -2,9 +2,9 @@
  * ReviewDetailScreen — schermata dettaglio recensione con replies.
  */
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ThumbsUp, ThumbsDown, Send, Heart, AlertTriangle, Film } from 'lucide-react';
+import { ChevronLeft, ThumbsUp, ThumbsDown, Send, Heart, AlertTriangle, Film, Pencil, Trash2 } from 'lucide-react';
 import type { Review, ReviewReply } from '../services/firestore';
-import { fetchReplies, addReply, voteReview, fetchUserVote } from '../services/firestore';
+import { fetchReplies, addReply, voteReview, fetchUserVote, deleteReview } from '../services/firestore';
 import { getImageUrl } from '../services/tmdb';
 import { cn } from '../utils';
 import type { User } from 'firebase/auth';
@@ -15,10 +15,12 @@ interface ReviewDetailScreenProps {
   onBack: () => void;
   onOpenMovie: (movieId: number, mediaType: 'movie' | 'tv') => void;
   onOpenUser: (userId: string) => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 export function ReviewDetailScreen({
-  review, currentUser, onBack, onOpenMovie, onOpenUser,
+  review, currentUser, onBack, onOpenMovie, onOpenUser, onEdit, onDelete,
 }: ReviewDetailScreenProps) {
   const [replies, setReplies] = useState<ReviewReply[]>([]);
   const [loadingReplies, setLoadingReplies] = useState(true);
@@ -28,6 +30,9 @@ export function ReviewDetailScreen({
   const [localLikes, setLocalLikes] = useState(review.likes);
   const [localDislikes, setLocalDislikes] = useState(review.dislikes);
   const [spoilerRevealed, setSpoilerRevealed] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const isAuthor = currentUser?.uid === review.userId;
 
   const canReply = review.repliesAllowed === 'all' ||
     (review.repliesAllowed === 'none' ? false : true); // simplified — full impl needs following check
@@ -84,7 +89,19 @@ export function ReviewDetailScreen({
             <ChevronLeft size={18} className="text-film-text" />
           </div>
         </button>
-        <span className="text-film-text font-semibold">Recensione</span>
+        <span className="text-film-text font-semibold flex-1">Recensione</span>
+        {isAuthor && (
+          <div className="flex items-center gap-2">
+            {onEdit && (
+              <button onClick={onEdit} className="w-9 h-9 flex items-center justify-center rounded-full bg-film-surface border border-film-border active:opacity-60">
+                <Pencil size={14} className="text-film-accent" />
+              </button>
+            )}
+            <button onClick={() => setConfirmDelete(true)} className="w-9 h-9 flex items-center justify-center rounded-full bg-film-surface border border-film-border active:opacity-60">
+              <Trash2 size={14} className="text-red-400" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Scrollable content */}
@@ -228,6 +245,38 @@ export function ReviewDetailScreen({
           >
             <Send size={14} className="text-film-black" />
           </button>
+        </div>
+      )}
+      {/* Confirm delete overlay */}
+      {confirmDelete && (
+        <div className="absolute inset-0 bg-film-black/80 flex items-end z-10">
+          <div className="w-full bg-film-black border-t border-film-border rounded-t-2xl p-6 space-y-4">
+            <p className="text-film-text font-semibold text-center">Eliminare questa recensione?</p>
+            <p className="text-film-subtle text-sm text-center">L'azione non può essere annullata.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="flex-1 py-3 rounded-xl border border-film-border text-film-text text-sm active:opacity-60"
+              >
+                Annulla
+              </button>
+              <button
+                disabled={deleting}
+                onClick={async () => {
+                  if (!currentUser) return;
+                  setDeleting(true);
+                  try {
+                    await deleteReview(review.id, currentUser.uid);
+                    onDelete?.();
+                    onBack();
+                  } finally { setDeleting(false); }
+                }}
+                className="flex-1 py-3 rounded-xl bg-red-600 text-white text-sm font-semibold active:opacity-60 disabled:opacity-50"
+              >
+                {deleting ? '...' : 'Elimina'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

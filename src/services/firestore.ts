@@ -1,7 +1,7 @@
 import {
   doc, setDoc, deleteDoc, collection, getDocs, getDoc,
   serverTimestamp, Timestamp, type FieldValue,
-  query, where, orderBy, limit, addDoc, updateDoc, increment,
+  query, where, limit, addDoc, updateDoc, increment,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { WatchedMovie, WatchlistItem } from '../types';
@@ -312,22 +312,27 @@ export async function fetchReviewsForMovie(
   sortMode: ReviewSortMode = 'popular',
   maxResults = 50
 ): Promise<Review[]> {
-  let q;
+  // Use simple single-field query to avoid composite index requirement.
+  // Sort client-side for flexibility.
+  const q = query(
+    reviewsCol(),
+    where('movieId', '==', movieId),
+    limit(maxResults)
+  );
+  const snap = await getDocs(q);
+  const reviews = snap.docs.filter(d => d.exists()).map(docToReview);
+
+  // Client-side sort by selected mode
   switch (sortMode) {
     case 'highest':
-      q = query(reviewsCol(), where('movieId', '==', movieId), orderBy('rating', 'desc'), orderBy('createdAt', 'desc'), limit(maxResults));
-      break;
+      return reviews.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
     case 'lowest':
-      q = query(reviewsCol(), where('movieId', '==', movieId), orderBy('rating', 'asc'), orderBy('createdAt', 'desc'), limit(maxResults));
-      break;
+      return reviews.sort((a, b) => (a.rating ?? 0) - (b.rating ?? 0));
     case 'newest':
-      q = query(reviewsCol(), where('movieId', '==', movieId), orderBy('createdAt', 'desc'), limit(maxResults));
-      break;
-    default: // popular
-      q = query(reviewsCol(), where('movieId', '==', movieId), orderBy('likes', 'desc'), orderBy('createdAt', 'desc'), limit(maxResults));
+      return reviews.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    default: // popular + friends
+      return reviews.sort((a, b) => (b.likes - a.likes) || (new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
   }
-  const snap = await getDocs(q);
-  return snap.docs.filter(d => d.exists()).map(docToReview);
 }
 
 export async function fetchUserReview(uid: string, movieId: number): Promise<Review | null> {
@@ -360,10 +365,10 @@ export async function saveReview(
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
-    // Update user public stats
+    // Update user public stats — ensure doc exists first with setDoc merge
     try {
-      await updateDoc(userPublicDoc(uid), { reviewsCount: increment(1) });
-    } catch { /* silently fail if doc doesn't exist */ }
+      await setDoc(userPublicDoc(uid), { reviewsCount: increment(1) }, { merge: true });
+    } catch { /* silent */ }
     const snap = await getDoc(ref);
     return docToReview(snap);
   }
@@ -372,7 +377,7 @@ export async function saveReview(
 export async function deleteReview(reviewId: string, uid: string): Promise<void> {
   await deleteDoc(reviewDoc(reviewId));
   try {
-    await updateDoc(userPublicDoc(uid), { reviewsCount: increment(-1) });
+    await setDoc(userPublicDoc(uid), { reviewsCount: increment(-1) }, { merge: true });
   } catch { /* silent */ }
 }
 
@@ -423,7 +428,8 @@ export async function fetchUserVotesForMovie(uid: string, _movieId: number): Pro
 
 // ─── Replies ──────────────────────────────────────────────────────
 export async function fetchReplies(reviewId: string): Promise<ReviewReply[]> {
-  const q = query(repliesCol(), where('reviewId', '==', reviewId), orderBy('createdAt', 'asc'), limit(50));
+  // Simple query without orderBy to avoid composite index requirement
+  const q = query(repliesCol(), where('reviewId', '==', reviewId), limit(50));
   const snap = await getDocs(q);
   return snap.docs.map(d => ({
     id: d.id,
@@ -433,7 +439,7 @@ export async function fetchReplies(reviewId: string): Promise<ReviewReply[]> {
     userPhotoURL: d.data().userPhotoURL ?? null,
     text: d.data().text,
     createdAt: toISO(d.data().createdAt),
-  }));
+  })).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 }
 
 export async function addReply(
@@ -506,7 +512,11 @@ export async function isFollowing(myUid: string, targetUid: string): Promise<boo
 }
 
 export async function fetchUserReviews(uid: string, maxResults = 20): Promise<Review[]> {
-  const q = query(reviewsCol(), where('userId', '==', uid), orderBy('createdAt', 'desc'), limit(maxResults));
+  // Simple query without orderBy to avoid composite index requirement
+  const q = query(reviewsCol(), where('userId', '==', uid), limit(maxResults));
   const snap = await getDocs(q);
-  return snap.docs.filter(d => d.exists()).map(docToReview);
+  return snap.docs
+    .filter(d => d.exists())
+    .map(docToReview)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }

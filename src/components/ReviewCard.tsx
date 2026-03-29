@@ -109,10 +109,11 @@ interface PopularReviewsProps {
   onOpenUser: (userId: string) => void;
   onShowAll: () => void;
   totalCount: number;
+  currentUserId?: string | null;
 }
 
 export function PopularReviews({
-  reviews, myVotes, onVote, onOpenReview, onOpenUser, onShowAll, totalCount,
+  reviews, myVotes, onVote, onOpenReview, onOpenUser, onShowAll, totalCount, currentUserId,
 }: PopularReviewsProps) {
   const [expanded, setExpanded] = useState(false);
   const visible = expanded ? reviews : reviews.slice(0, 3);
@@ -131,15 +132,21 @@ export function PopularReviews({
       </div>
       <div className="space-y-3">
         {visible.map(r => (
-          <ReviewCard
-            key={r.id}
-            review={r}
-            myVote={myVotes.get(r.id) ?? null}
-            onVote={type => onVote(r.id, type)}
-            onClick={() => onOpenReview(r)}
-            onUserClick={() => onOpenUser(r.userId)}
-            compact
-          />
+          <div key={r.id} className="relative">
+            {currentUserId && r.userId === currentUserId && (
+              <div className="absolute -top-1 -right-1 z-10 bg-film-accent text-film-black text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                TU
+              </div>
+            )}
+            <ReviewCard
+              review={r}
+              myVote={myVotes.get(r.id) ?? null}
+              onVote={type => onVote(r.id, type)}
+              onClick={() => onOpenReview(r)}
+              onUserClick={() => onOpenUser(r.userId)}
+              compact
+            />
+          </div>
         ))}
       </div>
       {reviews.length > 3 && (

@@ -11,7 +11,12 @@ import { cn } from '../utils';
 import { WatchedView } from './WatchedView';
 import { WatchlistView } from './WatchlistView';
 import { UserProfileScreen } from './UserProfileScreen';
-import { fetchFollowing, fetchFollowers, fetchUserPublicProfile, upsertUserPublicProfile } from '../services/firestore';
+import { ReviewDetailScreen } from './ReviewDetailScreen';
+import { ReviewEditor } from './ReviewEditor';
+import type { ReviewDraft } from './ReviewEditor';
+import { saveReview } from '../services/firestore';
+import { fetchFollowing, fetchFollowers, fetchUserPublicProfile, upsertUserPublicProfile, fetchUserReviews } from '../services/firestore';
+import type { Review } from '../services/firestore';
 import type { UserPublicProfile } from '../services/firestore';
 
 interface ProfileViewProps {
@@ -34,7 +39,7 @@ interface ProfileViewProps {
   onSignOut: () => void;
 }
 
-type MainTab = 'profilo' | 'visti' | 'watchlist';
+type MainTab = 'profilo' | 'visti' | 'watchlist' | 'recensioni';
 
 export function ProfileView({
   user, watchedMovies, watchlist,
@@ -51,6 +56,9 @@ export function ProfileView({
   const [followerProfiles, setFollowerProfiles] = useState<UserPublicProfile[]>([]);
   const [openUserProfile, setOpenUserProfile] = useState<string | null>(null);
   const [openSocialPanel, setOpenSocialPanel] = useState<'following' | 'followers' | null>(null);
+  const [myReviews, setMyReviews] = useState<Review[]>([]);
+  const [openReviewDetail, setOpenReviewDetail] = useState<Review | null>(null);
+  const [showProfileReviewEditor, setShowProfileReviewEditor] = useState(false);
 
   useEffect(() => {
     // Ensure own public profile exists
@@ -60,6 +68,7 @@ export function ProfileView({
       moviesWatchedCount: watchedMovies.length,
     }).catch(() => {});
     // Load following/followers
+    fetchUserReviews(user.uid, 20).then(setMyReviews).catch(() => {});
     fetchFollowing(user.uid).then(uids => {
       setFollowingUids(uids);
       Promise.all(uids.map(uid => fetchUserPublicProfile(uid)))
@@ -82,9 +91,10 @@ export function ProfileView({
     : null;
 
   const TABS: { key: MainTab; label: string; count?: number }[] = [
-    { key: 'profilo',   label: 'Profilo' },
-    { key: 'visti',     label: 'Visti',     count: watchedMovies.length },
-    { key: 'watchlist', label: 'Watchlist', count: watchlist.length },
+    { key: 'profilo',    label: 'Profilo' },
+    { key: 'visti',      label: 'Visti',       count: watchedMovies.length },
+    { key: 'watchlist',  label: 'Watchlist',   count: watchlist.length },
+    { key: 'recensioni', label: 'Recensioni',  count: myReviews.length },
   ];
 
   // Shared props for WatchedView/WatchlistView
@@ -199,6 +209,7 @@ export function ProfileView({
           </div>
 
 
+
         </div>
       )}
 
@@ -227,6 +238,85 @@ export function ProfileView({
           />
         </div>
       )}
+      {/* ── Tab: Recensioni ── */}
+      {tab === 'recensioni' && (
+        <div className="px-4 pt-4 pb-6 space-y-3">
+          {myReviews.length === 0 ? (
+            <p className="text-film-muted text-sm text-center py-8">Nessuna recensione ancora</p>
+          ) : myReviews.map(r => (
+            <button
+              key={r.id}
+              onClick={() => setOpenReviewDetail(r)}
+              className="w-full text-left bg-film-surface border border-film-border rounded-xl p-3 active:opacity-70"
+            >
+              <div className="flex items-start gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-film-text text-sm font-semibold truncate">{r.movieTitle}</p>
+                  {r.text.trim().length > 0 && (
+                    <p className="text-film-muted text-xs mt-1 line-clamp-2 leading-relaxed">{r.text}</p>
+                  )}
+                  <p className="text-film-subtle text-xs mt-1">{new Date(r.createdAt).toLocaleDateString('it-IT')}</p>
+                </div>
+                <div className="shrink-0 flex flex-col items-end gap-1">
+                  {r.rating !== null && (
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: r.rating }).map((_, i) => <span key={i} className="text-yellow-400 text-xs">★</span>)}
+                    </div>
+                  )}
+                  {r.liked && <span className="text-red-400 text-xs">❤️</span>}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── Review Detail from Profile ── */}
+      {openReviewDetail && (
+        <ReviewDetailScreen
+          review={openReviewDetail}
+          currentUser={user as import('firebase/auth').User}
+          onBack={() => setOpenReviewDetail(null)}
+          onOpenMovie={() => {}}
+          onOpenUser={() => {}}
+          onEdit={() => {
+            setShowProfileReviewEditor(true);
+          }}
+          onDelete={() => {
+            setMyReviews(prev => prev.filter(r => r.id !== openReviewDetail.id));
+            setOpenReviewDetail(null);
+          }}
+        />
+      )}
+
+      {/* ── Review Editor from Profile ── */}
+      {showProfileReviewEditor && openReviewDetail && (
+        <ReviewEditor
+          movie={{ id: openReviewDetail.movieId, media_type: openReviewDetail.mediaType, title: openReviewDetail.movieTitle, name: openReviewDetail.movieTitle, poster_path: openReviewDetail.moviePosterPath, release_date: openReviewDetail.movieReleaseDate, first_air_date: openReviewDetail.movieReleaseDate, vote_average: 0, genre_ids: [], } as unknown as import('../types').TMDBMovieDetail}
+          initialWatched={true}
+          initialRating={openReviewDetail.rating}
+          initialLiked={openReviewDetail.liked}
+          existingReview={openReviewDetail}
+          onCancel={() => setShowProfileReviewEditor(false)}
+          onSave={async (draft: ReviewDraft) => {
+            const saved = await saveReview(user.uid, {
+              movieId: openReviewDetail.movieId,
+              mediaType: openReviewDetail.mediaType,
+              movieTitle: openReviewDetail.movieTitle,
+              moviePosterPath: openReviewDetail.moviePosterPath,
+              movieReleaseDate: openReviewDetail.movieReleaseDate,
+              userId: user.uid,
+              userName: user.displayName ?? 'User',
+              userPhotoURL: user.photoURL ?? null,
+              ...draft,
+            });
+            setMyReviews(prev => prev.map(r => r.id === saved.id ? saved : r));
+            setOpenReviewDetail(saved);
+            setShowProfileReviewEditor(false);
+          }}
+        />
+      )}
+
       {/* ── Social panel (following/followers) — bottom sheet ── */}
       {openSocialPanel && (
         <div className="absolute inset-0 z-20 flex flex-col bg-film-black/50 backdrop-blur-sm"
@@ -335,6 +425,8 @@ function ProviderSelector({ selected, onChange }: {
   selected: number[];
   onChange: (ids: number[]) => Promise<void>;
 }) {
+  const [open, setOpen] = useState(false);
+
   function toggle(id: number) {
     const next = selected.includes(id)
       ? selected.filter(x => x !== id)
@@ -343,11 +435,20 @@ function ProviderSelector({ selected, onChange }: {
   }
 
   return (
-    <div className="bg-film-surface border border-film-border rounded-2xl p-4">
-      <div className="flex items-center justify-between mb-3">
+    <div className="bg-film-surface border border-film-border rounded-2xl overflow-hidden">
+      {/* Accordion header */}
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 active:opacity-60"
+      >
         <p className="text-film-text text-sm font-medium">Le mie piattaforme</p>
-        <p className="text-film-subtle text-xs">{selected.length > 0 ? `${selected.length} selezionate` : 'Nessuna'}</p>
-      </div>
+        <div className="flex items-center gap-2">
+          <p className="text-film-subtle text-xs">{selected.length > 0 ? `${selected.length} selezionate` : 'Nessuna'}</p>
+          <span className={cn('text-film-subtle text-xs transition-transform duration-200', open ? 'rotate-180' : '')}>▾</span>
+        </div>
+      </button>
+      {open && (
+      <div className="px-4 pb-4">
       <div className="grid grid-cols-4 gap-2">
         {PROVIDERS.map(p => {
           const active = selected.includes(p.id);
@@ -394,6 +495,8 @@ function ProviderSelector({ selected, onChange }: {
         <p className="text-film-subtle text-xs mt-3 text-center">
           Nella sezione Stasera vedrai subito cosa puoi guardare gratis
         </p>
+      )}
+      </div>
       )}
     </div>
   );
