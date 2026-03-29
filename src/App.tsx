@@ -438,25 +438,11 @@ export default function App() {
         className="relative shrink-0 z-40 border-b border-film-border bg-film-black"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center">
-          {cardQuickView ? (
-            <>
-              <button onClick={() => setCardQuickView(null)} className="w-9 h-9 flex items-center justify-center rounded-full bg-film-surface active:opacity-60 shrink-0">
-                <X size={18} className="text-film-text" />
-              </button>
-              <div className="flex-1 text-center">
-                <span className="text-film-text font-semibold text-base truncate block px-2">
-                  {getTitle(cardQuickView.movie)}
-                </span>
-              </div>
-              <div className="w-9 shrink-0" />
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center gap-2">
-              <span className="font-display text-lg tracking-[0.2em] text-film-text">CINEMATIC</span>
-              <span className="font-display text-lg tracking-[0.2em] text-film-accent">SHUFFLE</span>
-            </div>
-          )}
+        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-center">
+          <div className="flex items-center gap-2">
+            <span className="font-display text-lg tracking-[0.2em] text-film-text">CINEMATIC</span>
+            <span className="font-display text-lg tracking-[0.2em] text-film-accent">SHUFFLE</span>
+          </div>
         </div>
       </header>
 
@@ -464,36 +450,13 @@ export default function App() {
       <main
         className={cn(
           'flex-1 min-h-0 w-full max-w-3xl mx-auto flex flex-col',
-          cardQuickView
+          (view === 'shuffle' || view === 'search' || view === 'profile')
             ? 'overflow-hidden'
-            : (view === 'shuffle' || view === 'search' || view === 'profile')
-              ? 'overflow-hidden'
-              : 'overflow-y-auto px-4 py-4 pb-6'
+            : 'overflow-y-auto px-4 py-4 pb-6'
         )}
         style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
       >
-        {cardQuickView ? (
-          <CardQuickView
-            movie={cardQuickView.movie}
-            mediaType={cardQuickView.mediaType}
-            isWatched={watchedIds.has(cardQuickView.movie.id)}
-            isLiked={likedIds.has(cardQuickView.movie.id)}
-            isOnWatchlist={watchlistIds.has(cardQuickView.movie.id)}
-            personalRating={getPersonalRating(cardQuickView.movie.id)}
-            onClose={() => setCardQuickView(null)}
-            onOpenFull={() => {
-              const { movie, mediaType } = cardQuickView;
-              setCardQuickView(null);
-              openMovieDetail(movie.id, mediaType);
-            }}
-            onMarkWatched={markWatched}
-            onUnmarkWatched={unmarkWatched}
-            onToggleLiked={toggleLiked}
-            onAddToWatchlist={addToWatchlist}
-            onRemoveFromWatchlist={removeFromWatchlist}
-          />
-        ) : null}
-        {!cardQuickView && view === 'tonight' && (
+        {view === 'tonight' && (
           <TonightView
             watchlist={watchlist}
             watchedMovies={watchedMovies}
@@ -503,7 +466,7 @@ export default function App() {
             onSetupProviders={() => handleNavChange('profile')}
           />
         )}
-        {!cardQuickView && view === 'home' && (
+        {view === 'home' && (
           <HomeView
             watchedIds={watchedIds}
             watchlistIds={watchlistIds}
@@ -516,14 +479,14 @@ export default function App() {
             onOpenMovieGlobal={(id: number, mt: 'movie' | 'tv', playlist?: PlaylistItem[], index?: number) => openWithPlaylist(id, mt, playlist, index, 'Home')}
           />
         )}
-        {!cardQuickView && view === 'shuffle' && (
+        {view === 'shuffle' && (
           <ShuffleView
             {...sharedProps}
             watchedMovies={watchedMovies}
             onOpenMovieGlobal={(id: number, mt: 'movie' | 'tv', playlist?: PlaylistItem[], index?: number) => openWithPlaylist(id, mt, playlist, index, 'Shuffle')}
           />
         )}
-        {!cardQuickView && view === 'search' && (
+        {view === 'search' && (
           <SearchView
             {...sharedProps}
             onOpenMovieGlobal={(id: number, mt: 'movie' | 'tv', playlist?: PlaylistItem[], index?: number) => openWithPlaylist(id, mt, playlist, index, 'Cerca')}
@@ -531,7 +494,7 @@ export default function App() {
           />
         )}
 
-        {!cardQuickView && view === 'profile' && (
+        {view === 'profile' && (
           <ProfileView
             user={user}
             watchedMovies={watchedMovies}
@@ -558,7 +521,7 @@ export default function App() {
       {true && (
         <nav
           ref={navRef}
-          className="relative shrink-0 z-[100] border-t border-film-border bg-film-black"
+          className="relative shrink-0 z-[80] border-t border-film-border bg-film-black"
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <div className="max-w-3xl mx-auto px-4 flex">
             {NAV.map(({ view: v, icon: Icon, label }) => {
@@ -644,7 +607,30 @@ export default function App() {
 
       {user && <InstallPrompt />}
 
-      {/* RatingModal — direct child of root div, z-[110] above everything including nav z-[100] */}
+      {/* CardQuickView — direct child of root div, same pattern as RatingModal */}
+      {cardQuickView && (
+        <CardQuickView
+          movie={cardQuickView.movie}
+          mediaType={cardQuickView.mediaType}
+          isWatched={watchedIds.has(cardQuickView.movie.id)}
+          isLiked={likedIds.has(cardQuickView.movie.id)}
+          isOnWatchlist={watchlistIds.has(cardQuickView.movie.id)}
+          personalRating={getPersonalRating(cardQuickView.movie.id)}
+          onClose={() => setCardQuickView(null)}
+          onOpenFull={() => {
+            const { movie, mediaType } = cardQuickView;
+            setCardQuickView(null);
+            openMovieDetail(movie.id, mediaType);
+          }}
+          onMarkWatched={markWatched}
+          onUnmarkWatched={unmarkWatched}
+          onToggleLiked={toggleLiked}
+          onAddToWatchlist={addToWatchlist}
+          onRemoveFromWatchlist={removeFromWatchlist}
+        />
+      )}
+
+      {/* RatingModal — direct child of root div, z-[110] above everything including nav z-[80] */}
       {showRatingModal && detailMovie && (
         <RatingModal
           movie={detailMovie}

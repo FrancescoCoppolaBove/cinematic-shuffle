@@ -203,7 +203,7 @@ function StatPill({ icon, label, value, color }: {
 const PROVIDERS = [
   { id: 8,    name: 'Netflix',    logo: '/t2yyOv40HZeVlLjYsCsPHnWLk4W.jpg' },
   { id: 119,  name: 'Prime',      logo: '/dQeAar5H991VYporEjUspolDarG.jpg' },
-  { id: 337,  name: 'Disney+',    logo: '/7rwgEs15tFwyR9NPQ5vpzxTj19d.jpg' },
+  { id: 337,  name: 'Disney+',    logo: '/97yvRBw1GzX7fXprcF80er19ot.jpg' },
   { id: 35,   name: 'Apple TV+',  logo: '/6uhKBfmtzFqOcLousHwZuzcrScK.jpg' },
   { id: 1899, name: 'Max',        logo: '/Ajqyt5aNxNx8rDHQEhTHcPnNpjw.jpg' },
   { id: 531,  name: 'Paramount+', logo: '/xbhHHa1YgtpwhC8lb1NQ3ACVcLd.jpg' },
@@ -242,6 +242,11 @@ function ProviderSelector({ selected, onChange }: {
             >
               <img
                 src={`https://image.tmdb.org/t/p/w92${p.logo}`}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                  const parent = (e.target as HTMLImageElement).parentElement;
+                  if (parent) { parent.style.display = 'flex'; parent.style.alignItems = 'center'; parent.style.justifyContent = 'center'; parent.innerHTML = `<span style="font-size:8px;color:white;text-align:center;padding:2px;line-height:1.1">${p.name}</span>`; }
+                }}
                 alt={p.name}
                 className={cn('w-10 h-10 rounded-lg', !active && 'opacity-40 grayscale')}
               />

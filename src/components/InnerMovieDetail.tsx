@@ -5,11 +5,13 @@
  * Garantisce coerenza totale: stesse CTA, stessa grafica, stessi tab.
  * z-index 95 → sta sopra PersonDetailScreen (88) e GenreMoviesScreen (89).
  */
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, Fragment } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { getMovieDetail } from '../services/tmdb';
 import type { TMDBMovieDetail } from '../types';
 import { MovieDetailScreen } from './MovieDetailScreen';
+import { RatingModal } from './RatingModal';
+import type { RatingResult } from './RatingModal';
 import { PersonDetailScreen } from './PersonDetailScreen';
 import { GenreMoviesScreen } from './GenreMoviesScreen';
 
@@ -62,6 +64,7 @@ export function InnerMovieDetail({
   // ALL hooks must be before any conditional return (Rules of Hooks)
   // localRewatchCount: initializes to 0, updated when movie loads via useEffect
   const [localRewatchCount, setLocalRewatchCount] = useState(0);
+  const [showRatingModal, setShowRatingModal] = useState(false);
 
   // Sync localRewatchCount when movie changes
   useEffect(() => {
@@ -105,6 +108,7 @@ export function InnerMovieDetail({
   const personalRating = getPersonalRating?.(movie.id) ?? null;
 
   return (
+    <Fragment>
     <div className="fixed left-0 right-0 z-[95]" style={{ top: 0, bottom: 'var(--nav-h, 60px)' }}>
       <MovieDetailScreen
         movie={movie}
@@ -126,6 +130,7 @@ export function InnerMovieDetail({
         onSetFollowing={movie.media_type === 'tv' && onSetFollowing ? () => onSetFollowing(movie.id) : undefined}
         onSetCompleted={movie.media_type === 'tv' && onSetCompleted ? () => onSetCompleted(movie, movie.seasons ?? []) : undefined}
         onUnsetTVStatus={movie.media_type === 'tv' && onUnsetTVStatus ? () => onUnsetTVStatus(movie.id) : undefined}
+        onRequestRating={() => setShowRatingModal(true)}
         onOpenMovie={(mid, mt) => setInnerMovie({ id: mid, mediaType: mt })}
         // Passa tutti i propWatchedIds per i tab Cast/Crew/Generi
         watchedIds={watchedIds}
@@ -162,6 +167,38 @@ export function InnerMovieDetail({
         />
       )}
     </div>
+
+      {showRatingModal && (
+        <RatingModal
+          movie={movie}
+          initialWatched={isWatched}
+          initialRating={personalRating}
+          initialLiked={isLiked}
+          initialWatchlist={isOnWatchlist}
+          showWatchlistBtn={!isWatched}
+          onConfirm={async (result: RatingResult) => {
+            setShowRatingModal(false);
+            if (result.watched) {
+              await onMarkWatched?.(movie, result.rating);
+              if (movie.media_type === 'tv' && onSetCompleted) {
+                await onSetCompleted(movie, movie.seasons ?? []);
+              }
+              if (result.liked && !isLiked) await onToggleLiked?.(movie.id);
+              if (!result.liked && isLiked) await onToggleLiked?.(movie.id);
+            } else {
+              if (isWatched) await onUnmarkWatched?.(movie.id);
+              if (movie.media_type === 'tv') await onUnsetTVStatus?.(movie.id);
+            }
+          }}
+          onToggleWatchlist={
+            isOnWatchlist
+              ? () => onRemoveFromWatchlist?.(movie.id) ?? Promise.resolve()
+              : () => onAddToWatchlist?.(movie) ?? Promise.resolve()
+          }
+          onCancel={() => setShowRatingModal(false)}
+        />
+      )}
+    </Fragment>
   );
 }
 

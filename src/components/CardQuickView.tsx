@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Eye, EyeOff, Heart, Star, BookmarkPlus, BookmarkMinus } from 'lucide-react';
+import { X, Eye, EyeOff, Heart, Star, BookmarkPlus, BookmarkMinus } from 'lucide-react';
 import type { TMDBMovieBasic, TMDBMovieDetail } from '../types';
-import { getMovieDetail, getImageUrl, getEnglishTitle } from '../services/tmdb';
-import { cn } from '../utils';
+import { getMovieDetail, getImageUrl, getEnglishTitle, getReleaseDate } from '../services/tmdb';
+import { formatYear, cn } from '../utils';
 
 interface Props {
   movie: TMDBMovieBasic;
@@ -22,7 +22,7 @@ interface Props {
 
 export function CardQuickView({
   movie, mediaType, isWatched, isLiked, isOnWatchlist, personalRating,
-  onClose: _onClose, onOpenFull,
+  onClose, onOpenFull,
   onMarkWatched, onUnmarkWatched, onToggleLiked, onAddToWatchlist, onRemoveFromWatchlist,
 }: Props) {
   const [detail, setDetail] = useState<TMDBMovieDetail | null>(null);
@@ -34,6 +34,7 @@ export function CardQuickView({
 
   const poster = movie.poster_path ? getImageUrl(movie.poster_path, 'w500') : null;
   const title = getEnglishTitle(movie);
+  const year = formatYear(getReleaseDate(movie));
 
   const run = async (fn: () => Promise<void>) => {
     if (busy) return;
@@ -56,8 +57,12 @@ export function CardQuickView({
   });
 
   return (
-    // Fills the flex-1 main area — no fixed/absolute needed
-    <div className="relative flex flex-col w-full h-full" style={{ background: 'rgba(0,0,0,0.85)' }}>
+    // Direct child of root div — absolute inset:0 fills the full screen (same pattern as RatingModal)
+    // z-[110] puts it above nav (z-[100]) and everything else
+    <div
+      className="fixed inset-0 z-[110] flex flex-col"
+      style={{ background: 'rgba(0,0,0,0.92)' }}
+    >
       {/* Blurred poster background */}
       {poster && (
         <div className="absolute inset-0 overflow-hidden">
@@ -65,15 +70,33 @@ export function CardQuickView({
             src={poster}
             alt=""
             className="absolute inset-0 w-full h-full object-cover scale-110"
-            style={{ filter: 'blur(24px)', opacity: 0.4 }}
+            style={{ filter: 'blur(24px)', opacity: 0.35 }}
           />
         </div>
       )}
 
+      {/* Header: title + year + X */}
+      <div
+        className="relative shrink-0 flex items-center px-4 pb-2"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)' }}
+      >
+        <div className="flex-1 text-center px-10">
+          <h2 className="text-film-text font-bold text-base leading-tight truncate">{title}</h2>
+          {year && <p className="text-film-subtle text-sm mt-0.5">{year}</p>}
+        </div>
+        <button
+          onClick={onClose}
+          className="absolute right-4 w-9 h-9 flex items-center justify-center rounded-full bg-film-surface/80 active:opacity-60"
+          style={{ top: 'calc(env(safe-area-inset-top) + 8px)' }}
+        >
+          <X size={18} className="text-film-text" />
+        </button>
+      </div>
+
       {/* Poster — tappable to open full detail */}
       <button
         onClick={onOpenFull}
-        className="relative flex-1 flex items-center justify-center px-8 py-4 min-h-0"
+        className="relative flex-1 flex items-center justify-center px-8 py-3 min-h-0"
       >
         {poster ? (
           <img
@@ -83,7 +106,7 @@ export function CardQuickView({
               'h-full max-h-full w-auto object-contain rounded-2xl shadow-2xl',
               isWatched && 'opacity-50 grayscale'
             )}
-            style={{ maxWidth: '80vw' }}
+            style={{ maxWidth: '82vw' }}
           />
         ) : (
           <div className="w-full aspect-[2/3] rounded-2xl bg-film-surface border border-film-border flex items-center justify-center text-5xl">
@@ -93,7 +116,10 @@ export function CardQuickView({
       </button>
 
       {/* 4 CTA buttons */}
-      <div className="relative shrink-0 flex items-center justify-around px-4 py-5">
+      <div
+        className="relative shrink-0 flex items-center justify-around px-4 py-4"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}
+      >
         <button onClick={handleWatch} className="flex flex-col items-center gap-2 active:opacity-60">
           <div className={cn(
             'w-14 h-14 rounded-full border-2 flex items-center justify-center',
