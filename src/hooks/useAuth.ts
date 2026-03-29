@@ -6,6 +6,7 @@ import {
   type User,
 } from 'firebase/auth';
 import { auth, googleProvider, isFirebaseConfigured } from '../services/firebase';
+import { upsertUserPublicProfile } from '../services/firestore';
 
 interface AuthState {
   user: User | null;
@@ -25,7 +26,16 @@ export function useAuth() {
 
     const unsub = onAuthStateChanged(
       auth,
-      user => setState({ user, loading: false, error: null }),
+      user => {
+        setState({ user, loading: false, error: null });
+        if (user) {
+          // Ensure public profile exists/is updated on every login
+          upsertUserPublicProfile(user.uid, {
+            displayName: user.displayName ?? 'User',
+            photoURL: user.photoURL ?? null,
+          }).catch(() => {});
+        }
+      },
       err => setState({ user: null, loading: false, error: err.message })
     );
     return unsub;

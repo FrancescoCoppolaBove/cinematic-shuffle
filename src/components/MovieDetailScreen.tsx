@@ -11,7 +11,14 @@ import {
 } from '../services/tmdb';
 import { formatRuntime, formatYear, formatRating, cn } from '../utils';
 import { getAuth } from 'firebase/auth';
-import { fetchWatchedEpisodes, toggleWatchedEpisode, markAllEpisodesInSeason } from '../services/firestore';
+import { fetchWatchedEpisodes, toggleWatchedEpisode, markAllEpisodesInSeason,
+  fetchReviewsForMovie, voteReview, saveReview, fetchUserReview } from '../services/firestore';
+import type { Review } from '../services/firestore';
+import { PopularReviews } from './ReviewCard';
+import { ReviewDetailScreen } from './ReviewDetailScreen';
+import { AllReviewsScreen } from './AllReviewsScreen';
+import { UserProfileScreen } from './UserProfileScreen';
+import { ReviewEditor } from './ReviewEditor';
 import { MovieDetailTabs } from './MovieDetailTabs';
 import { PersonInner, GenreInner } from './InnerMovieDetail';
 import { BrowseListScreen } from './BrowseListScreen';
@@ -73,10 +80,22 @@ export function MovieDetailScreen({
   onRequestRating,
 }: MovieDetailScreenProps) {
   const [posterError, setPosterError] = useState(false);
+  useEffect(() => {
+    fetchReviewsForMovie(movie.id, 'popular', 20).then(setReviews).catch(() => {});
+    const uid = getAuth().currentUser?.uid;
+    if (uid) fetchUserReview(uid, movie.id).then(setExistingReview).catch(() => {});
+  }, [movie.id]);
   const [openPerson, setOpenPerson] = useState<{id: number; name: string} | null>(null);
   const [openSimilar, setOpenSimilar] = useState(false);
   const [openSeason, setOpenSeason] = useState<{ seriesId: number; seasonNumber: number; seasonName: string } | null>(null);
   const [openGenre, setOpenGenre] = useState<{id: number; name: string; type: 'genre'|'keyword'; mediaType: 'movie'|'tv'} | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [myVotes, setMyVotes] = useState<Map<string, 'like' | 'dislike'>>(new Map());
+  const [openReview, setOpenReview] = useState<Review | null>(null);
+  const [showAllReviews, setShowAllReviews] = useState(false);
+  const [openReviewUser, setOpenReviewUser] = useState<string | null>(null);
+  const [showReviewEditor, setShowReviewEditor] = useState(false);
+  const [existingReview, setExistingReview] = useState<Review | null>(null);
   const [collectionParts, setCollectionParts] = useState<TMDBMovieBasic[] | null>(null);
   const [collectionName, setCollectionName] = useState('');
   const [loadingCollection, setLoadingCollection] = useState(false);
@@ -103,6 +122,20 @@ export function MovieDetailScreen({
   const poster = !posterError ? getImageUrl(movie.poster_path, 'w500') : null;
   const backdrop = getImageUrl(movie.backdrop_path, 'w780');
   const isTV = movie.media_type === 'tv';
+  const handleVoteReview = async (reviewId: string, type: 'like' | 'dislike') => {
+    const uid = getAuth().currentUser?.uid;
+    if (!uid) return;
+    const prev = myVotes.get(reviewId) ?? null;
+    const next = new Map(myVotes);
+    if (prev === type) { next.delete(reviewId); } else { next.set(reviewId, type); }
+    setMyVotes(next);
+    setReviews(rs => rs.map(r => r.id !== reviewId ? r : {
+      ...r,
+      likes: type === 'like' ? (prev === 'like' ? r.likes - 1 : r.likes + 1) : (prev === 'like' ? r.likes - 1 : r.likes),
+      dislikes: type === 'dislike' ? (prev === 'dislike' ? r.dislikes - 1 : r.dislikes + 1) : (prev === 'dislike' ? r.dislikes - 1 : r.dislikes),
+    }));
+    await voteReview(reviewId, uid, prev === type ? null : type);
+  };
   const director = !isTV ? movie.credits?.crew?.find(c => c.job === 'Director') : null;
   const creator = isTV ? movie.credits?.crew?.find(c =>
     c.job === 'Creator' || c.job === 'Executive Producer') : null;
@@ -254,8 +287,8 @@ export function MovieDetailScreen({
 
   return (
     <div
-      className="fixed inset-0 z-[80] bg-film-black"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      className="fixed left-0 right-0 z-[80] bg-film-black"
+      style={{ top: 0, bottom: 'var(--nav-h, 60px)' }}
     >
       {/* ── Scrollable + swipeable content wrapper ── */}
       <div
@@ -699,6 +732,31 @@ export function MovieDetailScreen({
             />
           </div>
 
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs uppercase tracking-widest text-film-subtle font-medium">Recensioni</h3>
+              {isWatched && (
+                <button
+                  onClick={() => setShowReviewEditor(true)}
+                  className="text-film-accent text-xs active:opacity-60"
+                >
+                  {existingReview ? '✏️ Modifica' : '+ Scrivi'}
+                </button>
+              )}
+            </div>
+            {reviews.length > 0 && (
+              <PopularReviews
+                reviews={reviews}
+                myVotes={myVotes}
+                onVote={handleVoteReview}
+                onOpenReview={setOpenReview}
+                onOpenUser={setOpenReviewUser}
+                onShowAll={() => setShowAllReviews(true)}
+                totalCount={reviews.length}
+              />
+            )}
+          </div>
+
             <div className="h-8" />
           </div>
         </div>{/* end animated inner div */}
@@ -803,6 +861,75 @@ export function MovieDetailScreen({
       )}
 
       {/* Rating modal */}
+
+      {openReview && (
+        <ReviewDetailScreen
+          review={openReview}
+          currentUser={getAuth().currentUser}
+          onBack={() => setOpenReview(null)}
+          onOpenMovie={(id, mt) => { setOpenReview(null); onOpenMovie?.(id, mt); }}
+          onOpenUser={uid => { setOpenReview(null); setOpenReviewUser(uid); }}
+        />
+      )}
+
+      {showAllReviews && (
+        <AllReviewsScreen
+          movieId={movie.id}
+          movieTitle={movie.title ?? movie.name ?? ''}
+          currentUser={getAuth().currentUser}
+          onBack={() => setShowAllReviews(false)}
+          onOpenReview={r => { setShowAllReviews(false); setOpenReview(r); }}
+          onOpenUser={uid => { setShowAllReviews(false); setOpenReviewUser(uid); }}
+        />
+      )}
+
+      {openReviewUser && (
+        <UserProfileScreen
+          targetUid={openReviewUser}
+          currentUser={getAuth().currentUser}
+          onBack={() => setOpenReviewUser(null)}
+          onOpenMovie={(id, mt) => { setOpenReviewUser(null); onOpenMovie?.(id, mt); }}
+          onOpenReview={r => { setOpenReviewUser(null); setOpenReview(r); }}
+        />
+      )}
+
+      {showReviewEditor && (
+        <ReviewEditor
+          movie={movie}
+          initialWatched={isWatched}
+          initialRating={personalRating ?? null}
+          initialLiked={isLiked}
+          existingReview={existingReview}
+          onCancel={() => setShowReviewEditor(false)}
+          onSave={async draft => {
+            const user = getAuth().currentUser;
+            if (!user) return;
+            const saved = await saveReview(user.uid, {
+              movieId: movie.id,
+              mediaType: movie.media_type,
+              movieTitle: movie.title ?? movie.name ?? '',
+              moviePosterPath: movie.poster_path,
+              movieReleaseDate: (movie.release_date ?? movie.first_air_date) ?? '',
+              userId: user.uid,
+              userName: user.displayName ?? 'User',
+              userPhotoURL: user.photoURL ?? null,
+              ...draft,
+            });
+            setExistingReview(saved);
+            setReviews(prev => {
+              const idx = prev.findIndex(r => r.id === saved.id);
+              return idx >= 0
+                ? prev.map((r, i) => i === idx ? saved : r)
+                : [saved, ...prev];
+            });
+            // Sync rating ONLY after successful save
+            if (draft.rating !== null && draft.rating !== personalRating) {
+              onUpdateRatingFull?.(movie.id, draft.rating);
+            }
+            setShowReviewEditor(false);
+          }}
+        />
+      )}
 
     </div>
   );

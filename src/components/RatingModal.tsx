@@ -5,7 +5,7 @@
  * "Done" comunica tutto: { watched, rating, liked }
  */
 import { useState } from 'react';
-import { X, Eye, Heart, Bookmark, BookmarkCheck } from 'lucide-react';
+import { X, Eye, Heart, Bookmark, BookmarkCheck, MessageSquare } from 'lucide-react';
 import type { TMDBMovieDetail } from '../types';
 import { getImageUrl, getTitle, getReleaseDate } from '../services/tmdb';
 import { formatYear, cn } from '../utils';
@@ -28,6 +28,7 @@ interface RatingModalProps {
   onConfirm: (result: RatingResult) => void;
   onToggleWatchlist?: () => void;
   onCancel: () => void;
+  onReview?: () => void;
 }
 
 export function RatingModal({
@@ -40,6 +41,7 @@ export function RatingModal({
   onConfirm,
   onToggleWatchlist,
   onCancel,
+  onReview,
 }: RatingModalProps) {
   const [rating, setRating] = useState<number | null>(initialRating ?? null);
   const [liked, setLiked] = useState(initialLiked);
@@ -150,13 +152,23 @@ export function RatingModal({
             </div>
           </div>
 
-          {/* Done */}
-          <button
-            onClick={handleDone}
-            className="w-full py-4 mt-5 bg-white text-film-black font-bold text-base rounded-2xl active:scale-[0.98] transition-transform"
-          >
-            Done
-          </button>
+          {/* Done + Review buttons */}
+          <div className="flex gap-3 mt-5">
+            {onReview && (
+              <button
+                onClick={() => { handleDone(); setTimeout(() => onReview?.(), 50); }}
+                className="flex-1 py-4 bg-film-surface border border-film-accent/40 text-film-accent font-semibold text-sm rounded-2xl active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+              >
+                <MessageSquare size={16} />Recensisci
+              </button>
+            )}
+            <button
+              onClick={handleDone}
+              className="flex-1 py-4 bg-white text-film-black font-bold text-base rounded-2xl active:scale-[0.98] transition-transform"
+            >
+              Done
+            </button>
+          </div>
         </div>
       </div>
     </div>

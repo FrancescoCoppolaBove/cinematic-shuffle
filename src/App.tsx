@@ -15,6 +15,9 @@ import { ProfileView } from './components/ProfileView';
 import { InstallPrompt } from './components/InstallPrompt';
 import { MovieDetailScreen } from './components/MovieDetailScreen';
 import { RatingModal } from './components/RatingModal';
+import { ReviewEditor } from './components/ReviewEditor';
+import type { ReviewDraft } from './components/ReviewEditor';
+import { saveReview, upsertUserPublicProfile } from './services/firestore';
 import type { RatingResult } from './components/RatingModal';
 import { CardQuickView } from './components/CardQuickView';
 import type { TMDBMovieBasic } from './types';
@@ -90,6 +93,7 @@ export default function App() {
   const [view, setView] = useState<AppView>('home');
   const [cardQuickView, setCardQuickView] = useState<{ movie: TMDBMovieBasic; mediaType: 'movie' | 'tv' } | null>(null);
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [showReviewEditor, setShowReviewEditor] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   // Navigation stack for movie detail fullscreen
@@ -661,6 +665,37 @@ export default function App() {
               : () => addToWatchlist(detailMovie)
           }
           onCancel={() => setShowRatingModal(false)}
+          onReview={() => { setShowRatingModal(false); setShowReviewEditor(true); }}
+        />
+      )}
+
+      {/* ReviewEditor — fixed inset-0 z-120, direct root child */}
+      {showReviewEditor && detailMovie && user && (
+        <ReviewEditor
+          movie={detailMovie}
+          initialWatched={watchedIds.has(detailMovie.id)}
+          initialRating={getPersonalRating(detailMovie.id)}
+          initialLiked={likedIds.has(detailMovie.id)}
+          onCancel={() => setShowReviewEditor(false)}
+          onSave={async (draft: ReviewDraft) => {
+            if (!user) return;
+            await upsertUserPublicProfile(user.uid, {
+              displayName: user.displayName ?? 'User',
+              photoURL: user.photoURL ?? null,
+            });
+            await saveReview(user.uid, {
+              movieId: detailMovie.id,
+              mediaType: detailMovie.media_type,
+              movieTitle: detailMovie.title ?? detailMovie.name ?? '',
+              moviePosterPath: detailMovie.poster_path,
+              movieReleaseDate: (detailMovie.release_date ?? detailMovie.first_air_date) || '',
+              userId: user.uid,
+              userName: user.displayName ?? 'User',
+              userPhotoURL: user.photoURL ?? null,
+              ...draft,
+            });
+            setShowReviewEditor(false);
+          }}
         />
       )}
     </div>

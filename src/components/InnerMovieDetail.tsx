@@ -11,6 +11,9 @@ import { getMovieDetail } from '../services/tmdb';
 import type { TMDBMovieDetail } from '../types';
 import { MovieDetailScreen } from './MovieDetailScreen';
 import { RatingModal } from './RatingModal';
+import { ReviewEditor } from './ReviewEditor';
+import type { ReviewDraft } from './ReviewEditor';
+import { saveReview, upsertUserPublicProfile } from '../services/firestore';
 import type { RatingResult } from './RatingModal';
 import { PersonDetailScreen } from './PersonDetailScreen';
 import { GenreMoviesScreen } from './GenreMoviesScreen';
@@ -65,6 +68,7 @@ export function InnerMovieDetail({
   // localRewatchCount: initializes to 0, updated when movie loads via useEffect
   const [localRewatchCount, setLocalRewatchCount] = useState(0);
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [showReviewEditor, setShowReviewEditor] = useState(false);
 
   // Sync localRewatchCount when movie changes
   useEffect(() => {
@@ -196,6 +200,45 @@ export function InnerMovieDetail({
               : () => onAddToWatchlist?.(movie) ?? Promise.resolve()
           }
           onCancel={() => setShowRatingModal(false)}
+          onReview={() => { setShowRatingModal(false); setShowReviewEditor(true); }}
+        />
+      )}
+
+      {showReviewEditor && movie && (
+        <ReviewEditor
+          movie={movie}
+          initialWatched={isWatched}
+          initialRating={personalRating}
+          initialLiked={isLiked}
+          onCancel={() => setShowReviewEditor(false)}
+          onSave={async (draft: ReviewDraft) => {
+            const auth = (await import('firebase/auth')).getAuth();
+            const user = auth.currentUser;
+            if (!user || !movie) return;
+            await upsertUserPublicProfile(user.uid, {
+              displayName: user.displayName ?? 'User',
+              photoURL: user.photoURL ?? null,
+            });
+            await saveReview(user.uid, {
+              movieId: movie.id,
+              mediaType: movie.media_type,
+              movieTitle: movie.title ?? movie.name ?? '',
+              moviePosterPath: movie.poster_path,
+              movieReleaseDate: (movie.release_date ?? movie.first_air_date) ?? '',
+              userId: user.uid,
+              userName: user.displayName ?? 'User',
+              userPhotoURL: user.photoURL ?? null,
+              ...draft,
+            });
+            // Sync rating/liked ONLY after successful save
+            if (draft.rating !== null) {
+              await onUpdateRating?.(movie.id, draft.rating);
+            }
+            if (draft.liked !== isLiked) {
+              await onToggleLiked?.(movie.id);
+            }
+            setShowReviewEditor(false);
+          }}
         />
       )}
     </Fragment>

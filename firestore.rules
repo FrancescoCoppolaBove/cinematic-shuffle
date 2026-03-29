@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: is the request from an authenticated user?
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Helper: is this the user's own document?
+    function isOwner(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+
+    // ── Users: private subcollections ────────────────────────────────────
+    match /users/{uid}/{document=**} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // ── User public profiles (readable by all, writable by owner) ────────
+    match /userPublic/{uid} {
+      allow read: if isAuth();
+      allow write: if isOwner(uid);
+    }
+
+    // ── Following / Followers ─────────────────────────────────────────────
+    // Stored under users/{uid}/following/{targetUid} — covered by users rule above.
+
+    // ── Reviews ──────────────────────────────────────────────────────────
+    match /reviews/{reviewId} {
+      // Anyone authenticated can read reviews
+      allow read: if isAuth();
+      // Only the author can create/update their own review
+      allow create: if isAuth()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.movieId is int
+        && request.resource.data.text is string
+        && request.resource.data.likes == 0
+        && request.resource.data.dislikes == 0
+        && request.resource.data.replyCount == 0;
+      allow update: if isAuth()
+        // Author can update their review content
+        && (resource.data.userId == request.auth.uid
+        // OR any user can update only the likes/dislikes/replyCount counters
+        || (request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['likes', 'dislikes', 'replyCount', 'updatedAt'])));
+      allow delete: if isAuth() && resource.data.userId == request.auth.uid;
+    }
+
+    // ── Review Likes ──────────────────────────────────────────────────────
+    match /reviewLikes/{likeId} {
+      allow read: if isAuth();
+      // likeId format: {reviewId}_{uid} — user can only manage their own likes
+      allow write: if isAuth()
+        && (request.resource.data.uid == request.auth.uid
+            || resource.data.uid == request.auth.uid);
+      allow delete: if isAuth() && resource.data.uid == request.auth.uid;
+    }
+
+    // ── Review Replies ────────────────────────────────────────────────────
+    match /reviewReplies/{replyId} {
+      allow read: if isAuth();
+      allow create: if isAuth()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 1000;
+      allow delete: if isAuth() && resource.data.userId == request.auth.uid;
+    }
+  }
+}
