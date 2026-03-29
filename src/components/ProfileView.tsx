@@ -9,6 +9,8 @@ import type { WatchedMovie, WatchlistItem, TMDBMovieDetail } from '../types';
 import type { PlaylistItem } from '../hooks/useNavigationStack';
 import { cn } from '../utils';
 import { WatchedView } from './WatchedView';
+import { fetchItalianProviders } from '../services/tmdb';
+
 import { WatchlistView } from './WatchlistView';
 import { UserProfileScreen } from './UserProfileScreen';
 import { ReviewDetailScreen } from './ReviewDetailScreen';
@@ -56,6 +58,7 @@ export function ProfileView({
   const [followerProfiles, setFollowerProfiles] = useState<UserPublicProfile[]>([]);
   const [openUserProfile, setOpenUserProfile] = useState<string | null>(null);
   const [openSocialPanel, setOpenSocialPanel] = useState<'following' | 'followers' | null>(null);
+  const [liveProviderLogos, setLiveProviderLogos] = useState<Map<number, string>>(new Map());
   const [myReviews, setMyReviews] = useState<Review[]>([]);
   const [openReviewDetail, setOpenReviewDetail] = useState<Review | null>(null);
   const [showProfileReviewEditor, setShowProfileReviewEditor] = useState(false);
@@ -66,6 +69,12 @@ export function ProfileView({
       displayName: user.displayName ?? 'User',
       photoURL: user.photoURL ?? null,
       moviesWatchedCount: watchedMovies.length,
+    }).catch(() => {});
+    // Fetch live provider logos from TMDB
+    fetchItalianProviders().then(providers => {
+      const map = new Map<number, string>();
+      providers.forEach(p => map.set(p.provider_id, p.logo_path));
+      setLiveProviderLogos(map);
     }).catch(() => {});
     // Load following/followers
     fetchUserReviews(user.uid, 20).then(setMyReviews).catch(() => {});
@@ -171,6 +180,7 @@ export function ProfileView({
           <ProviderSelector
             selected={favoriteProviderIds}
             onChange={onUpdateProviders}
+            liveLogos={liveProviderLogos}
           />
 
           {/* Stats grid 3×2 */}
@@ -421,9 +431,10 @@ const PROVIDERS = [
   { id: 222,  name: 'TIMvision',  logo: '/bZGFHCAPgdD44ByaHFLAlqJGvSl.jpg' },
 ];
 
-function ProviderSelector({ selected, onChange }: {
+function ProviderSelector({ selected, onChange, liveLogos }: {
   selected: number[];
   onChange: (ids: number[]) => Promise<void>;
+  liveLogos?: Map<number, string>;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -462,7 +473,7 @@ function ProviderSelector({ selected, onChange }: {
               )}
             >
               <img
-                src={`https://image.tmdb.org/t/p/w92${p.logo}`}
+                src={`https://image.tmdb.org/t/p/w92${liveLogos?.get(p.id) ?? p.logo}`}
                 onError={(e) => {
                   const img = e.target as HTMLImageElement;
                   img.style.display = 'none';

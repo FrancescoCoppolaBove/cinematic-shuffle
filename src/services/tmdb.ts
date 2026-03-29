@@ -968,3 +968,23 @@ export async function getWatchlistProviders(
   await Promise.all(fetches);
   return result;
 }
+
+// ─── Watch Providers: fetch live logos for Italy ─────────────────
+export interface TMDBProvider {
+  provider_id: number;
+  provider_name: string;
+  logo_path: string;
+  display_priority: number;
+}
+
+export async function fetchItalianProviders(): Promise<TMDBProvider[]> {
+  try {
+    const res = await apiFetch<{ results: TMDBProvider[] }>(
+      '/watch/providers/movie',
+      { watch_region: 'IT' }
+    );
+    return res.results ?? [];
+  } catch {
+    return [];
+  }
+}
