@@ -66,8 +66,8 @@ export function PersonDetailScreen({
 
   return (
     <div
-      className="fixed left-0 right-0 z-[88] bg-film-black overflow-y-auto"
-      style={{ top: 0, bottom: 'var(--nav-h, 60px)', isolation: 'isolate' }}
+      className="fixed left-0 right-0 z-[88] bg-film-black flex flex-col"
+      style={{ top: 0, bottom: 0, isolation: 'isolate' }}
     >
       {/* Header */}
       <div
@@ -87,6 +87,7 @@ export function PersonDetailScreen({
         </div>
       </div>
 
+      <div className="flex-1 overflow-y-auto" style={{ paddingBottom: 'var(--nav-h, 60px)' }}>
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div className="w-10 h-10 border-2 border-film-accent border-t-transparent rounded-full animate-spin" />
@@ -243,6 +244,7 @@ export function PersonDetailScreen({
           onBack={() => setInnerMovie(null)}
         />
       )}
+      </div>
     </div>
   );
 }

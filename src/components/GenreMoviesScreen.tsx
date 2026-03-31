@@ -107,7 +107,7 @@ export function GenreMoviesScreen({
   return (
     <div
       className="fixed left-0 right-0 z-[89] bg-film-black flex flex-col"
-      style={{ top: 'var(--header-h, 52px)', bottom: 'var(--nav-h, 60px)', isolation: 'isolate' }}
+      style={{ top: 'var(--header-h, 52px)', bottom: 0, isolation: 'isolate' }}
     >
       {/* Header */}
       <div
@@ -144,7 +144,7 @@ export function GenreMoviesScreen({
       />
 
       {/* Content */}
-      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto">
+      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto" style={{ paddingBottom: 'var(--nav-h, 60px)' }}>
         {loading ? (
           <div className="grid grid-cols-3 gap-2 p-4">
             {Array.from({ length: 12 }).map((_, i) => (

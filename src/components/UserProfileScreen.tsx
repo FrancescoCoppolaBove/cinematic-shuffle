@@ -88,7 +88,7 @@ export function UserProfileScreen({
 
   if (loading) return (
     <div className="fixed left-0 right-0 z-[115] bg-film-black flex flex-col items-center justify-center"
-      style={{ top: 0, bottom: 'var(--nav-h, 60px)', paddingTop: 'env(safe-area-inset-top)', isolation: 'isolate' }}>
+      style={{ top: 0, bottom: 0, paddingTop: 'env(safe-area-inset-top)', isolation: 'isolate' }}>
       <div className="w-10 h-10 border-2 border-film-accent border-t-transparent rounded-full animate-spin" />
     </div>
   );
@@ -96,7 +96,7 @@ export function UserProfileScreen({
   return (
     <div
       className="fixed left-0 right-0 z-[115] bg-film-black flex flex-col"
-      style={{ top: 0, bottom: 'var(--nav-h, 60px)', paddingTop: 'env(safe-area-inset-top)', isolation: 'isolate' }}
+      style={{ top: 0, bottom: 0, paddingTop: 'env(safe-area-inset-top)', isolation: 'isolate' }}
     >
       {/* Header */}
       <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-film-border">
@@ -121,7 +121,7 @@ export function UserProfileScreen({
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" style={{ paddingBottom: 'var(--nav-h, 60px)' }}>
         {/* Profile header */}
         <div className="px-4 pt-6 pb-4 flex items-start gap-4 border-b border-film-border/40">
           <button onClick={() => setPhotoZoomed(true)} className="shrink-0 active:opacity-60">

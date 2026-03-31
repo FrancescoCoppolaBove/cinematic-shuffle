@@ -288,7 +288,7 @@ export function MovieDetailScreen({
   return (
     <div
       className="fixed left-0 right-0 z-[80] bg-film-black"
-      style={{ top: 0, bottom: 'var(--nav-h, 60px)', isolation: 'isolate' }}
+      style={{ top: 0, bottom: 0, isolation: 'isolate' }}
     >
       {/* ── Scrollable + swipeable content wrapper ── */}
       <div
@@ -298,7 +298,7 @@ export function MovieDetailScreen({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         className="h-full overflow-y-auto"
-        style={{ WebkitOverflowScrolling: 'touch', willChange: 'transform' } as React.CSSProperties}
+        style={{ paddingBottom: 'var(--nav-h, 60px)', WebkitOverflowScrolling: 'touch', willChange: 'transform' } as React.CSSProperties}
       >
         {/* This inner div is what physically moves during swipe */}
         <div
@@ -1101,7 +1101,7 @@ function SeasonDetailOverlay({
   return (
     <div
       className="fixed left-0 right-0 z-[97] bg-film-black flex flex-col"
-      style={{ top: 0, bottom: 'var(--nav-h, 60px)', isolation: 'isolate' }}
+      style={{ top: 0, bottom: 0, isolation: 'isolate' }}
     >
       {/* Header */}
       <div
