@@ -67,7 +67,7 @@ export function PersonDetailScreen({
   return (
     <div
       className="fixed left-0 right-0 z-[88] bg-film-black overflow-y-auto"
-      style={{ top: 0, bottom: 'var(--nav-h, 60px)' }}
+      style={{ top: 0, bottom: 'var(--nav-h, 60px)', isolation: 'isolate' }}
     >
       {/* Header */}
       <div

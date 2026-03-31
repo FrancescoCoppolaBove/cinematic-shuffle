@@ -80,7 +80,7 @@ export function AllReviewsScreen({
   return (
     <div
       className="fixed left-0 right-0 z-[115] bg-film-black flex flex-col"
-      style={{ top: 0, bottom: 'var(--nav-h, 60px)', paddingTop: 'env(safe-area-inset-top)' }}
+      style={{ top: 0, bottom: 'var(--nav-h, 60px)', paddingTop: 'env(safe-area-inset-top)', isolation: 'isolate' }}
     >
       {/* Header */}
       <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-film-border">

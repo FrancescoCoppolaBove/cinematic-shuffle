@@ -203,7 +203,7 @@ export function BrowseListScreen({
   return (
     <div
       className="fixed left-0 right-0 bg-film-black flex flex-col"
-      style={{ zIndex, top: 'var(--header-h, 52px)', bottom: 'var(--nav-h, 60px)' }}
+      style={{ zIndex, top: 'var(--header-h, 52px)', bottom: 'var(--nav-h, 60px)', isolation: 'isolate' }}
     >
       {/* Header */}
       <div

@@ -84,7 +84,7 @@ export function InnerMovieDetail({
     return (
       <div
         className="fixed left-0 right-0 z-[95] bg-film-black flex flex-col"
-        style={{ top: 0, bottom: 'var(--nav-h, 60px)' }}
+        style={{ top: 0, bottom: 'var(--nav-h, 60px)', isolation: 'isolate' }}
       >
         <div
           className="shrink-0 bg-film-black/95 backdrop-blur-md border-b border-film-border"
@@ -113,7 +113,7 @@ export function InnerMovieDetail({
 
   return (
     <Fragment>
-    <div className="fixed left-0 right-0 z-[95]" style={{ top: 0, bottom: 'var(--nav-h, 60px)' }}>
+    <div className="fixed left-0 right-0 z-[95]" style={{ top: 0, bottom: 'var(--nav-h, 60px)', isolation: 'isolate', pointerEvents: innerMovie ? 'none' : undefined }}>
       <MovieDetailScreen
         movie={movie}
         isWatched={isWatched}
@@ -269,7 +269,7 @@ export function PersonInner(props: {
 }) {
   const [innerMovie, setInnerMovie] = useState<{ id: number; mediaType: 'movie' | 'tv' } | null>(null);
   return (
-    <div className="fixed left-0 right-0 z-[98]" style={{ top: 0, bottom: 'var(--nav-h, 60px)' }}>
+    <div className="fixed left-0 right-0 z-[98]" style={{ top: 0, bottom: 'var(--nav-h, 60px)', isolation: 'isolate' }}>
       <PersonDetailScreen
         personId={props.personId}
         personName={props.personName}
@@ -328,7 +328,7 @@ export function GenreInner(props: {
 }) {
   const [innerMovie, setInnerMovie] = useState<{ id: number; mediaType: 'movie' | 'tv' } | null>(null);
   return (
-    <div className="fixed left-0 right-0 z-[98]" style={{ top: 0, bottom: 'var(--nav-h, 60px)' }}>
+    <div className="fixed left-0 right-0 z-[98]" style={{ top: 0, bottom: 'var(--nav-h, 60px)', isolation: 'isolate' }}>
       <GenreMoviesScreen
         id={props.id}
         name={props.name}

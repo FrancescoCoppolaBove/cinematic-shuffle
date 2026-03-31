@@ -114,10 +114,13 @@ export default function App() {
       }
     };
     updateSizes();
+    // iOS Safari computes safe-area-inset-bottom lazily — re-measure after delays
+    const t1 = setTimeout(updateSizes, 100);
+    const t2 = setTimeout(updateSizes, 500);
     const ro = new ResizeObserver(updateSizes);
     if (headerRef.current) ro.observe(headerRef.current);
     if (navRef.current) ro.observe(navRef.current);
-    return () => ro.disconnect();
+    return () => { ro.disconnect(); clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
   // Prevent iOS rubber-band scroll on the root container
@@ -393,7 +396,7 @@ export default function App() {
   }
 
   return (
-    <div className="relative flex flex-col bg-film-black text-film-text overflow-hidden" style={{ height: 'var(--app-height, 100dvh)', overscrollBehavior: 'none' }}>
+    <div className="relative flex flex-col bg-film-black text-film-text" style={{ height: 'var(--app-height, 100dvh)', overscrollBehavior: 'none' }}>
       <div className="fixed inset-0 pointer-events-none opacity-30 bg-grain z-50" />
 
       {/* PWA update banner */}
@@ -526,7 +529,7 @@ export default function App() {
         <nav
           ref={navRef}
           className="relative shrink-0 z-[80] border-t border-film-border bg-film-black"
-          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 5px)' }}>
           <div className="max-w-3xl mx-auto px-4 flex">
             {NAV.map(({ view: v, icon: Icon, label }) => {
               const active = view === v;

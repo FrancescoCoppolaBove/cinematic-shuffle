@@ -288,7 +288,7 @@ export function MovieDetailScreen({
   return (
     <div
       className="fixed left-0 right-0 z-[80] bg-film-black"
-      style={{ top: 0, bottom: 'var(--nav-h, 60px)' }}
+      style={{ top: 0, bottom: 'var(--nav-h, 60px)', isolation: 'isolate' }}
     >
       {/* ── Scrollable + swipeable content wrapper ── */}
       <div
@@ -1101,7 +1101,7 @@ function SeasonDetailOverlay({
   return (
     <div
       className="fixed left-0 right-0 z-[97] bg-film-black flex flex-col"
-      style={{ top: 0, bottom: 'var(--nav-h, 60px)' }}
+      style={{ top: 0, bottom: 'var(--nav-h, 60px)', isolation: 'isolate' }}
     >
       {/* Header */}
       <div

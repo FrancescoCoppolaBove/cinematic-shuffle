@@ -88,7 +88,7 @@ export function UserProfileScreen({
 
   if (loading) return (
     <div className="fixed left-0 right-0 z-[115] bg-film-black flex flex-col items-center justify-center"
-      style={{ top: 0, bottom: 'var(--nav-h, 60px)', paddingTop: 'env(safe-area-inset-top)' }}>
+      style={{ top: 0, bottom: 'var(--nav-h, 60px)', paddingTop: 'env(safe-area-inset-top)', isolation: 'isolate' }}>
       <div className="w-10 h-10 border-2 border-film-accent border-t-transparent rounded-full animate-spin" />
     </div>
   );
@@ -96,7 +96,7 @@ export function UserProfileScreen({
   return (
     <div
       className="fixed left-0 right-0 z-[115] bg-film-black flex flex-col"
-      style={{ top: 0, bottom: 'var(--nav-h, 60px)', paddingTop: 'env(safe-area-inset-top)' }}
+      style={{ top: 0, bottom: 'var(--nav-h, 60px)', paddingTop: 'env(safe-area-inset-top)', isolation: 'isolate' }}
     >
       {/* Header */}
       <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-film-border">
