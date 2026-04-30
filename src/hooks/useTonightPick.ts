@@ -234,7 +234,8 @@ export function useTonightPick(
       setPersonalItems(personal);
       setProviderMap(providers);
     }).catch(() => {}).finally(() => setLoading(false));
-  }, [seed, taste.topGenreIds, taste.qualityThreshold]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed, taste.topGenreIds, taste.qualityThreshold, favoriteProviderIds]);
 
   const picks = useMemo<TonightPick[]>(() => {
     const available = watchlist.filter(i => !watchedIds.has(i.id));

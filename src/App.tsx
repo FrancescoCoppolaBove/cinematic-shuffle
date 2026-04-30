@@ -199,9 +199,6 @@ export default function App() {
   }, []);
 
   useEffect(() => { if (authError) showToast(authError, 'info'); }, [authError, showToast]);
-  useEffect(() => {
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.uid]);
 
   const getPersonalRating = useCallback((id: number) =>
     watchedMovies.find(m => m.id === id)?.personal_rating ?? null, [watchedMovies]);
@@ -229,7 +226,10 @@ export default function App() {
         playlist,
         playlistIndex: playlistIndex ?? 0,
       });
-    } catch { /* silente */ }
+    } catch (err) {
+      console.error('Failed to load movie detail:', err);
+      showToast('Impossibile caricare i dettagli. Riprova.', 'info');
+    }
     finally { setDetailLoading(false); }
   }, [view, navStack]);
 
@@ -243,7 +243,10 @@ export default function App() {
         type: 'movie', id, mediaType,
         fromLabel: detailMovie ? getTitle(detailMovie) : 'Indietro',
       });
-    } catch { /* silente */ }
+    } catch (err) {
+      console.error('Failed to load related movie:', err);
+      showToast('Impossibile caricare i dettagli. Riprova.', 'info');
+    }
     finally { setDetailLoading(false); }
   }, [navStack, detailMovie]);
 

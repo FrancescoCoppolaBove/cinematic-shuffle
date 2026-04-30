@@ -61,6 +61,7 @@ export function ReviewEditor({
     setSaveError(null);
     try {
       await onSave({ text, rating, liked, watchedOn: watchedOn || null, firstView, hasSpoilers, repliesAllowed });
+      setSaving(false);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Errore nel salvataggio');
       setSaving(false);

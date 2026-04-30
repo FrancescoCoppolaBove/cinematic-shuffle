@@ -81,9 +81,17 @@ export function MovieDetailScreen({
 }: MovieDetailScreenProps) {
   const [posterError, setPosterError] = useState(false);
   useEffect(() => {
-    fetchReviewsForMovie(movie.id, 'popular', 20).then(setReviews).catch(() => {});
+    let isMounted = true;
+    fetchReviewsForMovie(movie.id, 'popular', 20)
+      .then(reviews => { if (isMounted) setReviews(reviews); })
+      .catch(() => {});
     const uid = getAuth().currentUser?.uid;
-    if (uid) fetchUserReview(uid, movie.id).then(setExistingReview).catch(() => {});
+    if (uid) {
+      fetchUserReview(uid, movie.id)
+        .then(review => { if (isMounted) setExistingReview(review); })
+        .catch(() => {});
+    }
+    return () => { isMounted = false; };
   }, [movie.id]);
   const [openPerson, setOpenPerson] = useState<{id: number; name: string} | null>(null);
   const [openSimilar, setOpenSimilar] = useState(false);

@@ -259,7 +259,7 @@ const reviewsCol = () => collection(db, 'reviews');
 const reviewDoc = (id: string) => doc(db, 'reviews', id);
 const reviewLikesCol = () => collection(db, 'reviewLikes');
 const reviewLikeDoc = (reviewId: string, uid: string) =>
-  doc(db, 'reviewLikes', `${reviewId}_${uid}`);
+  doc(db, 'reviewLikes', `${reviewId}|${uid}`);
 const repliesCol = () => collection(db, 'reviewReplies');
 const followCol = (uid: string) => collection(db, 'users', uid, 'following');
 const followerCol = (uid: string) => collection(db, 'users', uid, 'followers');
@@ -415,13 +415,13 @@ export async function fetchUserVote(reviewId: string, uid: string): Promise<'lik
   return snap.data().type as 'like' | 'dislike';
 }
 
-export async function fetchUserVotesForMovie(uid: string, _movieId: number): Promise<Map<string, 'like' | 'dislike'>> {
+export async function fetchUserVotesForMovie(uid: string): Promise<Map<string, 'like' | 'dislike'>> {
   const q = query(reviewLikesCol(), where('uid', '==', uid));
   const snap = await getDocs(q);
   const map = new Map<string, 'like' | 'dislike'>();
   snap.docs.forEach(d => {
-    const reviewId = d.id.split('_').slice(0, -1).join('_'); // remove uid suffix
-    map.set(reviewId, d.data().type);
+    const reviewId = d.id.split('|')[0]; // format: reviewId|uid
+    if (reviewId) map.set(reviewId, d.data().type);
   });
   return map;
 }

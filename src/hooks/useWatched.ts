@@ -66,6 +66,7 @@ export function useWatched(user: User | null) {
       rewatchCount: 0,
       genre_ids: movie.genres?.map(g => g.id) ?? [],
       runtime: movie.runtime ?? movie.episode_run_time?.[0] ?? null,
+      original_language: movie.original_language,
       media_type: movie.media_type,
     };
     await addWatchedToFirestore(user.uid, entry);
@@ -155,6 +156,7 @@ export function useWatched(user: User | null) {
       rewatchCount: 0,
       genre_ids: movie.genres?.map(g => g.id) ?? [],
       runtime: movie.episode_run_time?.[0] ?? null,
+      original_language: movie.original_language,
       media_type: 'tv',
     };
     await addWatchedToFirestore(user.uid, entry);
