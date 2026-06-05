@@ -306,7 +306,7 @@ export function MovieDetailScreen({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         className="h-full overflow-y-auto"
-        style={{ paddingBottom: 'var(--nav-h, 60px)', WebkitOverflowScrolling: 'touch', willChange: 'transform' } as React.CSSProperties}
+        style={{ paddingBottom: 'var(--nav-h, 60px)', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
       >
         {/* This inner div is what physically moves during swipe */}
         <div

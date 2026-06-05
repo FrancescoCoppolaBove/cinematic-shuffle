@@ -225,7 +225,17 @@ export function PersonDetailScreen({
           <p>Impossibile caricare i dettagli</p>
         </div>
       )}
-      {/* Inner movie detail — opens on top, back returns here */}
+      </div>
+      {/*
+       * InnerMovieDetail MUST be outside the overflow-y:auto scroll container.
+       * On iOS Safari, fixed-position descendants of overflow:auto elements can
+       * have their containing block incorrectly set to the scroll layer instead
+       * of the viewport, causing the nested PersonDetailScreen header to render
+       * with a wrong top offset (appearing "too tall"). Rendering InnerMovieDetail
+       * as a sibling of the scroll div — still inside our own fixed container —
+       * prevents the WebKit compositor from associating its fixed subtree with
+       * the scroll layer.
+       */}
       {innerMovie && (
         <InnerMovieDetail
           id={innerMovie.id}
@@ -244,7 +254,6 @@ export function PersonDetailScreen({
           onBack={() => setInnerMovie(null)}
         />
       )}
-      </div>
     </div>
   );
 }
