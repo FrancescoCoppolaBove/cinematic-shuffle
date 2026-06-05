@@ -71,7 +71,7 @@ export function PersonDetailScreen({
     >
       {/* Header */}
       <div
-        className="sticky top-0 z-10 bg-film-black/95 backdrop-blur-md border-b border-film-border"
+        className="shrink-0 bg-film-black border-b border-film-border"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="flex items-center gap-3 px-4 py-3">

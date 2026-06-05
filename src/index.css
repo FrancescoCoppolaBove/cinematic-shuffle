@@ -7,6 +7,15 @@
     /* Initial layout values — overridden by ResizeObserver after first paint */
     --header-h: calc(env(safe-area-inset-top) + 52px);
     --nav-h: calc(env(safe-area-inset-bottom) + 60px);
+    /*
+     * --app-height: inizializzato subito via CSS così il root div è già
+     * alla giusta altezza al primo paint, senza aspettare il probe JS.
+     * Su iOS PWA standalone, window.innerHeight ESCLUDE la home indicator
+     * (~34px), quindi 100dvh è più corta dello schermo fisico. Aggiungendo
+     * env(safe-area-inset-bottom) copriamo quella zona e il nav risulta
+     * sempre a filo con il bordo inferiore già al primo frame.
+     */
+    --app-height: calc(100dvh + env(safe-area-inset-bottom));
   }
 
   *, *::before, *::after { box-sizing: border-box; }

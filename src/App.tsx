@@ -399,7 +399,7 @@ export default function App() {
   }
 
   return (
-    <div className="relative flex flex-col bg-film-black text-film-text" style={{ height: 'var(--app-height, 100dvh)', overscrollBehavior: 'none' }}>
+    <div className="relative flex flex-col bg-film-black text-film-text" style={{ height: 'var(--app-height, calc(100dvh + env(safe-area-inset-bottom)))', overscrollBehavior: 'none' }}>
       <div className="fixed inset-0 pointer-events-none opacity-30 bg-grain z-50" />
 
       {/* PWA update banner */}
