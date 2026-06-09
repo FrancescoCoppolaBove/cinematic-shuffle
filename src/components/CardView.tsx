@@ -67,7 +67,6 @@ export function CardView({
   const isOnWatchlist = watchlistIds.has(item.id);
   const isLiked = likedIds?.has(item.id) ?? false;
   const personalRating = getPersonalRating(item.id);
-  const poster = getImageUrl(item.poster_path, 'w500');
   const title = getTitle(item);
   const canPrev = index > 0;
   const canNext = index < items.length - 1;
@@ -247,21 +246,9 @@ export function CardView({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Blurred poster backdrop — cornice stile Letterboxd (segue il film corrente) */}
-        {poster && (
-          <div className="absolute inset-0 pointer-events-none">
-            <img
-              src={poster}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover scale-110"
-              style={{ filter: 'blur(24px)', opacity: 0.3 }}
-            />
-            <div className="absolute inset-0 bg-film-black/50" />
-          </div>
-        )}
-
         {/* Track filmstrip: prev | current | next, centrata a -100% + dragX.
-            Trascinando, la card adiacente entra dal lato giusto seguendo il dito. */}
+            Ogni slide porta con sé lo sfondo sfocato e il badge, così durante lo
+            swipe l'INTERA vista scorre come un blocco unico (paging intuitivo). */}
         <div
           ref={trackRef}
           className="absolute inset-0 flex"
@@ -276,14 +263,7 @@ export function CardView({
           <PosterSlide item={nextItem} />
         </div>
 
-        {/* TMDB rating badge */}
-        {item.vote_average > 0 && (
-          <div className="absolute top-4 left-4 bg-film-black/70 backdrop-blur-sm px-2.5 py-1 rounded-xl pointer-events-none">
-            <span className="text-film-accent font-mono font-bold text-sm">★ {formatRating(item.vote_average)}</span>
-          </div>
-        )}
-
-        {/* Nav arrows */}
+        {/* Nav arrows — restano fissi sopra la track */}
         {canPrev && (
           <button onClick={() => goTo(index - 1)}
             className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 bg-film-black/60 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform">
@@ -387,18 +367,41 @@ function PosterSlide({ item }: { item: CardItem | null }) {
   if (!item) return <div className="w-full shrink-0" />;
   const poster = !err ? getImageUrl(item.poster_path, 'w500') : null;
   return (
-    <div className="w-full shrink-0 h-full flex items-center justify-center px-6 py-3">
-      {poster ? (
-        <img
-          src={poster}
-          alt={getTitle(item)}
-          className="max-h-full w-auto object-contain rounded-2xl shadow-2xl"
-          style={{ maxWidth: '80vw' }}
-          onError={() => setErr(true)}
-        />
-      ) : (
-        <div className="w-[60vw] aspect-[2/3] bg-film-surface rounded-2xl flex items-center justify-center text-6xl">
-          {item.media_type === 'tv' ? '📺' : '🎬'}
+    <div className="w-full shrink-0 h-full relative flex items-center justify-center overflow-hidden">
+      {/* Sfondo sfocato del poster — fa da cornice e scorre con la slide */}
+      {poster && (
+        <div className="absolute inset-0 pointer-events-none">
+          <img
+            src={poster}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover scale-110"
+            style={{ filter: 'blur(24px)', opacity: 0.3 }}
+          />
+          <div className="absolute inset-0 bg-film-black/50" />
+        </div>
+      )}
+
+      {/* Poster contenuto */}
+      <div className="relative flex items-center justify-center w-full h-full px-6 py-3">
+        {poster ? (
+          <img
+            src={poster}
+            alt={getTitle(item)}
+            className="max-h-full w-auto object-contain rounded-2xl shadow-2xl"
+            style={{ maxWidth: '86vw' }}
+            onError={() => setErr(true)}
+          />
+        ) : (
+          <div className="w-[60vw] aspect-[2/3] bg-film-surface rounded-2xl flex items-center justify-center text-6xl">
+            {item.media_type === 'tv' ? '📺' : '🎬'}
+          </div>
+        )}
+      </div>
+
+      {/* Rating badge specifico della slide */}
+      {item.vote_average > 0 && (
+        <div className="absolute top-4 left-4 bg-film-black/70 backdrop-blur-sm px-2.5 py-1 rounded-xl pointer-events-none">
+          <span className="text-film-accent font-mono font-bold text-sm">★ {formatRating(item.vote_average)}</span>
         </div>
       )}
     </div>
