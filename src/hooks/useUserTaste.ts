@@ -42,6 +42,8 @@ export interface UserProfile {
   topGenreIds: number[];
   // Generi che l'utente NON ha mai visto (per esplorazione)
   unseenGenreIds: number[];
+  // Generi visti più volte ma con voti bassi: da escludere dallo shuffle
+  dislikedGenreIds: number[];
   // Pesi decade: "1990s" → score 0–1
   decadeWeights: Record<string, number>;
   // Runtime: range preferito [min, max] in minuti
@@ -77,17 +79,33 @@ export function buildProfile(watchedMovies: WatchedMovie[]): UserProfile {
   if (count === 0) {
     return {
       genreWeights: {}, topGenreIds: [], unseenGenreIds: ALL_GENRE_IDS,
+      dislikedGenreIds: [],
       decadeWeights: {}, preferredRuntimeRange: null,
       languageWeights: {}, topLanguages: [],
       qualityThreshold: 6.0, watchedCount: 0, confidence: 0, phase: 'cold',
     };
   }
 
+  // ── Decay temporale ───────────────────────────────────────────
+  // I gusti cambiano: un film aggiunto di recente conta più di uno vecchio.
+  // Half-life di ~180 giorni, con un pavimento a 0.35 così lo storico
+  // non sparisce mai del tutto.
+  const now = Date.now();
+  const HALF_LIFE_DAYS = 180;
+  const recencyWeight = (addedAt: string): number => {
+    const t = Date.parse(addedAt);
+    if (Number.isNaN(t)) return 0.6; // dato mancante → peso medio
+    const ageDays = Math.max(0, (now - t) / 86_400_000);
+    return Math.max(0.35, Math.pow(0.5, ageDays / HALF_LIFE_DAYS));
+  };
+
   // ── Calcola peso per ogni genere ──────────────────────────────
   // Formula: media di (rating_score × liked_multiplier) per ogni film con quel genere
   // rating_score: personal_rating normalizzato 0–1, fallback a voto TMDB/10
   // liked_multiplier: 1.5 se liked, 1.0 altrimenti, 0.3 se votato basso (< 2.5)
-  const genreRaw: Record<number, { sum: number; count: number }> = {};
+  // sum/count sono pesati per recency; rawCount è il conteggio reale di film
+  // (serve per non penalizzare un genere visto una volta sola).
+  const genreRaw: Record<number, { sum: number; count: number; rawCount: number }> = {};
 
   for (const m of watchedMovies) {
     if (!m.genre_ids?.length) continue;
@@ -98,18 +116,20 @@ export function buildProfile(watchedMovies: WatchedMovie[]): UserProfile {
       : (m.personal_rating !== null && m.personal_rating < 2.5) ? 0.3
       : 1.0;
     const score = Math.min(1, personalScore * likedMult);
+    const w = recencyWeight(m.addedAt);
 
     for (const gid of m.genre_ids) {
-      if (!genreRaw[gid]) genreRaw[gid] = { sum: 0, count: 0 };
-      genreRaw[gid].sum += score;
-      genreRaw[gid].count += 1;
+      if (!genreRaw[gid]) genreRaw[gid] = { sum: 0, count: 0, rawCount: 0 };
+      genreRaw[gid].sum += score * w;
+      genreRaw[gid].count += w;
+      genreRaw[gid].rawCount += 1;
     }
   }
 
-  // Normalizza a 0–1
+  // Normalizza a 0–1 (media pesata)
   const genreAvg: Record<number, number> = {};
   for (const [id, { sum, count }] of Object.entries(genreRaw)) {
-    genreAvg[Number(id)] = sum / count;
+    genreAvg[Number(id)] = count > 0 ? sum / count : 0;
   }
   const maxG = Math.max(...Object.values(genreAvg), 0.01);
   const genreWeights: Record<number, number> = {};
@@ -123,6 +143,12 @@ export function buildProfile(watchedMovies: WatchedMovie[]): UserProfile {
 
   const seenGenreIds = new Set(Object.keys(genreRaw).map(Number));
   const unseenGenreIds = ALL_GENRE_IDS.filter(id => !seenGenreIds.has(id));
+
+  // Generi "sgraditi": visti almeno 2 volte ma con peso molto basso.
+  // Verranno esclusi a monte dalla query (without_genres) così non ricompaiono.
+  const dislikedGenreIds = Object.entries(genreRaw)
+    .filter(([id, { rawCount }]) => rawCount >= 2 && (genreWeights[Number(id)] ?? 0) < 0.15)
+    .map(([id]) => Number(id));
 
   // ── Calcola peso per decade ──────────────────────────────────
   const decadeRaw: Record<string, number> = {};
@@ -183,7 +209,7 @@ export function buildProfile(watchedMovies: WatchedMovie[]): UserProfile {
     : 5.5;
 
   return {
-    genreWeights, topGenreIds, unseenGenreIds,
+    genreWeights, topGenreIds, unseenGenreIds, dislikedGenreIds,
     decadeWeights, preferredRuntimeRange, languageWeights, topLanguages,
     qualityThreshold, watchedCount: count, confidence, phase,
   };
@@ -235,6 +261,13 @@ export function getQueryStrategy(
   const filters = { ...baseFilters };
   const userBase = { ...baseFilters }; // copia pulita da restituire
 
+  // Esclude a monte i generi sgraditi, ma SOLO se l'utente non ha scelto
+  // generi manualmente (in quel caso rispettiamo la sua volontà esplicita).
+  // I top-genere non sono mai tra i disliked, quindi nessun conflitto con
+  // with_genres nelle strategie genre_single/genre_multi.
+  const excludeDisliked = !baseFilters.genreIds?.length ? profile.dislikedGenreIds : [];
+  if (excludeDisliked.length) filters.withoutGenreIds = excludeDisliked;
+
   // La qualità viene gestita da scoreCandidates, NON dal filtro API.
   // Aggiungere minImdbRating qui restringe troppo il catalogo per utenti esperti.
 
@@ -264,9 +297,13 @@ export function getQueryStrategy(
 
     case 'explore': {
       // Suggerisci un genere che l'utente non ha mai visto
-      // o un genere "secondario" (pesi bassi) per espandere i gusti
+      // o un genere "secondario" (pesi bassi) per espandere i gusti.
+      // In esplorazione NON applichiamo l'esclusione dei disliked (sarebbe
+      // contraddittorio) e non proponiamo un genere apertamente sgradito.
+      delete filters.withoutGenreIds;
+      const disliked = new Set(profile.dislikedGenreIds);
       const lowWeightGenres = topGenreIds
-        .filter(id => (profile.genreWeights[id] ?? 0) < 0.4)
+        .filter(id => (profile.genreWeights[id] ?? 0) < 0.4 && !disliked.has(id))
         .slice(0, 5);
       const candidates = [...unseenGenreIds.slice(0, 10), ...lowWeightGenres];
       if (candidates.length > 0 && !filters.genreIds?.length) {

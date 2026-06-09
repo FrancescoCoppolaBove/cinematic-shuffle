@@ -135,6 +135,7 @@ export interface MovieFilters {
   year?: number;
   decade?: string;
   genreIds?: number[];
+  withoutGenreIds?: number[];      // generi da escludere (es. quelli votati basso)
   watchedStatus: 'all' | 'unwatched' | 'watched';
   actorIds?: number[];
   actorNames?: string[];

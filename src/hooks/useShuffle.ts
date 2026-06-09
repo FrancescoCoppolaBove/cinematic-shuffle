@@ -60,6 +60,7 @@ async function tmdbDiscover(
     'vote_count.gte': '10',
   });
   if (filters.genreIds?.length)      p.set('with_genres', filters.genreIds.join(','));
+  if (filters.withoutGenreIds?.length) p.set('without_genres', filters.withoutGenreIds.join(','));
   if (filters.minImdbRating)         p.set('vote_average.gte', String(filters.minImdbRating));
   if (filters.withProviders?.length) { p.set('with_watch_providers', filters.withProviders.join('|')); p.set('watch_region', 'IT'); }
   if (filters.actorIds?.length)      p.set('with_cast', filters.actorIds.join(','));
