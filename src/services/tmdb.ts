@@ -989,6 +989,29 @@ export async function fetchItalianProviders(): Promise<TMDBProvider[]> {
   }
 }
 
+// ─── Risoluzione titolo+anno → film TMDB (per le checklist canoniche) ───
+export interface ResolvedFilm { id: number; title: string; poster_path: string | null; release_date: string }
+
+export async function searchMovieByTitleYear(title: string, year: number): Promise<ResolvedFilm | null> {
+  try {
+    const res = await apiFetch<{ results: TMDBMovieBasic[] }>('/search/movie', {
+      query: title,
+      primary_release_year: String(year),
+    });
+    let pick = res.results?.[0] ?? null;
+    if (!pick) {
+      // Fallback senza vincolo d'anno: scegli il risultato con anno più vicino
+      const res2 = await apiFetch<{ results: TMDBMovieBasic[] }>('/search/movie', { query: title });
+      const cands = res2.results ?? [];
+      pick = cands
+        .map(m => ({ m, dy: Math.abs(parseInt((m.release_date ?? '0').slice(0, 4)) - year) }))
+        .sort((a, b) => a.dy - b.dy)[0]?.m ?? null;
+    }
+    if (!pick) return null;
+    return { id: pick.id, title: getTitle(pick), poster_path: pick.poster_path, release_date: pick.release_date };
+  } catch { return null; }
+}
+
 // ─── Crediti (registi + cast) per le statistiche del profilo ───────
 export interface CreditPerson { id: number; name: string; profile_path: string | null }
 export interface TitleCredits { directors: CreditPerson[]; cast: CreditPerson[] }

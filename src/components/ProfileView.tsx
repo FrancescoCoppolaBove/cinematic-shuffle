@@ -11,6 +11,7 @@ import { cn } from '../utils';
 import { WatchedView } from './WatchedView';
 import { TasteInsights } from './TasteInsights';
 import { ListsTab } from './ListsTab';
+import { CanonChecklists } from './CanonChecklists';
 import { PersonDetailScreen } from './PersonDetailScreen';
 import { fetchItalianProviders } from '../services/tmdb';
 
@@ -215,6 +216,12 @@ export function ProfileView({
           <TasteInsights
             watchedMovies={watchedMovies}
             onOpenPerson={(id, name) => setOpenPerson({ id, name })}
+          />
+
+          {/* Premi & Canoni — checklist completismo */}
+          <CanonChecklists
+            watchedIds={watchedIds}
+            onOpenMovie={(id, mt) => onOpenMovieGlobal(id, mt)}
           />
 
           {/* Connessioni — following/followers inline */}
