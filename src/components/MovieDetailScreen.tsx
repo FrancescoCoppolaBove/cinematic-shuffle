@@ -116,6 +116,9 @@ export function MovieDetailScreen({
   const [dragX, setDragX] = useState(0);
 
   const [isAnimating, setIsAnimating] = useState(false);
+  // Disabilita la transizione per un frame quando riposizioniamo la pagina
+  // fuori schermo prima di farla rientrare (evita salti visibili).
+  const [noTransition, setNoTransition] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -244,41 +247,32 @@ export function MovieDetailScreen({
     }
 
     const dx = activeDragX.current;
-    const threshold = 60; // px needed to commit
+    const vw = window.innerWidth;
+    const threshold = vw * 0.18; // ~18% della larghezza per confermare (come la card)
 
-    if (dx < -threshold && canGoNext) {
-      // Commit: quick snap left, swap content, snap back from right
+    // Slittamento pulito e direzionale: la pagina corrente esce completamente
+    // da un lato, poi la nuova entra dal lato opposto. Sempre la stessa
+    // direzione (sfogliare pagine), niente salto a metà.
+    const commit = (dir: 1 | -1) => {
       setIsAnimating(true);
-      setDragX(-window.innerWidth * 0.6); // fly partially off — faster
+      setDragX(dir === 1 ? -vw : vw); // esce: next→sinistra, prev→destra
       setTimeout(() => {
-        onSwipeToIndex!(playlistIndex + 1);
-        // Place new content coming in from the right
-        setDragX(window.innerWidth * 0.3);
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            setDragX(0); // animate to center
-            setTimeout(() => setIsAnimating(false), 220);
-          });
-        });
-      }, 180);
-    } else if (dx > threshold && canGoPrev) {
-      // Commit: quick snap right, swap content, snap back from left
-      setIsAnimating(true);
-      setDragX(window.innerWidth * 0.6);
-      setTimeout(() => {
-        onSwipeToIndex!(playlistIndex - 1);
-        setDragX(-window.innerWidth * 0.3);
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            setDragX(0);
-            setTimeout(() => setIsAnimating(false), 220);
-          });
-        });
-      }, 180);
-    } else {
-      // Snap back: spring return to center
-      setDragX(0);
-    }
+        onSwipeToIndex!(playlistIndex + dir);
+        // riposiziona la nuova pagina fuori schermo dal lato opposto, senza transizione
+        setNoTransition(true);
+        setDragX(dir === 1 ? vw : -vw);
+        if (scrollRef.current) scrollRef.current.scrollTop = 0;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          setNoTransition(false);
+          setDragX(0); // entra al centro con transizione
+          setTimeout(() => setIsAnimating(false), 300);
+        }));
+      }, 280);
+    };
+
+    if (dx <= -threshold && canGoNext) commit(1);
+    else if (dx >= threshold && canGoPrev) commit(-1);
+    else setDragX(0); // sotto soglia → molla al centro
 
     touchStartX.current = null;
     touchStartY.current = null;
@@ -286,13 +280,13 @@ export function MovieDetailScreen({
     activeDragX.current = 0;
   }, [hasPlaylist, canGoNext, canGoPrev, onSwipeToIndex, playlistIndex]);
 
-  // CSS transition string:
-  // - During drag: no transition (follows finger instantly)
-  // - On release: spring-like cubic-bezier for snap-back or commit
+  // CSS transition:
+  // - durante il drag o il riposizionamento: nessuna transizione (segue il dito / salto invisibile)
+  // - al rilascio: molla morbida per snap-back e per il commit
   const isBeingDragged = swipeLocked.current === 'horizontal' && dragX !== 0;
-  const transitionStyle = isBeingDragged
+  const transitionStyle = (isBeingDragged || noTransition)
     ? 'none'
-    : 'transform 220ms cubic-bezier(0.33, 1, 0.68, 1)'; // snappier ease-out
+    : 'transform 300ms cubic-bezier(0.22, 1, 0.36, 1)';
 
   return (
     <div
