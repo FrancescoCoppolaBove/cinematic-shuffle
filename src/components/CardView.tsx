@@ -4,6 +4,7 @@
  * Rate apre solo le stelle (no dialog completa).
  */
 import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Eye, Heart, Star, Bookmark, BookmarkCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { TMDBMovieDetail } from '../types';
 import { getImageUrl, getMovieDetail, getTitle, getReleaseDate } from '../services/tmdb';
@@ -178,9 +179,9 @@ export function CardView({
   const isDragged = swipeLocked.current === 'h' && dragX !== 0;
   const transition = isDragged ? 'none' : 'transform 260ms cubic-bezier(0.25,0.46,0.45,0.94)';
 
-  return (
+  return createPortal((
     <div
-      className="fixed inset-0 z-[85] bg-film-black flex flex-col"
+      className="fixed inset-0 z-[95] bg-film-black flex flex-col"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       {/* ── Header ── */}
@@ -211,24 +212,39 @@ export function CardView({
 
       {/* ── Poster area ── */}
       <div
-        className="flex-1 min-h-0 px-4 py-2 relative"
+        className="flex-1 min-h-0 relative flex items-center justify-center overflow-hidden"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
+        {/* Blurred poster backdrop — cornice stile Letterboxd */}
+        {poster && (
+          <div className="absolute inset-0 pointer-events-none">
+            <img
+              src={poster}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover scale-110"
+              style={{ filter: 'blur(24px)', opacity: 0.3 }}
+            />
+            <div className="absolute inset-0 bg-film-black/50" />
+          </div>
+        )}
+
+        {/* Poster contenuto, centrato, con margini visibili */}
         <div
-          className="w-full h-full"
+          className="relative flex items-center justify-center w-full h-full px-6 py-3"
           style={{ transform: dragX ? `translateX(${dragX}px)` : 'none', transition }}
         >
           {poster ? (
             <img
               src={poster}
               alt={title}
-              className="w-full h-full object-contain rounded-2xl"
+              className="max-h-full w-auto object-contain rounded-2xl shadow-2xl"
+              style={{ maxWidth: '80vw' }}
               onError={() => setImgErr(true)}
             />
           ) : (
-            <div className="w-full h-full bg-film-surface rounded-2xl flex items-center justify-center text-6xl">
+            <div className="w-[60vw] aspect-[2/3] bg-film-surface rounded-2xl flex items-center justify-center text-6xl">
               {item.media_type === 'tv' ? '📺' : '🎬'}
             </div>
           )}
@@ -236,7 +252,7 @@ export function CardView({
 
         {/* TMDB rating badge */}
         {item.vote_average > 0 && (
-          <div className="absolute top-4 left-7 bg-film-black/70 backdrop-blur-sm px-2.5 py-1 rounded-xl pointer-events-none">
+          <div className="absolute top-4 left-4 bg-film-black/70 backdrop-blur-sm px-2.5 py-1 rounded-xl pointer-events-none">
             <span className="text-film-accent font-mono font-bold text-sm">★ {formatRating(item.vote_average)}</span>
           </div>
         )}
@@ -244,13 +260,13 @@ export function CardView({
         {/* Nav arrows */}
         {canPrev && (
           <button onClick={() => goTo(index - 1)}
-            className="absolute left-5 top-1/2 -translate-y-1/2 w-11 h-11 bg-film-black/60 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform">
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 bg-film-black/60 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform">
             <ChevronLeft size={20} className="text-white" />
           </button>
         )}
         {canNext && (
           <button onClick={() => goTo(index + 1)}
-            className="absolute right-5 top-1/2 -translate-y-1/2 w-11 h-11 bg-film-black/60 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform">
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 bg-film-black/60 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform">
             <ChevronRight size={20} className="text-white" />
           </button>
         )}
@@ -335,7 +351,7 @@ export function CardView({
         )}
       </div>
     </div>
-  );
+  ), document.body);
 }
 
 // ── Inline star rating (swipe/touch, no modal) ───────────────────
