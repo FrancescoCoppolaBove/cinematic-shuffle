@@ -42,6 +42,7 @@ export function PersonDetailScreen({
   const [innerMovie, setInnerMovie] = useState<{id: number; mediaType: 'movie'|'tv'} | null>(null);
   const [expandBio, setExpandBio] = useState(false);
   const [onlyUnseen, setOnlyUnseen] = useState(false);
+  const [mediaFilter, setMediaFilter] = useState<'all' | 'movie' | 'tv'>('all');
 
   useEffect(() => {
     setLoading(true);
@@ -73,7 +74,9 @@ export function PersonDetailScreen({
   const primaryWatched = primaryCredits.filter(m => watchedIds.has(m.id)).length;
   const primaryPct = primaryCredits.length ? Math.round((primaryWatched / primaryCredits.length) * 100) : 0;
   const primaryLabel = isDirector ? 'Filmografia da regista' : 'Filmografia da attore';
-  const unseenFilter = (m: { id: number }) => !onlyUnseen || !watchedIds.has(m.id);
+  const passesFilters = (m: { id: number; media_type: 'movie' | 'tv' }) =>
+    (!onlyUnseen || !watchedIds.has(m.id)) &&
+    (mediaFilter === 'all' || m.media_type === mediaFilter);
 
   return (
     <div
@@ -180,15 +183,32 @@ export function PersonDetailScreen({
                 watchedBadge={watchedCrewCount}
               />
             </div>
-            <button
-              onClick={() => setOnlyUnseen(v => !v)}
-              className={cn(
-                'text-xs px-3 py-1.5 rounded-full border transition-colors',
-                onlyUnseen ? 'bg-film-accent text-film-black border-film-accent' : 'bg-film-surface text-film-muted border-film-border'
-              )}
-            >
-              {onlyUnseen ? '✓ ' : ''}Solo da recuperare
-            </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Segmentato tipo */}
+              <div className="flex gap-1 bg-film-surface border border-film-border rounded-full p-0.5">
+                {([['all', 'Tutti'], ['movie', 'Film'], ['tv', 'Serie']] as const).map(([val, label]) => (
+                  <button
+                    key={val}
+                    onClick={() => setMediaFilter(val)}
+                    className={cn(
+                      'px-3 py-1 rounded-full text-xs font-medium transition-colors',
+                      mediaFilter === val ? 'bg-film-accent text-film-black' : 'text-film-muted'
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setOnlyUnseen(v => !v)}
+                className={cn(
+                  'text-xs px-3 py-1.5 rounded-full border transition-colors',
+                  onlyUnseen ? 'bg-film-accent text-film-black border-film-accent' : 'bg-film-surface text-film-muted border-film-border'
+                )}
+              >
+                {onlyUnseen ? '✓ ' : ''}Solo da recuperare
+              </button>
+            </div>
           </div>
 
           {/* Cast list */}
@@ -206,7 +226,7 @@ export function PersonDetailScreen({
                 <p className="text-film-muted text-sm py-4 text-center">Nessun credito come attore</p>
               ) : (
                 <div className="grid grid-cols-3 gap-2">
-                  {credits.cast.filter(unseenFilter).map(m => (
+                  {credits.cast.filter(passesFilters).map(m => (
                     <CreditPoster
                       key={`cast-${m.id}`}
                       movie={m}
@@ -241,7 +261,7 @@ export function PersonDetailScreen({
                         {watched > 0 && <span className="text-green-400 text-xs">· {watched} visti</span>}
                       </div>
                       <div className="grid grid-cols-3 gap-2">
-                        {movies.filter(unseenFilter).map(m => (
+                        {movies.filter(passesFilters).map(m => (
                           <CreditPoster
                             key={`crew-${m.id}`}
                             movie={m}

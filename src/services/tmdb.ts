@@ -722,6 +722,8 @@ export interface TMDBPersonCreditMovie {
   media_type: 'movie' | 'tv';
   original_title?: string;
   original_name?: string;
+  genre_ids?: number[];
+  episode_count?: number;
 }
 
 export interface TMDBPersonCredits {
@@ -738,9 +740,22 @@ export async function getPersonCredits(personId: number): Promise<TMDBPersonCred
   const data = await apiFetch<{ cast: (TMDBPersonCreditMovie & { media_type: string })[]; crew: (TMDBPersonCreditMovie & { media_type: string })[] }>(
     `/person/${personId}/combined_credits`
   );
-  // Filtra SOLO film e serie TV — escludi episodi, stagioni, cortometraggi TV, ecc.
-  const isValidMedia = (m: { media_type: string; vote_count?: number; popularity?: number }) => {
+  // Generi "rumore" TV: talk show, news, reality, soap — non sono opere di
+  // finzione/documentari rilevanti per una filmografia.
+  const NOISE_GENRES = new Set([10763, 10764, 10766, 10767]);
+
+  // Tieni SOLO film e serie TV rilevanti: film, serie, documentari; escludi
+  // talk/news/reality e le apparizioni "come se stesso" fuori dai documentari.
+  const isValidMedia = (m: TMDBPersonCreditMovie & { media_type: string }) => {
     if (m.media_type !== 'movie' && m.media_type !== 'tv') return false;
+    const genres = m.genre_ids ?? [];
+    if (genres.some(g => NOISE_GENRES.has(g))) return false;
+    const ch = (m.character ?? '').toLowerCase();
+    const isSelf = ch === 'self' || ch.startsWith('self ') || ch.startsWith('self -')
+      || ch.includes('(self)') || ch.includes('himself') || ch.includes('herself')
+      || ch.includes('archive footage');
+    const isDoc = genres.includes(99);
+    if (isSelf && !isDoc) return false;
     return true;
   };
 
