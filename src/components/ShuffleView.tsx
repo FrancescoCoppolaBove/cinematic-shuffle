@@ -51,6 +51,22 @@ const MOODS: Mood[] = [
   { id: 'famiglia', emoji: '👨‍👩‍👧', label: 'In famiglia',  genreIds: [10751, 16] },
 ];
 
+// Confronta i SOLI campi che una chip mood imposta. Se questi combaciano
+// ancora coi filtri correnti, la chip resta selezionata; altrimenti no.
+// Così cambiare visti/non visti, anno, piattaforme ecc. NON la deseleziona.
+function sameGenres(a?: number[], b?: number[]) {
+  const aa = a ?? [], bb = b ?? [];
+  if (aa.length !== bb.length) return false;
+  const set = new Set(aa);
+  return bb.every(x => set.has(x));
+}
+function moodStillMatches(mood: Mood, f: MovieFilters) {
+  return sameGenres(f.genreIds, mood.genreIds)
+    && (f.minRuntime ?? undefined) === (mood.minRuntime ?? undefined)
+    && (f.maxRuntime ?? undefined) === (mood.maxRuntime ?? undefined)
+    && (f.minImdbRating ?? undefined) === (mood.minRating ?? undefined);
+}
+
 export function ShuffleView({
   watchedIds, watchlistIds, watchedMovies,
   onMarkWatched, onUnmarkWatched, onUpdateRating,
@@ -84,6 +100,16 @@ export function ShuffleView({
     (filters.withProviders?.length || 0) > 0,
     filters.withAwards,
   ].filter(Boolean).length;
+
+  // Aggiorna i filtri e deseleziona la chip mood SOLO se la modifica entra in
+  // conflitto coi campi che la chip aveva impostato.
+  function applyFilters(next: MovieFilters) {
+    setFilters(next);
+    if (activeMood) {
+      const mood = MOODS.find(m => m.id === activeMood);
+      if (mood && !moodStillMatches(mood, next)) setActiveMood(null);
+    }
+  }
 
   function runShuffle(f: MovieFilters, exploreMode = false) {
     const strategyResult = getStrategyAndFilters(f, exploreMode);
@@ -147,7 +173,7 @@ export function ShuffleView({
             {(['movie', 'tv', 'both'] as MediaType[]).map(mt => (
               <button
                 key={mt}
-                onClick={() => { setActiveMood(null); setFilters(f => ({ ...f, mediaType: mt, genreIds: [], year: undefined, decade: undefined })); }}
+                onClick={() => applyFilters({ ...filters, mediaType: mt, genreIds: [], year: undefined, decade: undefined })}
                 className={cn(
                   'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all',
                   filters.mediaType === mt
@@ -218,7 +244,7 @@ export function ShuffleView({
       {/* Filter panel — slides in below top bar */}
       {showFilters && (
         <div className="shrink-0 px-4 pb-2 overflow-y-auto max-h-[40vh] animate-slide-up" style={{ overscrollBehavior: 'contain' }}>
-          <FilterPanel filters={filters} onChange={(f) => { setActiveMood(null); setFilters(f); }} />
+          <FilterPanel filters={filters} onChange={applyFilters} />
         </div>
       )}
 
