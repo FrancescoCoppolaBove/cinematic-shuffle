@@ -119,6 +119,10 @@ export function MovieDetailScreen({
   // Disabilita la transizione per un frame quando riposizioniamo la pagina
   // fuori schermo prima di farla rientrare (evita salti visibili).
   const [noTransition, setNoTransition] = useState(false);
+  // Spinner mostrato mentre il nuovo film viene caricato durante lo swipe.
+  const [spinning, setSpinning] = useState(false);
+  // Direzione del commit in corso (1 = avanti, -1 = indietro), null se nessuno.
+  const pendingDir = useRef<1 | -1 | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -250,24 +254,18 @@ export function MovieDetailScreen({
     const vw = window.innerWidth;
     const threshold = vw * 0.18; // ~18% della larghezza per confermare (come la card)
 
-    // Slittamento pulito e direzionale: la pagina corrente esce completamente
-    // da un lato, poi la nuova entra dal lato opposto. Sempre la stessa
-    // direzione (sfogliare pagine), niente salto a metà.
+    // Sequenza "bloccata": la pagina corrente esce completamente da un lato,
+    // compare uno spinner, e quando il nuovo film è pronto entra dal lato
+    // opposto (gestito dall'effetto su movie.id qui sotto).
     const commit = (dir: 1 | -1) => {
       setIsAnimating(true);
+      pendingDir.current = dir;
       setDragX(dir === 1 ? -vw : vw); // esce: next→sinistra, prev→destra
-      setTimeout(() => {
-        onSwipeToIndex!(playlistIndex + dir);
-        // riposiziona la nuova pagina fuori schermo dal lato opposto, senza transizione
-        setNoTransition(true);
-        setDragX(dir === 1 ? vw : -vw);
+      window.setTimeout(() => {
+        setSpinning(true);
         if (scrollRef.current) scrollRef.current.scrollTop = 0;
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-          setNoTransition(false);
-          setDragX(0); // entra al centro con transizione
-          setTimeout(() => setIsAnimating(false), 300);
-        }));
-      }, 280);
+        onSwipeToIndex!(playlistIndex + dir);
+      }, 300);
     };
 
     if (dx <= -threshold && canGoNext) commit(1);
@@ -280,6 +278,24 @@ export function MovieDetailScreen({
     activeDragX.current = 0;
   }, [hasPlaylist, canGoNext, canGoPrev, onSwipeToIndex, playlistIndex]);
 
+  // Quando il nuovo film è caricato (movie.id cambia dopo un commit), lo facciamo
+  // entrare dal lato opposto con una transizione pulita.
+  useEffect(() => {
+    if (pendingDir.current === null) return;
+    const dir = pendingDir.current;
+    pendingDir.current = null;
+    const vw = window.innerWidth;
+    setNoTransition(true);
+    setDragX(dir === 1 ? vw : -vw); // parte fuori schermo dal lato opposto
+    const raf = requestAnimationFrame(() => requestAnimationFrame(() => {
+      setNoTransition(false);
+      setSpinning(false);
+      setDragX(0); // entra al centro
+      window.setTimeout(() => setIsAnimating(false), 300);
+    }));
+    return () => cancelAnimationFrame(raf);
+  }, [movie.id]);
+
   // CSS transition:
   // - durante il drag o il riposizionamento: nessuna transizione (segue il dito / salto invisibile)
   // - al rilascio: molla morbida per snap-back e per il commit
@@ -288,11 +304,35 @@ export function MovieDetailScreen({
     ? 'none'
     : 'transform 300ms cubic-bezier(0.22, 1, 0.36, 1)';
 
+  // Mostra lo sfondo sfocato solo durante swipe/transizione (altrimenti è
+  // coperto dal contenuto): evita il nero ai lati e dà profondità cinematografica.
+  const showBackdropLayer = dragX !== 0 || isAnimating || spinning;
+
   return (
     <div
       className="fixed left-0 right-0 z-[80] bg-film-black"
       style={{ top: 0, bottom: 0, isolation: 'isolate' }}
     >
+      {/* ── Sfondo sfocato (dietro), visibile ai bordi mentre si scorre ── */}
+      {showBackdropLayer && (backdrop || poster) && (
+        <div className="absolute inset-0 pointer-events-none">
+          <img
+            src={(backdrop || poster) as string}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover scale-110"
+            style={{ filter: 'blur(28px)', opacity: 0.35 }}
+          />
+          <div className="absolute inset-0 bg-film-black/60" />
+        </div>
+      )}
+
+      {/* ── Spinner durante il caricamento del nuovo film ── */}
+      {spinning && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+          <div className="w-10 h-10 border-2 border-film-accent border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+
       {/* ── Scrollable + swipeable content wrapper ── */}
       <div
         ref={scrollRef}
@@ -300,7 +340,7 @@ export function MovieDetailScreen({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className="h-full overflow-y-auto"
+        className="relative h-full overflow-y-auto"
         style={{ paddingBottom: 'var(--nav-h, 60px)', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
       >
         {/* This inner div is what physically moves during swipe */}
