@@ -229,11 +229,16 @@ export function MovieDetailScreen({
     if (swipeLocked.current === 'horizontal') {
       e.preventDefault();
 
-      // Resistance at the edges: if swiping left at first item or right at last, add rubber band
+      const vw = window.innerWidth;
       let resistedDx = dx;
       if ((dx > 0 && !canGoPrev) || (dx < 0 && !canGoNext)) {
-        // Rubber band: sqrt dampening makes it feel elastic
+        // Bordi (nessun film prima/dopo): forte resistenza elastica
         resistedDx = Math.sign(dx) * Math.sqrt(Math.abs(dx)) * 8;
+      } else {
+        // Trascinamento "bloccato": segue il dito ma si ferma al ~28% della
+        // larghezza, così la striscia laterale resta piccola e controllata.
+        const cap = vw * 0.28;
+        resistedDx = Math.sign(dx) * Math.min(Math.abs(dx), cap);
       }
 
       activeDragX.current = resistedDx;
@@ -320,9 +325,9 @@ export function MovieDetailScreen({
             src={(backdrop || poster) as string}
             alt=""
             className="absolute inset-0 w-full h-full object-cover scale-110"
-            style={{ filter: 'blur(28px)', opacity: 0.35 }}
+            style={{ filter: 'blur(28px)', opacity: 0.45 }}
           />
-          <div className="absolute inset-0 bg-film-black/60" />
+          <div className="absolute inset-0 bg-film-black/45" />
         </div>
       )}
 
@@ -343,9 +348,12 @@ export function MovieDetailScreen({
         className="relative h-full overflow-y-auto"
         style={{ paddingBottom: 'var(--nav-h, 60px)', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
       >
-        {/* This inner div is what physically moves during swipe */}
+        {/* This inner div is what physically moves during swipe.
+            bg-film-black opaco: scorrendo, ai lati appare lo sfondo sfocato
+            (dietro) e mai il vuoto trasparente. */}
         <div
           ref={contentRef}
+          className="bg-film-black"
           style={{
             transform: dragX !== 0 ? `translateX(${dragX}px)` : 'translateX(0)',
             transition: transitionStyle,
