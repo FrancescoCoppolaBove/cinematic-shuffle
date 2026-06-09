@@ -9,6 +9,7 @@ import type { WatchedMovie, WatchlistItem, TMDBMovieDetail } from '../types';
 import type { PlaylistItem } from '../hooks/useNavigationStack';
 import { cn } from '../utils';
 import { WatchedView } from './WatchedView';
+import { TasteInsights } from './TasteInsights';
 import { fetchItalianProviders } from '../services/tmdb';
 
 import { WatchlistView } from './WatchlistView';
@@ -197,6 +198,9 @@ export function ProfileView({
             />
             <StatPill icon={<RotateCcw size={14} />} label="Rewatch" value={rewatched.length} color="text-orange-400" />
           </div>
+
+          {/* Ritratto cinefilo / insights */}
+          <TasteInsights watchedMovies={watchedMovies} />
 
           {/* Connessioni — following/followers inline */}
           <div className="border border-film-border rounded-2xl overflow-hidden">
