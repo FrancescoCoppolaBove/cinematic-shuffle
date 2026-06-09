@@ -225,7 +225,15 @@ export function ProfileView({
           {/* Premi & Canoni — checklist completismo */}
           <CanonChecklists
             watchedIds={watchedIds}
-            onOpenMovie={(id, mt) => onOpenMovieGlobal(id, mt)}
+            watchlistIds={watchlistIds}
+            likedIds={likedIds}
+            getPersonalRating={getPersonalRating}
+            onMarkWatched={onMarkWatched}
+            onUnmarkWatched={onUnmarkWatched}
+            onUpdateRating={onUpdateRating}
+            onToggleLiked={onToggleLiked}
+            onAddToWatchlist={onAddToWatchlist}
+            onRemoveFromWatchlist={onRemoveFromWatchlist}
           />
 
           {/* Import da Letterboxd */}

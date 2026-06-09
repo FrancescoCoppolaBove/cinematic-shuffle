@@ -9,14 +9,28 @@ import { Award, ChevronLeft, ChevronDown } from 'lucide-react';
 import { CANON_LISTS, type CanonList } from '../data/canonLists';
 import { useCanonList } from '../hooks/useCanonList';
 import { getImageUrl } from '../services/tmdb';
+import { InnerMovieDetail } from './InnerMovieDetail';
+import type { TMDBMovieDetail } from '../types';
 import { cn } from '../utils';
 
-interface Props {
-  watchedIds: Set<number>;
-  onOpenMovie: (id: number, mt: 'movie' | 'tv') => void;
+// Callback necessari per aprire il dettaglio del film dentro la lista.
+export interface CanonMovieActions {
+  watchlistIds: Set<number>;
+  likedIds: Set<number>;
+  getPersonalRating: (id: number) => number | null;
+  onMarkWatched: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
+  onUnmarkWatched: (id: number) => Promise<void>;
+  onUpdateRating: (id: number, rating: number | null) => Promise<void>;
+  onToggleLiked: (id: number) => Promise<void>;
+  onAddToWatchlist: (movie: TMDBMovieDetail) => Promise<void>;
+  onRemoveFromWatchlist: (id: number) => Promise<void>;
 }
 
-export function CanonChecklists({ watchedIds, onOpenMovie }: Props) {
+interface Props extends CanonMovieActions {
+  watchedIds: Set<number>;
+}
+
+export function CanonChecklists({ watchedIds, ...actions }: Props) {
   const [open, setOpen] = useState(false);
   const [openList, setOpenList] = useState<CanonList | null>(null);
 
@@ -42,7 +56,7 @@ export function CanonChecklists({ watchedIds, onOpenMovie }: Props) {
         <CanonListScreen
           list={openList}
           watchedIds={watchedIds}
-          onOpenMovie={(id, mt) => { setOpenList(null); onOpenMovie(id, mt); }}
+          actions={actions}
           onBack={() => setOpenList(null)}
         />
       )}
@@ -74,12 +88,12 @@ function CanonCard({ list, watchedIds, onClick }: {
   );
 }
 
-function CanonListScreen({ list, watchedIds, onOpenMovie, onBack }: {
-  list: CanonList; watchedIds: Set<number>;
-  onOpenMovie: (id: number, mt: 'movie' | 'tv') => void; onBack: () => void;
+function CanonListScreen({ list, watchedIds, actions, onBack }: {
+  list: CanonList; watchedIds: Set<number>; actions: CanonMovieActions; onBack: () => void;
 }) {
   const { entries, watchedCount, total, loading, progress } = useCanonList(list, watchedIds);
   const [onlyUnseen, setOnlyUnseen] = useState(false);
+  const [innerMovie, setInnerMovie] = useState<number | null>(null);
   const pct = total > 0 ? Math.round((watchedCount / total) * 100) : 0;
 
   const visible = entries.filter(e => e.resolved && (!onlyUnseen || !watchedIds.has(e.resolved!.id)));
@@ -132,7 +146,7 @@ function CanonListScreen({ list, watchedIds, onOpenMovie, onBack }: {
             const isWatched = watchedIds.has(r.id);
             const poster = getImageUrl(r.poster_path, 'w342');
             return (
-              <button key={e.key} onClick={() => onOpenMovie(r.id, 'movie')}
+              <button key={e.key} onClick={() => setInnerMovie(r.id)}
                 className="relative aspect-[2/3] rounded-xl overflow-hidden border border-film-border bg-film-card active:scale-[0.97] transition-transform text-left">
                 {poster
                   ? <img src={poster} alt={r.title} className={cn('w-full h-full object-cover', isWatched && 'opacity-40 grayscale')} />
@@ -156,6 +170,25 @@ function CanonListScreen({ list, watchedIds, onOpenMovie, onBack }: {
           </p>
         )}
       </div>
+
+      {/* Dettaglio film SOPRA la lista — il back torna alla lista */}
+      {innerMovie !== null && (
+        <InnerMovieDetail
+          id={innerMovie}
+          mediaType="movie"
+          watchedIds={watchedIds}
+          watchlistIds={actions.watchlistIds}
+          likedIds={actions.likedIds}
+          getPersonalRating={actions.getPersonalRating}
+          onMarkWatched={actions.onMarkWatched}
+          onUnmarkWatched={actions.onUnmarkWatched}
+          onUpdateRating={actions.onUpdateRating}
+          onToggleLiked={actions.onToggleLiked}
+          onAddToWatchlist={actions.onAddToWatchlist}
+          onRemoveFromWatchlist={actions.onRemoveFromWatchlist}
+          onBack={() => setInnerMovie(null)}
+        />
+      )}
     </div>
   ), document.body);
 }
