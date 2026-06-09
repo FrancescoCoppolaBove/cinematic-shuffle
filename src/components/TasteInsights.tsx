@@ -1,56 +1,65 @@
 /**
  * TasteInsights — il "ritratto cinefilo" dell'utente, stile Wrapped.
- * Tutto calcolato in locale dai film già segnati come visti: generi top,
- * decade e cinematografia preferite, ore guardate, attività dell'anno.
- * Read-only: nessuna chiamata di rete.
+ * Generi top, decade/lingua preferite, ore guardate, classifiche di registi e
+ * attori più visti (crediti recuperati da TMDB con cache) e un'etichetta di gusto.
  */
 import { useMemo } from 'react';
-import { Clapperboard, Globe, CalendarRange, Clock, TrendingUp } from 'lucide-react';
+import {
+  Clapperboard, Globe, CalendarRange, Clock, TrendingUp, Megaphone, Users, Sparkles,
+} from 'lucide-react';
 import type { WatchedMovie } from '../types';
 import { TMDB_MOVIE_GENRES, TMDB_TV_GENRES, COMMON_LANGUAGES } from '../types';
+import { getImageUrl, getPersonName } from '../services/tmdb';
+import { useWatchedCredits, type RankedPerson } from '../hooks/useWatchedCredits';
 import { cn } from '../utils';
 
 const GENRE_NAME = new Map<number, string>(
   [...TMDB_MOVIE_GENRES, ...TMDB_TV_GENRES].map(g => [g.id, g.name])
 );
-
 const LANG_NAME = new Map<string, string>(
   COMMON_LANGUAGES.map(l => [l.code, l.name.replace(/\s*\(.*\)/, '')])
 );
 
+// Etichetta "tipo di cinefilo" in base al genere dominante
+const TASTE_LABEL: Record<number, string> = {
+  28: 'Adrenalina pura', 12: 'Avventuriero', 16: 'Sognatore animato',
+  35: 'Spirito leggero', 80: 'Detective nato', 99: 'Mente curiosa',
+  18: 'Cuore drammatico', 10751: 'Anima di famiglia', 14: 'Sognatore fantasy',
+  36: 'Viaggiatore nel tempo', 27: 'Anima dark', 10402: 'Anima musicale',
+  9648: 'Investigatore', 10749: 'Inguaribile romantico', 878: 'Esploratore di mondi',
+  53: 'Amante del brivido', 10752: 'Stratega', 37: 'Spirito di frontiera',
+};
+
 function decadeLabel(decade: string): string {
-  // "1990s" → "Anni '90", "2000s" → "Anni 2000"
   const start = parseInt(decade);
   if (Number.isNaN(start)) return decade;
   return start >= 2000 ? `Anni ${start}` : `Anni '${String(start).slice(2)}`;
 }
 
 export function TasteInsights({ watchedMovies }: { watchedMovies: WatchedMovie[] }) {
+  const { topDirectors, topActors, loading: creditsLoading } = useWatchedCredits(watchedMovies);
+
   const stats = useMemo(() => {
     if (watchedMovies.length === 0) return null;
 
-    // Solo i film apprezzati definiscono il "gusto"; se non ce ne sono ancora,
-    // ripieghiamo su tutti i visti per non lasciare la card vuota.
     const liked = watchedMovies.filter(
       m => m.liked || (m.personal_rating !== null && m.personal_rating >= 3.5)
     );
     const taste = liked.length >= 3 ? liked : watchedMovies;
 
-    // Top generi
+    // Generi (conteggio su tutti i film, per avere abbastanza dati per 10)
     const genreCount = new Map<number, number>();
     for (const m of taste) {
-      for (const g of m.genre_ids ?? []) {
-        genreCount.set(g, (genreCount.get(g) ?? 0) + 1);
-      }
+      for (const g of m.genre_ids ?? []) genreCount.set(g, (genreCount.get(g) ?? 0) + 1);
     }
     const topGenres = [...genreCount.entries()]
       .filter(([id]) => GENRE_NAME.has(id))
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 4)
-      .map(([id, n]) => ({ name: GENRE_NAME.get(id)!, count: n }));
+      .slice(0, 10)
+      .map(([id, n]) => ({ id, name: GENRE_NAME.get(id)!, count: n }));
     const maxGenre = topGenres[0]?.count ?? 1;
 
-    // Decade preferita
+    // Decade
     const decadeCount = new Map<string, number>();
     for (const m of taste) {
       const year = parseInt(m.release_date?.slice(0, 4) ?? '0');
@@ -60,29 +69,28 @@ export function TasteInsights({ watchedMovies }: { watchedMovies: WatchedMovie[]
     }
     const topDecade = [...decadeCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
 
-    // Cinematografia (lingua) preferita
+    // Lingua
     const langCount = new Map<string, number>();
     for (const m of taste) {
-      if (!m.original_language) continue;
-      langCount.set(m.original_language, (langCount.get(m.original_language) ?? 0) + 1);
+      if (m.original_language) langCount.set(m.original_language, (langCount.get(m.original_language) ?? 0) + 1);
     }
     const topLangEntry = [...langCount.entries()].sort((a, b) => b[1] - a[1])[0];
-    const topLang = topLangEntry
-      ? (LANG_NAME.get(topLangEntry[0]) ?? topLangEntry[0].toUpperCase())
-      : null;
+    const topLang = topLangEntry ? (LANG_NAME.get(topLangEntry[0]) ?? topLangEntry[0].toUpperCase()) : null;
 
-    // Ore guardate (solo film con runtime nota)
+    // Ore guardate
     const totalMinutes = watchedMovies.reduce((s, m) => s + (m.runtime ?? 0), 0);
     const totalHours = Math.round(totalMinutes / 60);
 
-    // Attività dell'anno corrente (per data di aggiunta)
+    // Attività anno corrente
     const thisYear = new Date().getFullYear();
     const thisYearCount = watchedMovies.filter(m => {
       const t = Date.parse(m.addedAt);
       return !Number.isNaN(t) && new Date(t).getFullYear() === thisYear;
     }).length;
 
-    return { topGenres, maxGenre, topDecade, topLang, totalHours, thisYear, thisYearCount };
+    const tasteLabel = topGenres[0] ? (TASTE_LABEL[topGenres[0].id] ?? 'Cinefilo eclettico') : null;
+
+    return { topGenres, maxGenre, topDecade, topLang, totalHours, thisYear, thisYearCount, tasteLabel };
   }, [watchedMovies]);
 
   if (!stats || stats.topGenres.length === 0) return null;
@@ -94,7 +102,18 @@ export function TasteInsights({ watchedMovies }: { watchedMovies: WatchedMovie[]
         <h2 className="text-film-text text-sm font-semibold tracking-wide">Il tuo ritratto cinefilo</h2>
       </div>
 
-      {/* Generi preferiti con barre */}
+      {/* Etichetta di gusto */}
+      {stats.tasteLabel && (
+        <div className="bg-gradient-to-r from-film-accent/20 to-transparent border border-film-accent/30 rounded-2xl px-4 py-3 flex items-center gap-3">
+          <Sparkles size={18} className="text-film-accent shrink-0" />
+          <div>
+            <p className="text-film-subtle text-[10px] uppercase tracking-widest">Sei un</p>
+            <p className="text-film-text font-display text-lg tracking-wide leading-tight">{stats.tasteLabel}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Generi preferiti (fino a 10) */}
       <div className="bg-film-surface border border-film-border rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <Clapperboard size={14} className="text-film-accent" />
@@ -102,9 +121,11 @@ export function TasteInsights({ watchedMovies }: { watchedMovies: WatchedMovie[]
         </div>
         <div className="space-y-2.5">
           {stats.topGenres.map((g, i) => (
-            <div key={g.name}>
+            <div key={g.id}>
               <div className="flex justify-between text-xs mb-1">
-                <span className={cn('font-medium', i === 0 ? 'text-film-accent' : 'text-film-text')}>{g.name}</span>
+                <span className={cn('font-medium', i === 0 ? 'text-film-accent' : 'text-film-text')}>
+                  <span className="text-film-subtle mr-1.5">{i + 1}</span>{g.name}
+                </span>
                 <span className="text-film-subtle">{g.count}</span>
               </div>
               <div className="h-1.5 rounded-full bg-film-card overflow-hidden">
@@ -118,26 +139,39 @@ export function TasteInsights({ watchedMovies }: { watchedMovies: WatchedMovie[]
         </div>
       </div>
 
-      {/* Tre tessere: decade, lingua, ore */}
+      {/* Tessere: decade, lingua, ore */}
       <div className="grid grid-cols-3 gap-2">
-        <InsightTile
-          icon={<CalendarRange size={14} />}
-          label="Decade"
-          value={stats.topDecade ? decadeLabel(stats.topDecade) : '—'}
-        />
-        <InsightTile
-          icon={<Globe size={14} />}
-          label="Cinema"
-          value={stats.topLang ?? '—'}
-        />
-        <InsightTile
-          icon={<Clock size={14} />}
-          label="Ore viste"
-          value={stats.totalHours > 0 ? `${stats.totalHours}h` : '—'}
-        />
+        <InsightTile icon={<CalendarRange size={14} />} label="Decade" value={stats.topDecade ? decadeLabel(stats.topDecade) : '—'} />
+        <InsightTile icon={<Globe size={14} />} label="Cinema" value={stats.topLang ?? '—'} />
+        <InsightTile icon={<Clock size={14} />} label="Ore viste" value={stats.totalHours > 0 ? `${stats.totalHours}h` : '—'} />
       </div>
 
-      {/* Riga attività dell'anno */}
+      {/* Registi più visti (top 5) */}
+      <PeopleRanking
+        icon={<Megaphone size={14} />}
+        title="Registi più visti"
+        people={topDirectors.slice(0, 5)}
+        loading={creditsLoading && topDirectors.length === 0}
+      />
+
+      {/* Attori più visti (top 10) — avatar scorrevoli */}
+      <div className="bg-film-surface border border-film-border rounded-2xl p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Users size={14} className="text-film-accent" />
+          <span className="text-film-subtle text-xs uppercase tracking-widest">Attori più visti</span>
+        </div>
+        {topActors.length === 0 ? (
+          <p className="text-film-subtle text-xs">{creditsLoading ? 'Calcolo in corso…' : 'Dati non disponibili'}</p>
+        ) : (
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-1 px-1">
+            {topActors.slice(0, 10).map((p, i) => (
+              <ActorAvatar key={p.id} person={p} rank={i + 1} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Attività dell'anno */}
       {stats.thisYearCount > 0 && (
         <div className="bg-gradient-to-r from-film-accent/15 to-transparent border border-film-accent/25 rounded-2xl px-4 py-3 flex items-center gap-3">
           <span className="font-display text-2xl text-film-accent font-bold">{stats.thisYearCount}</span>
@@ -150,9 +184,59 @@ export function TasteInsights({ watchedMovies }: { watchedMovies: WatchedMovie[]
   );
 }
 
-function InsightTile({ icon, label, value }: {
-  icon: React.ReactNode; label: string; value: string;
+function PeopleRanking({ icon, title, people, loading }: {
+  icon: React.ReactNode; title: string; people: RankedPerson[]; loading: boolean;
 }) {
+  return (
+    <div className="bg-film-surface border border-film-border rounded-2xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-film-accent">{icon}</span>
+        <span className="text-film-subtle text-xs uppercase tracking-widest">{title}</span>
+      </div>
+      {people.length === 0 ? (
+        <p className="text-film-subtle text-xs">{loading ? 'Calcolo in corso…' : 'Dati non disponibili'}</p>
+      ) : (
+        <div className="space-y-2.5">
+          {people.map((p, i) => {
+            const photo = getImageUrl(p.profile_path, 'w185');
+            return (
+              <div key={p.id} className="flex items-center gap-3">
+                <span className={cn('font-display text-sm w-4 text-center shrink-0', i === 0 ? 'text-film-accent' : 'text-film-subtle')}>{i + 1}</span>
+                <div className="w-9 h-9 rounded-full overflow-hidden bg-film-card border border-film-border shrink-0">
+                  {photo
+                    ? <img src={photo} alt={p.name} className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center text-film-subtle text-xs">{p.name[0]}</div>}
+                </div>
+                <span className="flex-1 text-film-text text-sm truncate">{getPersonName(p.name)}</span>
+                <span className="text-film-subtle text-xs shrink-0">{p.count} film</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ActorAvatar({ person, rank }: { person: RankedPerson; rank: number }) {
+  const photo = getImageUrl(person.profile_path, 'w185');
+  return (
+    <div className="flex flex-col items-center gap-1.5 w-16 shrink-0">
+      <div className="relative w-16 h-16 rounded-full overflow-hidden bg-film-card border border-film-border">
+        {photo
+          ? <img src={photo} alt={person.name} className="w-full h-full object-cover" />
+          : <div className="w-full h-full flex items-center justify-center text-film-subtle text-lg">{person.name[0]}</div>}
+        <span className="absolute -top-0.5 -left-0.5 w-5 h-5 rounded-full bg-film-accent text-film-black text-[10px] font-bold flex items-center justify-center border-2 border-film-surface">
+          {rank}
+        </span>
+      </div>
+      <span className="text-film-text text-[11px] text-center leading-tight line-clamp-2">{getPersonName(person.name)}</span>
+      <span className="text-film-subtle text-[10px]">{person.count} film</span>
+    </div>
+  );
+}
+
+function InsightTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="bg-film-surface border border-film-border rounded-2xl px-2 py-3 flex flex-col items-center gap-1 text-center">
       <span className="text-film-accent">{icon}</span>

@@ -988,3 +988,22 @@ export async function fetchItalianProviders(): Promise<TMDBProvider[]> {
     return [];
   }
 }
+
+// ─── Crediti (registi + cast) per le statistiche del profilo ───────
+export interface CreditPerson { id: number; name: string; profile_path: string | null }
+export interface TitleCredits { directors: CreditPerson[]; cast: CreditPerson[] }
+
+/** Endpoint /credits (leggero): registi dal crew, primi 10 del cast. */
+export async function getCredits(id: number, mediaType: 'movie' | 'tv'): Promise<TitleCredits> {
+  const data = await apiFetch<{
+    cast?: { id: number; name: string; profile_path: string | null; order: number }[];
+    crew?: { id: number; name: string; profile_path: string | null; job: string }[];
+  }>(`/${mediaType}/${id}/credits`);
+  const directors = (data.crew ?? [])
+    .filter(c => c.job === 'Director')
+    .map(c => ({ id: c.id, name: c.name, profile_path: c.profile_path ?? null }));
+  const cast = (data.cast ?? [])
+    .slice(0, 10)
+    .map(c => ({ id: c.id, name: c.name, profile_path: c.profile_path ?? null }));
+  return { directors, cast };
+}
