@@ -18,6 +18,8 @@ export interface CanonList {
 
 // Oscar — Miglior Film (vincitori). Anno = anno di uscita del film.
 const OSCAR_BEST_PICTURE: CanonFilm[] = [
+  { title: 'One Battle After Another', year: 2025 },
+  { title: 'Anora', year: 2024 },
   { title: 'Oppenheimer', year: 2023 },
   { title: 'Everything Everywhere All at Once', year: 2022 },
   { title: 'CODA', year: 2021 },
@@ -117,6 +119,7 @@ const OSCAR_BEST_PICTURE: CanonFilm[] = [
 
 // Festival di Cannes — Palme d'Or (vincitori). Include gli ex aequo.
 const PALME_DOR: CanonFilm[] = [
+  { title: 'Anora', year: 2024 },
   { title: 'Anatomy of a Fall', year: 2023 },
   { title: 'Triangle of Sadness', year: 2022 },
   { title: 'Titane', year: 2021 },
@@ -168,12 +171,35 @@ const PALME_DOR: CanonFilm[] = [
   { title: 'Padre Padrone', year: 1977 },
   { title: 'Taxi Driver', year: 1976 },
   { title: 'Chronicle of the Years of Fire', year: 1975 },
+  // Prima era della Palme d'Or (1955–1964); dal 1965 al 1974 il premio
+  // si chiamava Grand Prix e non è incluso qui.
+  { title: 'The Umbrellas of Cherbourg', year: 1964 },
+  { title: 'The Leopard', year: 1963 },
+  { title: 'Keeper of Promises', year: 1962 },
+  { title: 'Viridiana', year: 1961 },
+  { title: 'Une aussi longue absence', year: 1961 },
+  { title: 'La Dolce Vita', year: 1960 },
+  { title: 'Black Orpheus', year: 1959 },
+  { title: 'The Cranes Are Flying', year: 1957 },
+  { title: 'Friendly Persuasion', year: 1956 },
+  { title: 'The Silent World', year: 1956 },
+  { title: 'Marty', year: 1955 },
 ];
 
 // Oscar — Candidati a Miglior Film che NON hanno vinto.
 // Selezione curata: tutti i candidati delle annate recenti (2009→2023, era
 // fino a 10 candidati) + grandi classici sconfitti. Estendibile.
 const OSCAR_NOMINEES_LOST: CanonFilm[] = [
+  // 2024 (vinse Anora)
+  { title: 'The Brutalist', year: 2024 },
+  { title: 'A Complete Unknown', year: 2024 },
+  { title: 'Conclave', year: 2024 },
+  { title: 'Dune: Part Two', year: 2024 },
+  { title: 'Emilia Pérez', year: 2024 },
+  { title: "I'm Still Here", year: 2024 },
+  { title: 'Nickel Boys', year: 2024 },
+  { title: 'The Substance', year: 2024 },
+  { title: 'Wicked', year: 2024 },
   // 2023 (vinse Oppenheimer)
   { title: 'American Fiction', year: 2023 },
   { title: 'Anatomy of a Fall', year: 2023 },
@@ -357,9 +383,9 @@ export const CANON_LISTS: CanonList[] = [
   },
   {
     id: 'oscar-nominees-lost',
-    name: 'Oscar · Candidati mai vincitori',
+    name: 'Oscar · Grandi sconfitti',
     emoji: '🥈',
-    subtitle: 'Candidati a Miglior Film che non hanno vinto',
+    subtitle: 'Selezione di candidati a Miglior Film mai premiati (2009–oggi + classici)',
     films: OSCAR_NOMINEES_LOST,
   },
 ];
