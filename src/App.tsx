@@ -3,6 +3,8 @@ import { TrendingUp, Shuffle, Search, X, CheckCircle, User, Moon } from 'lucide-
 import type { AppView, TMDBMovieDetail } from './types';
 import { useAuth } from './hooks/useAuth';
 import { useWatched } from './hooks/useWatched';
+import { useLists } from './hooks/useLists';
+import { AddToListModal } from './components/AddToListModal';
 import { useNavigationStack } from './hooks/useNavigationStack';
 import type { PlaylistItem } from './hooks/useNavigationStack';
 import { getMovieDetail } from './services/tmdb';
@@ -94,6 +96,7 @@ export default function App() {
   const [cardQuickView, setCardQuickView] = useState<{ movie: TMDBMovieBasic; mediaType: 'movie' | 'tv' } | null>(null);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showReviewEditor, setShowReviewEditor] = useState(false);
+  const [showListPicker, setShowListPicker] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   // Navigation stack for movie detail fullscreen
@@ -186,6 +189,9 @@ export default function App() {
     addToWatchlist, removeFromWatchlist,
     tvStatus, setFollowing, setCompleted, unsetTVStatus,
   } = useWatched(user);
+  const {
+    lists, createList, renameList, deleteList, addToList, removeFromList,
+  } = useLists(user);
   const { showUpdate, applyUpdate, dismissUpdate } = useUpdatePrompt();
 
   const handleCardQuickView = useCallback((movie: TMDBMovieBasic, mediaType: 'movie' | 'tv') => {
@@ -523,6 +529,11 @@ export default function App() {
             onRemoveFromWatchlist={removeFromWatchlist}
             onOpenMovieGlobal={(id, mt, playlist, index) => openWithPlaylist(id, mt, playlist, index, 'Profilo')}
             onSignOut={signOut}
+            lists={lists}
+            onCreateList={createList}
+            onRenameList={renameList}
+            onDeleteList={deleteList}
+            onRemoveFromList={removeFromList}
           />
         )}
       </main>
@@ -605,6 +616,19 @@ export default function App() {
           onSetCompleted={detailMovie.media_type === 'tv' ? async () => { await setCompleted(detailMovie, detailMovie.seasons ?? []); } : undefined}
           onUnsetTVStatus={detailMovie.media_type === 'tv' ? async () => { await unsetTVStatus(detailMovie.id); } : undefined}
           onRequestRating={() => setShowRatingModal(true)}
+          onAddToList={() => setShowListPicker(true)}
+        />
+      )}
+
+      {/* AddToList picker — bottom sheet sopra il detail */}
+      {showListPicker && detailMovie && (
+        <AddToListModal
+          movie={detailMovie}
+          lists={lists}
+          onClose={() => setShowListPicker(false)}
+          onCreateList={createList}
+          onAddToList={addToList}
+          onRemoveFromList={removeFromList}
         />
       )}
 

@@ -4,7 +4,7 @@ import {
   query, where, limit, addDoc, updateDoc, increment,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import type { WatchedMovie, WatchlistItem } from '../types';
+import type { WatchedMovie, WatchlistItem, MovieList, ListMovie } from '../types';
 
 // ─── Refs ─────────────────────────────────────────────────────────
 const watchedRef   = (uid: string, id: number) => doc(db, 'users', uid, 'watched',   String(id));
@@ -123,6 +123,53 @@ export async function fetchUserPreferences(uid: string): Promise<UserPreferences
 
 export async function saveUserPreferences(uid: string, prefs: UserPreferences): Promise<void> {
   await setDoc(prefsRef(uid), prefs, { merge: true });
+}
+
+// ── Liste tematiche ───────────────────────────────────────────────
+const listsCol = (uid: string) => collection(db, 'users', uid, 'lists');
+const listRef  = (uid: string, listId: string) => doc(db, 'users', uid, 'lists', listId);
+
+export async function fetchLists(uid: string): Promise<MovieList[]> {
+  const snap = await getDocs(listsCol(uid));
+  return snap.docs
+    .map(d => {
+      const data = d.data();
+      return {
+        id: d.id,
+        name: (data.name as string) ?? 'Lista',
+        note: (data.note as string | undefined) ?? undefined,
+        items: ((data.items as ListMovie[]) ?? []).slice().sort(
+          (a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()
+        ),
+        createdAt: toISOString(data.createdAt),
+        updatedAt: toISOString(data.updatedAt),
+      } satisfies MovieList;
+    })
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+}
+
+export async function createList(uid: string, name: string): Promise<MovieList> {
+  const ref = doc(listsCol(uid));
+  const now = new Date().toISOString();
+  await setDoc(ref, {
+    name: name.trim() || 'Nuova lista',
+    items: [],
+    createdAt: serverTimestamp() as FieldValue,
+    updatedAt: serverTimestamp() as FieldValue,
+  });
+  return { id: ref.id, name: name.trim() || 'Nuova lista', items: [], createdAt: now, updatedAt: now };
+}
+
+export async function renameList(uid: string, listId: string, name: string): Promise<void> {
+  await setDoc(listRef(uid, listId), { name: name.trim() || 'Lista', updatedAt: serverTimestamp() as FieldValue }, { merge: true });
+}
+
+export async function deleteList(uid: string, listId: string): Promise<void> {
+  await deleteDoc(listRef(uid, listId));
+}
+
+export async function setListItems(uid: string, listId: string, items: ListMovie[]): Promise<void> {
+  await setDoc(listRef(uid, listId), { items, updatedAt: serverTimestamp() as FieldValue }, { merge: true });
 }
 
 // ── Episode tracking ──────────────────────────────────────────────

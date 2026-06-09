@@ -5,11 +5,12 @@
 import { useState, useEffect } from 'react';
 import { LogOut, Star, Heart, RotateCcw, Film, Tv, Bookmark, Check } from 'lucide-react';
 import type { User } from 'firebase/auth';
-import type { WatchedMovie, WatchlistItem, TMDBMovieDetail } from '../types';
+import type { WatchedMovie, WatchlistItem, TMDBMovieDetail, MovieList } from '../types';
 import type { PlaylistItem } from '../hooks/useNavigationStack';
 import { cn } from '../utils';
 import { WatchedView } from './WatchedView';
 import { TasteInsights } from './TasteInsights';
+import { ListsTab } from './ListsTab';
 import { fetchItalianProviders } from '../services/tmdb';
 
 import { WatchlistView } from './WatchlistView';
@@ -40,9 +41,14 @@ interface ProfileViewProps {
   onRemoveFromWatchlist: (id: number) => Promise<void>;
   onOpenMovieGlobal: (id: number, mt: 'movie' | 'tv', playlist?: PlaylistItem[], index?: number) => void;
   onSignOut: () => void;
+  lists: MovieList[];
+  onCreateList: (name: string) => Promise<MovieList | null>;
+  onRenameList: (listId: string, name: string) => Promise<void>;
+  onDeleteList: (listId: string) => Promise<void>;
+  onRemoveFromList: (listId: string, movieId: number) => Promise<void>;
 }
 
-type MainTab = 'profilo' | 'visti' | 'watchlist' | 'recensioni';
+type MainTab = 'profilo' | 'visti' | 'watchlist' | 'liste' | 'recensioni';
 
 export function ProfileView({
   user, watchedMovies, watchlist,
@@ -51,6 +57,7 @@ export function ProfileView({
   favoriteProviderIds, onUpdateProviders,
   onToggleLiked, onAddToWatchlist, onRemoveFromWatchlist,
   onOpenMovieGlobal, onSignOut,
+  lists, onCreateList, onRenameList, onDeleteList, onRemoveFromList,
 }: ProfileViewProps) {
   const [tab, setTab] = useState<MainTab>('profilo');
   const [followingUids, setFollowingUids] = useState<string[]>([]);
@@ -104,6 +111,7 @@ export function ProfileView({
     { key: 'profilo',    label: 'Profilo' },
     { key: 'visti',      label: 'Visti',       count: watchedMovies.length },
     { key: 'watchlist',  label: 'Watchlist',   count: watchlist.length },
+    { key: 'liste',      label: 'Liste',       count: lists.length },
     { key: 'recensioni', label: 'Recensioni',  count: myReviews.length },
   ];
 
@@ -252,6 +260,20 @@ export function ProfileView({
           />
         </div>
       )}
+      {/* ── Tab: Liste ── */}
+      {tab === 'liste' && (
+        <div className="px-4 pt-4 pb-6">
+          <ListsTab
+            lists={lists}
+            onCreateList={onCreateList}
+            onRenameList={onRenameList}
+            onDeleteList={onDeleteList}
+            onRemoveFromList={onRemoveFromList}
+            onOpenMovie={(id, mt) => onOpenMovieGlobal(id, mt)}
+          />
+        </div>
+      )}
+
       {/* ── Tab: Recensioni ── */}
       {tab === 'recensioni' && (
         <div className="px-4 pt-4 pb-6 space-y-3">

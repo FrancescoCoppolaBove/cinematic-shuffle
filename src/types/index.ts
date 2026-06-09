@@ -223,6 +223,25 @@ export interface WatchlistItem {
   media_type: 'movie' | 'tv';
 }
 
+// Liste tematiche personalizzate (es. "Maratona Nolan", "Da vedere con lei")
+export interface ListMovie {
+  id: number;
+  title: string;
+  poster_path: string | null;
+  release_date: string;
+  media_type: 'movie' | 'tv';
+  addedAt: string;
+}
+
+export interface MovieList {
+  id: string;
+  name: string;
+  note?: string;
+  items: ListMovie[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface SearchResult {
   id: number;
   title: string;

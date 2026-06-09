@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ChevronLeft, ChevronRight, Star, Clock, Play,
   Eye, Bookmark, BookmarkCheck, Heart,
-  Tv, Film, MapPin, Shuffle, Check,
+  Tv, Film, MapPin, Shuffle, Check, ListPlus,
 } from 'lucide-react';
 import type { TMDBMovieDetail, TMDBMovieBasic } from '../types';
 import {
@@ -64,6 +64,7 @@ interface MovieDetailScreenProps {
   onSetCompleted?: () => Promise<void>;
   onUnsetTVStatus?: () => Promise<void>;
   onRequestRating?: () => void;
+  onAddToList?: () => void;
 }
 
 export function MovieDetailScreen({
@@ -77,7 +78,7 @@ export function MovieDetailScreen({
   getPersonalRatingFull, getRewatchCountFull, onMarkWatchedFull, onUnmarkWatchedFull, onUpdateRatingFull,
   onToggleLikedFull, onAddToWatchlistFull, onRemoveFromWatchlistFull, loading,
   tvSeriesStatus, onSetFollowing, onSetCompleted: _onSetCompleted, onUnsetTVStatus,
-  onRequestRating,
+  onRequestRating, onAddToList,
 }: MovieDetailScreenProps) {
   const [posterError, setPosterError] = useState(false);
   useEffect(() => {
@@ -588,6 +589,14 @@ export function MovieDetailScreen({
                 <button onClick={onRemoveFromWatchlist}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border border-purple-500/40 bg-purple-900/20 text-purple-300 active:scale-95 transition-all">
                   <BookmarkCheck size={14} />In watchlist
+                </button>
+              )}
+
+              {/* Aggiungi a lista tematica */}
+              {onAddToList && (
+                <button onClick={onAddToList}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border border-film-border bg-film-surface text-film-muted active:scale-95 transition-all">
+                  <ListPlus size={14} />Lista
                 </button>
               )}
             </div>
