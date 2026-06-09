@@ -136,6 +136,8 @@ export interface MovieFilters {
   decade?: string;
   genreIds?: number[];
   withoutGenreIds?: number[];      // generi da escludere (es. quelli votati basso)
+  minRuntime?: number;             // durata minima in minuti (per i mood)
+  maxRuntime?: number;             // durata massima in minuti (per i mood)
   watchedStatus: 'all' | 'unwatched' | 'watched';
   actorIds?: number[];
   actorNames?: string[];

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Shuffle, SlidersHorizontal, X, Film, Tv, Play, Eye, Bookmark, BookmarkCheck } from 'lucide-react';
-import type { MovieFilters, MediaType, TMDBMovieDetail } from '../types';
+import type { MovieFilters, MediaType, TMDBMovieDetail, TMDBMovieBasic } from '../types';
 import { useShuffle } from '../hooks/useShuffle';
 import { FilterPanel } from './FilterPanel';
 import { RatingModal } from './RatingModal';
@@ -32,6 +32,25 @@ interface ShuffleViewProps {
 
 const DEFAULT_FILTERS: MovieFilters = { watchedStatus: 'all', mediaType: 'movie' };
 
+// Mood: scorciatoie di scoperta per "come ti senti / quanto tempo hai".
+// Ognuno imposta generi, durata e qualità minima al volo.
+interface Mood {
+  id: string; emoji: string; label: string;
+  genreIds?: number[]; maxRuntime?: number; minRuntime?: number; minRating?: number;
+}
+const MOODS: Mood[] = [
+  { id: 'comfort',  emoji: '🍿', label: 'Comfort',        genreIds: [35, 10751], minRating: 6.5 },
+  { id: 'brivido',  emoji: '🔪', label: 'Brivido',        genreIds: [53, 80, 9648] },
+  { id: 'adrenalina', emoji: '💥', label: 'Adrenalina',   genreIds: [28, 12] },
+  { id: 'paura',    emoji: '😱', label: 'Paura',          genreIds: [27] },
+  { id: 'romantico', emoji: '💘', label: 'Romantico',     genreIds: [10749] },
+  { id: 'lento',    emoji: '🌙', label: 'Lento & intenso', genreIds: [18], minRating: 7 },
+  { id: 'mente',    emoji: '🧠', label: 'Cervellotico',   genreIds: [878, 9648] },
+  { id: 'corto',    emoji: '⏱️', label: 'Sotto 100 min',  maxRuntime: 100 },
+  { id: 'autore',   emoji: '🎨', label: "D'autore",       minRating: 7.7 },
+  { id: 'famiglia', emoji: '👨‍👩‍👧', label: 'In famiglia',  genreIds: [10751, 16] },
+];
+
 export function ShuffleView({
   watchedIds, watchlistIds, watchedMovies,
   onMarkWatched, onUnmarkWatched, onUpdateRating,
@@ -41,6 +60,7 @@ export function ShuffleView({
   onOpenMovieGlobal,
 }: ShuffleViewProps) {
   const [filters, setFilters] = useState<MovieFilters>(DEFAULT_FILTERS);
+  const [activeMood, setActiveMood] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [openPerson, setOpenPerson] = useState<{id: number; name: string} | null>(null);
@@ -65,10 +85,35 @@ export function ShuffleView({
     filters.withAwards,
   ].filter(Boolean).length;
 
-  function handleShuffle(exploreMode = false) {
-    const strategyResult = getStrategyAndFilters(filters, exploreMode);
+  function runShuffle(f: MovieFilters, exploreMode = false) {
+    const strategyResult = getStrategyAndFilters(f, exploreMode);
     shuffle(strategyResult, watchedIds, profile);
     setShowFilters(false);
+  }
+
+  function handleShuffle(exploreMode = false) {
+    runShuffle(filters, exploreMode);
+  }
+
+  function pickMood(mood: Mood) {
+    // Toggle off se già attivo
+    if (activeMood === mood.id) {
+      setActiveMood(null);
+      const cleared: MovieFilters = { ...filters, genreIds: undefined, minRuntime: undefined, maxRuntime: undefined, minImdbRating: undefined };
+      setFilters(cleared);
+      runShuffle(cleared);
+      return;
+    }
+    setActiveMood(mood.id);
+    const f: MovieFilters = {
+      ...filters,
+      genreIds: mood.genreIds,
+      minRuntime: mood.minRuntime,
+      maxRuntime: mood.maxRuntime,
+      minImdbRating: mood.minRating,
+    };
+    setFilters(f);
+    runShuffle(f);
   }
 
   async function handleRatingConfirm(result: RatingResult) {
@@ -102,7 +147,7 @@ export function ShuffleView({
             {(['movie', 'tv', 'both'] as MediaType[]).map(mt => (
               <button
                 key={mt}
-                onClick={() => setFilters(f => ({ ...f, mediaType: mt, genreIds: [], year: undefined, decade: undefined }))}
+                onClick={() => { setActiveMood(null); setFilters(f => ({ ...f, mediaType: mt, genreIds: [], year: undefined, decade: undefined })); }}
                 className={cn(
                   'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all',
                   filters.mediaType === mt
@@ -149,12 +194,31 @@ export function ShuffleView({
           <Shuffle size={20} className={loading ? 'animate-spin-slow' : ''} />
           {loading ? 'CERCANDO...' : hasSearched ? 'ALTRO' : 'SHUFFLE'}
         </button>
+
+        {/* Row 3: mood chips — scoperta per "come ti senti" */}
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 pt-0.5">
+          {MOODS.map(mood => (
+            <button
+              key={mood.id}
+              onClick={() => pickMood(mood)}
+              disabled={loading}
+              className={cn(
+                'shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all active:scale-95 disabled:opacity-50',
+                activeMood === mood.id
+                  ? 'bg-film-accent text-film-black border-film-accent'
+                  : 'bg-film-surface border-film-border text-film-muted'
+              )}
+            >
+              <span>{mood.emoji}</span>{mood.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Filter panel — slides in below top bar */}
       {showFilters && (
         <div className="shrink-0 px-4 pb-2 overflow-y-auto max-h-[40vh] animate-slide-up" style={{ overscrollBehavior: 'contain' }}>
-          <FilterPanel filters={filters} onChange={setFilters} />
+          <FilterPanel filters={filters} onChange={(f) => { setActiveMood(null); setFilters(f); }} />
         </div>
       )}
 
@@ -199,6 +263,7 @@ export function ShuffleView({
         {/* ── Movie card — full info, no scroll needed ── */}
         {movie && !loading && (
           <ShuffleMovieCard
+            key={movie.id}
             movie={movie}
             isWatched={isWatched}
             isOnWatchlist={isOnWatchlist}
@@ -210,6 +275,7 @@ export function ShuffleView({
               : () => onAddToWatchlist(movie)
             }
             onOpenDetail={() => onOpenMovieGlobal?.(movie.id, movie.media_type)}
+            onOpenMovieId={(id, mt) => onOpenMovieGlobal?.(id, mt)}
             onOpenPerson={(id, name) => setOpenPerson({ id, name })}
             onOpenGenre={(id, name, type, mt) => setOpenGenre({ id, name, type, mediaType: mt })}
             onIncrementRewatch={onIncrementRewatch ? (delta) => onIncrementRewatch(movie.id, delta) : undefined}
@@ -280,6 +346,23 @@ export function ShuffleView({
   );
 }
 
+// ── Poster mini per il "doppio spettacolo" ──
+function DoubleFeaturePoster({ posterPath, title, watched, onClick }: {
+  posterPath: string | null; title: string; watched?: boolean; onClick: () => void;
+}) {
+  const poster = getImageUrl(posterPath, 'w185');
+  return (
+    <button onClick={onClick} className="flex-1 min-w-0 text-left active:scale-95 transition-transform">
+      <div className="w-full aspect-[2/3] rounded-xl overflow-hidden border border-film-border bg-film-card">
+        {poster
+          ? <img src={poster} alt={title} className={cn('w-full h-full object-cover', watched && 'opacity-40 grayscale')} />
+          : <div className="w-full h-full flex items-center justify-center text-2xl">🎬</div>}
+      </div>
+      <p className="text-film-text text-xs mt-1 line-clamp-2 leading-tight">{title}</p>
+    </button>
+  );
+}
+
 // ── Inline movie card for shuffle — compact, all info visible ──
 
 interface ShuffleMovieCardProps {
@@ -292,6 +375,7 @@ interface ShuffleMovieCardProps {
   onOpenRating: () => void;
   onWatchlistToggle: () => void;
   onOpenDetail: () => void;
+  onOpenMovieId: (id: number, mt: 'movie' | 'tv') => void;
   onOpenPerson: (id: number, name: string) => void;
   onOpenGenre: (id: number, name: string, type: 'genre'|'keyword', mt: 'movie'|'tv') => void;
   onIncrementRewatch?: (delta: number) => void;
@@ -300,11 +384,12 @@ interface ShuffleMovieCardProps {
 
 function ShuffleMovieCard({
   movie, isWatched, isOnWatchlist, rewatchCount, watchedIds = new Set(),
-  onShuffle, onOpenRating, onWatchlistToggle, onOpenDetail,
+  onShuffle, onOpenRating, onWatchlistToggle, onOpenDetail, onOpenMovieId,
   onOpenPerson, onOpenGenre, onIncrementRewatch,
 }: ShuffleMovieCardProps) {
   const [posterErr, setPosterErr] = useState(false);
   const [expandOverview, setExpandOverview] = useState(false);
+  const [partner, setPartner] = useState<TMDBMovieBasic | null>(null);
   const title = getEnglishTitle(movie);
   const backdrop = getImageUrl(movie.backdrop_path, 'w780');
   const poster = !posterErr ? getImageUrl(movie.poster_path, 'w342') : null;
@@ -425,6 +510,43 @@ function ShuffleMovieCard({
         </button>
       </div>
 
+      {/* Doppio spettacolo — abbina un secondo film a tema */}
+      {similar.length > 0 && (
+        partner ? (
+          <div className="bg-film-surface border border-film-accent/30 rounded-2xl p-3 space-y-2 animate-scale-in">
+            <p className="text-film-subtle text-xs uppercase tracking-wider flex items-center gap-1.5">🎬🎬 Serata doppia</p>
+            <div className="flex items-stretch gap-2">
+              <DoubleFeaturePoster posterPath={movie.poster_path} title={title} onClick={onOpenDetail} />
+              <div className="flex items-center text-film-accent font-display text-xl shrink-0">+</div>
+              <DoubleFeaturePoster
+                posterPath={partner.poster_path}
+                title={getTitle(partner)}
+                watched={watchedIds.has(partner.id)}
+                onClick={() => onOpenMovieId(partner.id, partner.media_type ?? (isTV ? 'tv' : 'movie'))}
+              />
+            </div>
+            <button onClick={() => {
+              const pool = similar.filter(s => s.poster_path && s.id !== partner.id);
+              const fresh = pool.filter(s => !watchedIds.has(s.id));
+              const arr = fresh.length ? fresh : pool;
+              if (arr.length) setPartner(arr[Math.floor(Math.random() * arr.length)]);
+            }} className="w-full py-1.5 text-film-accent text-xs active:opacity-70">↻ Cambia secondo film</button>
+          </div>
+        ) : (
+          <button
+            onClick={() => {
+              const pool = similar.filter(s => s.poster_path);
+              const fresh = pool.filter(s => !watchedIds.has(s.id));
+              const arr = fresh.length ? fresh : pool;
+              if (arr.length) setPartner(arr[Math.floor(Math.random() * arr.length)]);
+            }}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl border border-film-border bg-film-surface text-film-muted text-sm active:scale-[0.98] transition-all"
+          >
+            🎬🎬 Crea doppio spettacolo
+          </button>
+        )
+      )}
+
       {/* Dove guardarlo */}
       {allProviders.length > 0 && (
         <div>
@@ -457,7 +579,7 @@ function ShuffleMovieCard({
           </p>
           <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-4 px-4">
             {similar.map(item => (
-              <button key={item.id} onClick={() => onOpenDetail()}
+              <button key={item.id} onClick={() => onOpenMovieId(item.id, item.media_type ?? (isTV ? 'tv' : 'movie'))}
                 className="shrink-0 w-20 text-left active:scale-95 transition-all">
                 <div className="w-20 aspect-[2/3] rounded-xl overflow-hidden bg-film-surface border border-film-border">
                   {item.poster_path
