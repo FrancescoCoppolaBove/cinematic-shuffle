@@ -37,6 +37,9 @@ export function StarRating({ value, onChange, readonly = false, size = 'md' }: S
   const touchActive = useRef(false);
   const touchMoved = useRef(false);
   const touchStartX = useRef(0);
+  // Timestamp dell'ultimo touchend: serve a ignorare il click sintetico
+  // che iOS emette ~300ms dopo, evitando la doppia onChange che azzera il voto.
+  const lastTouchEnd = useRef(0);
 
   const displayed = preview ?? value ?? 0;
 
@@ -78,6 +81,7 @@ export function StarRating({ value, onChange, readonly = false, size = 'md' }: S
     e.preventDefault();
 
     touchActive.current = false;
+    lastTouchEnd.current = Date.now();
     const r = xToRating(e.changedTouches[0].clientX);
     setPreview(null);
     onChange(r === value ? null : r);
@@ -95,10 +99,11 @@ export function StarRating({ value, onChange, readonly = false, size = 'md' }: S
   }
 
   function handleClick(e: React.MouseEvent) {
-    // Su mobile, dopo touchend arriva anche click — lo ignoriamo
-    // se c'è stato un touch recente (touchActive è già false ma possiamo
-    // controllare con un flag dedicato)
     if (readonly) return;
+    // Su mobile, dopo touchend iOS emette un click sintetico: lo ignoriamo
+    // se un touch è terminato da meno di 500ms, così onChange non viene
+    // chiamato due volte (cosa che resetterebbe il voto appena dato).
+    if (Date.now() - lastTouchEnd.current < 500) return;
     const r = xToRating(e.clientX);
     onChange(r === value ? null : r);
     setPreview(null);
