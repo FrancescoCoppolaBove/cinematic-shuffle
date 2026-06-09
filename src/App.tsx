@@ -135,9 +135,14 @@ export default function App() {
       let node: HTMLElement | null = target;
       while (node && node !== document.body) {
         const style = window.getComputedStyle(node);
-        const overflow = style.overflowY;
-        if ((overflow === 'auto' || overflow === 'scroll') && node.scrollHeight > node.clientHeight) {
+        // Scroll verticale
+        if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && node.scrollHeight > node.clientHeight) {
           return; // Let the child scroll
+        }
+        // Scroll orizzontale (es. chip mood, caroselli) — altrimenti il pan
+        // laterale verrebbe annullato dal preventDefault.
+        if ((style.overflowX === 'auto' || style.overflowX === 'scroll') && node.scrollWidth > node.clientWidth) {
+          return;
         }
         node = node.parentElement;
       }

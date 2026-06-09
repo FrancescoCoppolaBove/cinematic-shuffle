@@ -4,6 +4,7 @@
  * mostra l'avanzamento; tap → schermata con la griglia completa dei film.
  */
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Award, ChevronLeft, ChevronDown } from 'lucide-react';
 import { CANON_LISTS, type CanonList } from '../data/canonLists';
 import { useCanonList } from '../hooks/useCanonList';
@@ -83,8 +84,8 @@ function CanonListScreen({ list, watchedIds, onOpenMovie, onBack }: {
 
   const visible = entries.filter(e => e.resolved && (!onlyUnseen || !watchedIds.has(e.resolved!.id)));
 
-  return (
-    <div className="fixed left-0 right-0 z-[92] bg-film-black flex flex-col" style={{ top: 0, bottom: 0, isolation: 'isolate' }}>
+  return createPortal((
+    <div className="fixed inset-0 z-[110] bg-film-black flex flex-col" style={{ isolation: 'isolate' }}>
       {/* Header */}
       <div className="shrink-0 bg-film-black border-b border-film-border" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="flex items-center gap-3 px-4 py-3">
@@ -156,5 +157,5 @@ function CanonListScreen({ list, watchedIds, onOpenMovie, onBack }: {
         )}
       </div>
     </div>
-  );
+  ), document.body);
 }
