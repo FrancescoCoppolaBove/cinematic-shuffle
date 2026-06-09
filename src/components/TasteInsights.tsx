@@ -36,7 +36,10 @@ function decadeLabel(decade: string): string {
   return start >= 2000 ? `Anni ${start}` : `Anni '${String(start).slice(2)}`;
 }
 
-export function TasteInsights({ watchedMovies }: { watchedMovies: WatchedMovie[] }) {
+export function TasteInsights({ watchedMovies, onOpenPerson }: {
+  watchedMovies: WatchedMovie[];
+  onOpenPerson?: (id: number, name: string) => void;
+}) {
   const { topDirectors, topActors, loading: creditsLoading } = useWatchedCredits(watchedMovies);
 
   const stats = useMemo(() => {
@@ -152,6 +155,7 @@ export function TasteInsights({ watchedMovies }: { watchedMovies: WatchedMovie[]
         title="Registi più visti"
         people={topDirectors.slice(0, 5)}
         loading={creditsLoading && topDirectors.length === 0}
+        onOpenPerson={onOpenPerson}
       />
 
       {/* Attori più visti (top 10) — avatar scorrevoli */}
@@ -165,7 +169,7 @@ export function TasteInsights({ watchedMovies }: { watchedMovies: WatchedMovie[]
         ) : (
           <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-1 px-1">
             {topActors.slice(0, 10).map((p, i) => (
-              <ActorAvatar key={p.id} person={p} rank={i + 1} />
+              <ActorAvatar key={p.id} person={p} rank={i + 1} onOpenPerson={onOpenPerson} />
             ))}
           </div>
         )}
@@ -184,8 +188,9 @@ export function TasteInsights({ watchedMovies }: { watchedMovies: WatchedMovie[]
   );
 }
 
-function PeopleRanking({ icon, title, people, loading }: {
+function PeopleRanking({ icon, title, people, loading, onOpenPerson }: {
   icon: React.ReactNode; title: string; people: RankedPerson[]; loading: boolean;
+  onOpenPerson?: (id: number, name: string) => void;
 }) {
   return (
     <div className="bg-film-surface border border-film-border rounded-2xl p-4">
@@ -200,7 +205,12 @@ function PeopleRanking({ icon, title, people, loading }: {
           {people.map((p, i) => {
             const photo = getImageUrl(p.profile_path, 'w185');
             return (
-              <div key={p.id} className="flex items-center gap-3">
+              <button
+                key={p.id}
+                onClick={() => onOpenPerson?.(p.id, p.name)}
+                disabled={!onOpenPerson}
+                className="w-full flex items-center gap-3 text-left active:opacity-60 disabled:active:opacity-100"
+              >
                 <span className={cn('font-display text-sm w-4 text-center shrink-0', i === 0 ? 'text-film-accent' : 'text-film-subtle')}>{i + 1}</span>
                 <div className="w-9 h-9 rounded-full overflow-hidden bg-film-card border border-film-border shrink-0">
                   {photo
@@ -209,7 +219,7 @@ function PeopleRanking({ icon, title, people, loading }: {
                 </div>
                 <span className="flex-1 text-film-text text-sm truncate">{getPersonName(p.name)}</span>
                 <span className="text-film-subtle text-xs shrink-0">{p.count} film</span>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -218,10 +228,17 @@ function PeopleRanking({ icon, title, people, loading }: {
   );
 }
 
-function ActorAvatar({ person, rank }: { person: RankedPerson; rank: number }) {
+function ActorAvatar({ person, rank, onOpenPerson }: {
+  person: RankedPerson; rank: number;
+  onOpenPerson?: (id: number, name: string) => void;
+}) {
   const photo = getImageUrl(person.profile_path, 'w185');
   return (
-    <div className="flex flex-col items-center gap-1.5 w-16 shrink-0">
+    <button
+      onClick={() => onOpenPerson?.(person.id, person.name)}
+      disabled={!onOpenPerson}
+      className="flex flex-col items-center gap-1.5 w-16 shrink-0 active:opacity-60 disabled:active:opacity-100"
+    >
       <div className="relative w-16 h-16 rounded-full overflow-hidden bg-film-card border border-film-border">
         {photo
           ? <img src={photo} alt={person.name} className="w-full h-full object-cover" />
@@ -232,7 +249,7 @@ function ActorAvatar({ person, rank }: { person: RankedPerson; rank: number }) {
       </div>
       <span className="text-film-text text-[11px] text-center leading-tight line-clamp-2">{getPersonName(person.name)}</span>
       <span className="text-film-subtle text-[10px]">{person.count} film</span>
-    </div>
+    </button>
   );
 }
 

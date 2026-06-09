@@ -11,6 +11,7 @@ import { cn } from '../utils';
 import { WatchedView } from './WatchedView';
 import { TasteInsights } from './TasteInsights';
 import { ListsTab } from './ListsTab';
+import { PersonDetailScreen } from './PersonDetailScreen';
 import { fetchItalianProviders } from '../services/tmdb';
 
 import { WatchlistView } from './WatchlistView';
@@ -70,6 +71,7 @@ export function ProfileView({
   const [myReviews, setMyReviews] = useState<Review[]>([]);
   const [openReviewDetail, setOpenReviewDetail] = useState<Review | null>(null);
   const [showProfileReviewEditor, setShowProfileReviewEditor] = useState(false);
+  const [openPerson, setOpenPerson] = useState<{ id: number; name: string } | null>(null);
 
   useEffect(() => {
     // Ensure own public profile exists
@@ -210,7 +212,10 @@ export function ProfileView({
           </div>
 
           {/* Ritratto cinefilo / insights */}
-          <TasteInsights watchedMovies={watchedMovies} />
+          <TasteInsights
+            watchedMovies={watchedMovies}
+            onOpenPerson={(id, name) => setOpenPerson({ id, name })}
+          />
 
           {/* Connessioni — following/followers inline */}
           <div className="border border-film-border rounded-2xl overflow-hidden">
@@ -386,6 +391,24 @@ export function ProfileView({
       )}
 
       </div>{/* end scroll wrapper */}
+
+      {openPerson && (
+        <PersonDetailScreen
+          personId={openPerson.id}
+          personName={openPerson.name}
+          watchedIds={watchedIds}
+          watchlistIds={watchlistIds}
+          likedIds={likedIds}
+          getPersonalRating={getPersonalRating}
+          onMarkWatched={onMarkWatched}
+          onUnmarkWatched={onUnmarkWatched}
+          onUpdateRating={onUpdateRating}
+          onToggleLiked={onToggleLiked}
+          onAddToWatchlist={onAddToWatchlist}
+          onRemoveFromWatchlist={onRemoveFromWatchlist}
+          onBack={() => setOpenPerson(null)}
+        />
+      )}
 
       {openUserProfile && (
         <UserProfileScreen

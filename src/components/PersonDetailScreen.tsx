@@ -41,6 +41,7 @@ export function PersonDetailScreen({
   const [tab, setTab] = useState<'cast' | 'crew'>('cast');
   const [innerMovie, setInnerMovie] = useState<{id: number; mediaType: 'movie'|'tv'} | null>(null);
   const [expandBio, setExpandBio] = useState(false);
+  const [onlyUnseen, setOnlyUnseen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -63,6 +64,16 @@ export function PersonDetailScreen({
   const watchedCastCount = credits?.cast.filter(m => watchedIds.has(m.id)).length ?? 0;
   const watchedCrewCount = Object.values(crewByDepartment).flat()
     .filter((m, i, a) => a.findIndex(x => x.id === m.id) === i && watchedIds.has(m.id)).length;
+
+  // Completismo: filmografia "principale" della persona (regia se regista,
+  // altrimenti recitazione) per il banner in cima.
+  const directingCredits = crewByDepartment['Directing'] ?? [];
+  const isDirector = (person?.known_for_department === 'Directing') || directingCredits.length > castCount;
+  const primaryCredits = isDirector ? directingCredits : (credits?.cast ?? []);
+  const primaryWatched = primaryCredits.filter(m => watchedIds.has(m.id)).length;
+  const primaryPct = primaryCredits.length ? Math.round((primaryWatched / primaryCredits.length) * 100) : 0;
+  const primaryLabel = isDirector ? 'Filmografia da regista' : 'Filmografia da attore';
+  const unseenFilter = (m: { id: number }) => !onlyUnseen || !watchedIds.has(m.id);
 
   return (
     <div
@@ -135,22 +146,49 @@ export function PersonDetailScreen({
             </div>
           )}
 
-          {/* Tab bar */}
-          <div className="flex gap-2">
-            <TabBtn
-              active={tab === 'cast'}
-              onClick={() => setTab('cast')}
-              label="Come attore"
-              badge={castCount}
-              watchedBadge={watchedCastCount}
-            />
-            <TabBtn
-              active={tab === 'crew'}
-              onClick={() => setTab('crew')}
-              label="Ruoli tecnici"
-              badge={Object.values(crewByDepartment).flat().filter((m, i, a) => a.findIndex(x => x.id === m.id) === i).length}
-              watchedBadge={watchedCrewCount}
-            />
+          {/* Banner completismo filmografia */}
+          {primaryCredits.length > 0 && (
+            <div className="bg-gradient-to-r from-film-accent/15 to-transparent border border-film-accent/30 rounded-2xl p-4 flex items-center gap-4">
+              <p className="font-display text-3xl text-film-accent leading-none shrink-0">
+                {primaryWatched}<span className="text-film-subtle text-lg">/{primaryCredits.length}</span>
+              </p>
+              <div className="flex-1 min-w-0">
+                <p className="text-film-text text-sm font-medium">{primaryLabel}</p>
+                <div className="h-1.5 rounded-full bg-film-card overflow-hidden mt-2">
+                  <div className="h-full bg-film-accent rounded-full" style={{ width: `${primaryPct}%` }} />
+                </div>
+                <p className="text-film-subtle text-xs mt-1">{primaryPct}% completata</p>
+              </div>
+            </div>
+          )}
+
+          {/* Tab bar + filtro */}
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <TabBtn
+                active={tab === 'cast'}
+                onClick={() => setTab('cast')}
+                label="Come attore"
+                badge={castCount}
+                watchedBadge={watchedCastCount}
+              />
+              <TabBtn
+                active={tab === 'crew'}
+                onClick={() => setTab('crew')}
+                label="Ruoli tecnici"
+                badge={Object.values(crewByDepartment).flat().filter((m, i, a) => a.findIndex(x => x.id === m.id) === i).length}
+                watchedBadge={watchedCrewCount}
+              />
+            </div>
+            <button
+              onClick={() => setOnlyUnseen(v => !v)}
+              className={cn(
+                'text-xs px-3 py-1.5 rounded-full border transition-colors',
+                onlyUnseen ? 'bg-film-accent text-film-black border-film-accent' : 'bg-film-surface text-film-muted border-film-border'
+              )}
+            >
+              {onlyUnseen ? '✓ ' : ''}Solo da recuperare
+            </button>
           </div>
 
           {/* Cast list */}
@@ -168,7 +206,7 @@ export function PersonDetailScreen({
                 <p className="text-film-muted text-sm py-4 text-center">Nessun credito come attore</p>
               ) : (
                 <div className="grid grid-cols-3 gap-2">
-                  {credits.cast.map(m => (
+                  {credits.cast.filter(unseenFilter).map(m => (
                     <CreditPoster
                       key={`cast-${m.id}`}
                       movie={m}
@@ -203,7 +241,7 @@ export function PersonDetailScreen({
                         {watched > 0 && <span className="text-green-400 text-xs">· {watched} visti</span>}
                       </div>
                       <div className="grid grid-cols-3 gap-2">
-                        {movies.map(m => (
+                        {movies.filter(unseenFilter).map(m => (
                           <CreditPoster
                             key={`crew-${m.id}`}
                             movie={m}
