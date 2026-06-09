@@ -60,6 +60,18 @@
   }
 
   select option { @apply bg-film-card text-film-text; }
+
+  /*
+   * iOS Safari forza uno zoom automatico quando si tocca un input con
+   * font-size < 16px, causando un fastidioso "salto" del layout. Imponiamo
+   * 16px minimo ai controlli su schermi mobile (il design visivo resta
+   * invariato su desktop, dove lo zoom non avviene).
+   */
+  @media (max-width: 767px) {
+    input, textarea, select {
+      font-size: 16px;
+    }
+  }
 }
 
 @layer utilities {

@@ -118,6 +118,7 @@ export function useWatched(user: User | null) {
       vote_average: movie.vote_average,
       genre_ids: movie.genres?.map(g => g.id) ?? [],
       runtime: movie.runtime ?? movie.episode_run_time?.[0] ?? null,
+      original_language: movie.original_language,
       media_type: movie.media_type,
     };
     await addToWatchlistFirestore(user.uid, item);

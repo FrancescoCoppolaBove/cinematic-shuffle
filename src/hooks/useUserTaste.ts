@@ -46,6 +46,8 @@ export interface UserProfile {
   decadeWeights: Record<string, number>;
   // Runtime: range preferito [min, max] in minuti
   preferredRuntimeRange: [number, number] | null;
+  // Pesi lingua originale: "ja" → score 0–1 (1 = lingua più amata)
+  languageWeights: Record<string, number>;
   // Lingue originali (ISO 639-1) ordinate per frequenza nei film liked
   topLanguages: string[];
   // Soglia voto TMDB calibrata sul comportamento utente
@@ -75,7 +77,8 @@ export function buildProfile(watchedMovies: WatchedMovie[]): UserProfile {
   if (count === 0) {
     return {
       genreWeights: {}, topGenreIds: [], unseenGenreIds: ALL_GENRE_IDS,
-      decadeWeights: {}, preferredRuntimeRange: null, topLanguages: [],
+      decadeWeights: {}, preferredRuntimeRange: null,
+      languageWeights: {}, topLanguages: [],
       qualityThreshold: 6.0, watchedCount: 0, confidence: 0, phase: 'cold',
     };
   }
@@ -150,8 +153,23 @@ export function buildProfile(watchedMovies: WatchedMovie[]): UserProfile {
   }
 
   // ── Lingue originali ─────────────────────────────────────────
-  // (salvate in future — per ora non abbiamo original_language in WatchedMovie)
-  const topLanguages: string[] = ['en']; // default inglese
+  // Calcola le lingue preferite pesando i film apprezzati. Questo permette
+  // allo shuffle di favorire es. cinema giapponese/coreano/italiano se è
+  // ciò che l'utente guarda davvero, invece di assumere sempre l'inglese.
+  const langRaw: Record<string, number> = {};
+  for (const m of goodMovies) {
+    const lang = m.original_language;
+    if (!lang) continue;
+    langRaw[lang] = (langRaw[lang] ?? 0) + 1;
+  }
+  const maxL = Math.max(...Object.values(langRaw), 1);
+  const languageWeights: Record<string, number> = {};
+  for (const [l, v] of Object.entries(langRaw)) {
+    languageWeights[l] = v / maxL;
+  }
+  const topLanguages = Object.entries(langRaw)
+    .sort(([, a], [, b]) => b - a)
+    .map(([l]) => l);
 
   // ── Soglia qualità TMDB ──────────────────────────────────────
   const rated = watchedMovies.filter(m => m.personal_rating !== null);
@@ -166,7 +184,7 @@ export function buildProfile(watchedMovies: WatchedMovie[]): UserProfile {
 
   return {
     genreWeights, topGenreIds, unseenGenreIds,
-    decadeWeights, preferredRuntimeRange, topLanguages,
+    decadeWeights, preferredRuntimeRange, languageWeights, topLanguages,
     qualityThreshold, watchedCount: count, confidence, phase,
   };
 }
@@ -305,18 +323,21 @@ export function scoreCandidates(
       score += (profile.decadeWeights[decade] ?? 0) * 15;
     }
 
-    // 4. Affinità runtime (15%)
-    if (profile.preferredRuntimeRange && m.vote_count > 0) {
-      // TMDB non restituisce runtime nei risultati discover — skip
-      // Ma possiamo usare il voto_count come proxy di film "mainstream" vs "di nicchia"
-      // Alto vote_count = film molto visto = probabilmente nella fascia dell'utente
-      const isPopular = m.vote_count > 500;
-      score += isPopular ? 8 : 5;
+    // 4. Affinità lingua originale (12%)
+    // Se l'utente ama il cinema in una certa lingua (es. ja/ko/it), premia
+    // i candidati in quella lingua. Segnale forte di gusto personale.
+    if (m.original_language && Object.keys(profile.languageWeights).length > 0) {
+      score += (profile.languageWeights[m.original_language] ?? 0) * 12;
     } else {
-      score += 7;
+      score += 6; // neutro se nessun dato lingua
     }
 
-    // 5. Novità — penalizza film già visti di recente (10%)
+    // 5. Popolarità come proxy "mainstream vs nicchia" (8%)
+    // TMDB non restituisce runtime nei risultati discover, quindi usiamo
+    // vote_count come segnale debole di film conosciuto.
+    score += m.vote_count > 500 ? 8 : 5;
+
+    // 6. Novità — penalizza film già visti di recente (10%)
     if (!recentHistoryIds.has(m.id)) score += 10;
 
     return { m, score };

@@ -38,6 +38,7 @@ export async function fetchWatchedMovies(uid: string): Promise<WatchedMovie[]> {
         rewatchCount: (data.rewatchCount as number) ?? 0,
         genre_ids: (data.genre_ids as number[]) ?? [],
         runtime: (data.runtime as number | null) ?? null,
+        original_language: (data.original_language as string | undefined) ?? undefined,
         media_type: (data.media_type as 'movie' | 'tv') ?? 'movie',
         addedAt: toISOString(data.addedAt),
       } satisfies WatchedMovie;
@@ -83,6 +84,7 @@ export async function fetchWatchlist(uid: string): Promise<WatchlistItem[]> {
         vote_average: data.vote_average as number,
         genre_ids: (data.genre_ids as number[]) ?? [],
         runtime: (data.runtime as number | null) ?? null,
+        original_language: (data.original_language as string | undefined) ?? undefined,
         media_type: (data.media_type as 'movie' | 'tv') ?? 'movie',
         addedAt: toISOString(data.addedAt),
       } satisfies WatchlistItem;
