@@ -164,20 +164,40 @@ export default function App() {
 
     const setAppHeight = () => {
       const safeBottom = probe.offsetHeight;
-      document.documentElement.style.setProperty(
-        '--app-height',
-        `${window.innerHeight + safeBottom}px`
-      );
+      // Usa la misura più affidabile del viewport. All'avvio della PWA iOS a
+      // volte riporta innerHeight troppo piccolo: prendiamo il massimo tra le
+      // metriche disponibili così il contenitore non risulta mai più corto
+      // dello schermo (nav che "galleggia" in alto col nero sotto).
+      const vv = window.visualViewport?.height ?? 0;
+      const base = Math.max(window.innerHeight, vv, document.documentElement.clientHeight);
+      if (base < 200) return; // valore implausibile (layout non pronto): salta
+      document.documentElement.style.setProperty('--app-height', `${base + safeBottom}px`);
     };
-    // Run immediately and again after 100ms to catch iOS late safe-area computation
+
+    // Misura subito e ripeti più volte: iOS calcola safe-area e viewport in
+    // ritardo all'avvio, e a volte solo dopo qualche frame il valore è corretto.
     setAppHeight();
-    const t = setTimeout(setAppHeight, 100);
+    const raf = requestAnimationFrame(setAppHeight);
+    const timers = [50, 150, 350, 700, 1200].map(ms => window.setTimeout(setAppHeight, ms));
+
+    // Rimisura anche al foreground / ripresa della PWA (è lì che si vede il bug).
+    const onVisible = () => { if (document.visibilityState === 'visible') setAppHeight(); };
     window.addEventListener('resize', setAppHeight);
     window.addEventListener('orientationchange', setAppHeight);
+    window.addEventListener('pageshow', setAppHeight);
+    window.addEventListener('load', setAppHeight);
+    document.addEventListener('visibilitychange', onVisible);
+    window.visualViewport?.addEventListener('resize', setAppHeight);
+
     return () => {
-      clearTimeout(t);
+      cancelAnimationFrame(raf);
+      timers.forEach(clearTimeout);
       window.removeEventListener('resize', setAppHeight);
       window.removeEventListener('orientationchange', setAppHeight);
+      window.removeEventListener('pageshow', setAppHeight);
+      window.removeEventListener('load', setAppHeight);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.visualViewport?.removeEventListener('resize', setAppHeight);
       probe.remove();
     };
   }, []);
