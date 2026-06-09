@@ -77,6 +77,34 @@ export function useWatched(user: User | null) {
     await refresh();
   }, [user, watchlistIds, refresh]);
 
+  // Import in blocco (es. da Letterboxd): scrive tutto e fa un solo refresh.
+  const markManyWatched = useCallback(async (
+    items: { movie: TMDBMovieDetail; rating: number | null }[]
+  ) => {
+    if (!user || items.length === 0) return;
+    const CHUNK = 20;
+    for (let i = 0; i < items.length; i += CHUNK) {
+      await Promise.all(items.slice(i, i + CHUNK).map(({ movie, rating }) =>
+        addWatchedToFirestore(user.uid, {
+          id: movie.id,
+          title: getTitle(movie),
+          original_title: movie.original_title || movie.original_name,
+          poster_path: movie.poster_path,
+          release_date: getReleaseDate(movie),
+          vote_average: movie.vote_average,
+          personal_rating: rating,
+          liked: false,
+          rewatchCount: 0,
+          genre_ids: movie.genres?.map(g => g.id) ?? [],
+          runtime: movie.runtime ?? movie.episode_run_time?.[0] ?? null,
+          original_language: movie.original_language,
+          media_type: movie.media_type,
+        })
+      ));
+    }
+    await refresh();
+  }, [user, refresh]);
+
   const unmarkWatched = useCallback(async (id: number) => {
     if (!user) return;
     await removeWatchedFromFirestore(user.uid, id);
@@ -174,7 +202,7 @@ export function useWatched(user: User | null) {
   return {
     watchedMovies, watchedIds, watchlist, watchlistIds,
     loading, refresh,
-    markWatched, unmarkWatched, updateRating, toggleLiked, incrementRewatch,
+    markWatched, markManyWatched, unmarkWatched, updateRating, toggleLiked, incrementRewatch,
     addToWatchlist, removeFromWatchlist,
     tvStatus, setFollowing, setCompleted, unsetTVStatus,
   };

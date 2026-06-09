@@ -12,6 +12,7 @@ import { WatchedView } from './WatchedView';
 import { TasteInsights } from './TasteInsights';
 import { ListsTab } from './ListsTab';
 import { CanonChecklists } from './CanonChecklists';
+import { ImportLetterboxd } from './ImportLetterboxd';
 import { PersonDetailScreen } from './PersonDetailScreen';
 import { fetchItalianProviders } from '../services/tmdb';
 
@@ -48,6 +49,7 @@ interface ProfileViewProps {
   onRenameList: (listId: string, name: string) => Promise<void>;
   onDeleteList: (listId: string) => Promise<void>;
   onRemoveFromList: (listId: string, movieId: number) => Promise<void>;
+  onImportWatched: (items: { movie: TMDBMovieDetail; rating: number | null }[]) => Promise<void>;
 }
 
 type MainTab = 'profilo' | 'visti' | 'watchlist' | 'liste' | 'recensioni';
@@ -60,6 +62,7 @@ export function ProfileView({
   onToggleLiked, onAddToWatchlist, onRemoveFromWatchlist,
   onOpenMovieGlobal, onSignOut,
   lists, onCreateList, onRenameList, onDeleteList, onRemoveFromList,
+  onImportWatched,
 }: ProfileViewProps) {
   const [tab, setTab] = useState<MainTab>('profilo');
   const [followingUids, setFollowingUids] = useState<string[]>([]);
@@ -73,6 +76,7 @@ export function ProfileView({
   const [openReviewDetail, setOpenReviewDetail] = useState<Review | null>(null);
   const [showProfileReviewEditor, setShowProfileReviewEditor] = useState(false);
   const [openPerson, setOpenPerson] = useState<{ id: number; name: string } | null>(null);
+  const [showImport, setShowImport] = useState(false);
 
   useEffect(() => {
     // Ensure own public profile exists
@@ -223,6 +227,14 @@ export function ProfileView({
             watchedIds={watchedIds}
             onOpenMovie={(id, mt) => onOpenMovieGlobal(id, mt)}
           />
+
+          {/* Import da Letterboxd */}
+          <button
+            onClick={() => setShowImport(true)}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-film-border bg-film-surface text-film-muted text-sm active:scale-[0.98] transition-all"
+          >
+            ⬆️ Importa la libreria da Letterboxd
+          </button>
 
           {/* Connessioni — following/followers inline */}
           <div className="border border-film-border rounded-2xl overflow-hidden">
@@ -398,6 +410,13 @@ export function ProfileView({
       )}
 
       </div>{/* end scroll wrapper */}
+
+      {showImport && (
+        <ImportLetterboxd
+          onImport={onImportWatched}
+          onClose={() => setShowImport(false)}
+        />
+      )}
 
       {openPerson && (
         <PersonDetailScreen
