@@ -132,13 +132,15 @@ export function ProfileView({
   return (
     <div className="flex flex-col h-full">
       {/* ── Top tab bar ── */}
-      <div className="flex border-b border-film-border mb-0">
+      {/* flex-1 distribuisce su schermi larghi; min-w + overflow-x-auto evita che
+          le 5 voci si schiaccino/vadano a capo su iPhone stretti (scroll orizzontale). */}
+      <div className="flex border-b border-film-border mb-0 overflow-x-auto scrollbar-hide">
         {TABS.map(({ key, label, count }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
             className={cn(
-              'flex-1 py-3.5 text-sm font-medium transition-all relative active:opacity-70',
+              'flex-1 min-w-[84px] whitespace-nowrap py-3.5 text-sm font-medium transition-all relative active:opacity-70',
               tab === key ? 'text-film-accent' : 'text-film-muted'
             )}
           >

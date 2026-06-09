@@ -83,7 +83,7 @@ export function RatingModal({
           ? <img src={backdrop} alt="" className="w-full h-full object-cover" />
           : <div className="w-full h-full bg-film-deep" />
         }
-        <div className="absolute inset-0 bg-film-black/75 backdrop-blur-xl" />
+        <div className="absolute inset-0 bg-film-black/80 backdrop-blur-lg" />
       </div>
 
       {/* Content */}

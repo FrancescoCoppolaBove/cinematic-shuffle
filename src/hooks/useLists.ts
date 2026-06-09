@@ -56,24 +56,32 @@ export function useLists(user: User | null) {
     setLists(prev => prev.filter(l => l.id !== listId));
   }, [user]);
 
-  // Aggiunge un film a una lista (no-op se già presente)
+  // Aggiunge un film a una lista (no-op se già presente).
+  // Usa un update funzionale così legge SEMPRE lo stato aggiornato: indispensabile
+  // quando si crea una lista e si aggiunge il film nello stesso tick (altrimenti
+  // la closure cattura l'array vecchio e la lista appena creata non viene trovata).
   const addToList = useCallback(async (listId: string, movie: TMDBMovieDetail) => {
     if (!user) return;
-    const list = lists.find(l => l.id === listId);
-    if (!list || list.items.some(i => i.id === movie.id)) return;
-    const items = [toListMovie(movie), ...list.items];
-    setLists(prev => prev.map(l => l.id === listId ? { ...l, items } : l));
-    await setListItems(user.uid, listId, items);
-  }, [user, lists]);
+    let nextItems: ListMovie[] | null = null;
+    setLists(prev => prev.map(l => {
+      if (l.id !== listId) return l;
+      if (l.items.some(i => i.id === movie.id)) { nextItems = l.items; return l; }
+      nextItems = [toListMovie(movie), ...l.items];
+      return { ...l, items: nextItems };
+    }));
+    if (nextItems) await setListItems(user.uid, listId, nextItems);
+  }, [user]);
 
   const removeFromList = useCallback(async (listId: string, movieId: number) => {
     if (!user) return;
-    const list = lists.find(l => l.id === listId);
-    if (!list) return;
-    const items = list.items.filter(i => i.id !== movieId);
-    setLists(prev => prev.map(l => l.id === listId ? { ...l, items } : l));
-    await setListItems(user.uid, listId, items);
-  }, [user, lists]);
+    let nextItems: ListMovie[] | null = null;
+    setLists(prev => prev.map(l => {
+      if (l.id !== listId) return l;
+      nextItems = l.items.filter(i => i.id !== movieId);
+      return { ...l, items: nextItems };
+    }));
+    if (nextItems) await setListItems(user.uid, listId, nextItems);
+  }, [user]);
 
   return { lists, loading, createList, renameList, deleteList, addToList, removeFromList };
 }
