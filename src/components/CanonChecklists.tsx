@@ -42,7 +42,7 @@ export function CanonChecklists({ watchedIds, onOpenMovie }: Props) {
         <CanonListScreen
           list={openList}
           watchedIds={watchedIds}
-          onOpenMovie={onOpenMovie}
+          onOpenMovie={(id, mt) => { setOpenList(null); onOpenMovie(id, mt); }}
           onBack={() => setOpenList(null)}
         />
       )}
