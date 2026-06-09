@@ -45,13 +45,16 @@ export function CardView({
   onOpenFull, onClose, initialIndex = 0,
 }: CardViewProps) {
   const [index, setIndex] = useState(Math.min(initialIndex, items.length - 1));
-  const [imgErr, setImgErr] = useState(false);
   const [bottomMode, setBottomMode] = useState<BottomMode>('cta');
   const [loadingAction, setLoadingAction] = useState<'watch' | 'like' | 'watchlist' | null>(null);
 
-  // Swipe state
+  // Swipe / carousel state — modello "filmstrip" a 3 slide (prev/current/next).
+  // La track è traslata di -100% (slide centrale al centro) + dragX in px.
   const [dragX, setDragX] = useState(0);
+  const [dragging, setDragging] = useState(false);   // dito a contatto, segue il dito (no transizione)
   const [isAnimating, setIsAnimating] = useState(false);
+  const [noTransition, setNoTransition] = useState(false); // reset istantaneo dopo il commit
+  const trackRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const swipeLocked = useRef<'h' | 'v' | null>(null);
@@ -64,15 +67,43 @@ export function CardView({
   const isOnWatchlist = watchlistIds.has(item.id);
   const isLiked = likedIds?.has(item.id) ?? false;
   const personalRating = getPersonalRating(item.id);
-  const poster = !imgErr ? getImageUrl(item.poster_path, 'w500') : null;
+  const poster = getImageUrl(item.poster_path, 'w500');
   const title = getTitle(item);
   const canPrev = index > 0;
   const canNext = index < items.length - 1;
 
+  // Larghezza di una slide (= larghezza dell'area poster), per traslazioni precise
+  // anche su desktop dove l'area non occupa tutta la finestra.
+  const slideWidth = () => trackRef.current?.offsetWidth ?? window.innerWidth;
+
+  // Avanza/retrocede di una posizione con animazione continua, poi ricentra.
+  function animateTo(dir: 'next' | 'prev') {
+    if (isAnimating) return;
+    if ((dir === 'next' && !canNext) || (dir === 'prev' && !canPrev)) {
+      setDragX(0);
+      return;
+    }
+    setDragging(false);
+    setIsAnimating(true);
+    // Trascina la track di un'intera slide: la card adiacente arriva al centro.
+    setDragX(dir === 'next' ? -slideWidth() : slideWidth());
+    window.setTimeout(() => {
+      // Swap dell'indice + reset a 0 SENZA transizione (la nuova slide centrale
+      // è già il nuovo film, quindi non si vede alcun salto).
+      setNoTransition(true);
+      setIndex(i => (dir === 'next' ? i + 1 : i - 1));
+      setBottomMode('cta');
+      setDragX(0);
+      setIsAnimating(false);
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => setNoTransition(false))
+      );
+    }, 300);
+  }
+
   function goTo(i: number) {
-    setIndex(i);
-    setImgErr(false);
-    setBottomMode('cta');
+    if (i > index) animateTo('next');
+    else if (i < index) animateTo('prev');
   }
 
   // ── Touch swipe ─────────────────────────────────────────────────
@@ -85,15 +116,17 @@ export function CardView({
   }
 
   function handleTouchMove(e: React.TouchEvent) {
-    if (touchStartX.current === null || touchStartY.current === null) return;
+    if (touchStartX.current === null || touchStartY.current === null || isAnimating) return;
     const dx = e.touches[0].clientX - touchStartX.current;
     const dy = e.touches[0].clientY - touchStartY.current;
     if (!swipeLocked.current && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
       swipeLocked.current = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+      if (swipeLocked.current === 'h') setDragging(true);
     }
     if (swipeLocked.current === 'h') {
       e.preventDefault();
       let resist = dx;
+      // Resistenza elastica solo ai bordi (nessuna slide oltre il primo/ultimo).
       if ((dx > 0 && !canPrev) || (dx < 0 && !canNext)) {
         resist = Math.sign(dx) * Math.sqrt(Math.abs(dx)) * 7;
       }
@@ -103,28 +136,20 @@ export function CardView({
   }
 
   function handleTouchEnd() {
-    if (swipeLocked.current !== 'h') {
-      touchStartX.current = null;
-      swipeLocked.current = null;
-      setDragX(0);
-      return;
-    }
-    const dx = activeDragX.current;
-    const threshold = 70;
-    if (dx < -threshold && canNext) {
-      setIsAnimating(true);
-      setDragX(-window.innerWidth);
-      setTimeout(() => { goTo(index + 1); setDragX(0); setIsAnimating(false); }, 260);
-    } else if (dx > threshold && canPrev) {
-      setIsAnimating(true);
-      setDragX(window.innerWidth);
-      setTimeout(() => { goTo(index - 1); setDragX(0); setIsAnimating(false); }, 260);
-    } else {
-      setDragX(0);
-    }
+    const wasHorizontal = swipeLocked.current === 'h';
     touchStartX.current = null;
+    touchStartY.current = null;
     swipeLocked.current = null;
+    setDragging(false);
+
+    if (!wasHorizontal) { setDragX(0); return; }
+
+    const dx = activeDragX.current;
     activeDragX.current = 0;
+    const threshold = slideWidth() * 0.18; // ~18% della larghezza per confermare
+    if (dx <= -threshold && canNext) animateTo('next');
+    else if (dx >= threshold && canPrev) animateTo('prev');
+    else setDragX(0); // sotto soglia → torna al centro con molla
   }
 
   // ── Actions ─────────────────────────────────────────────────────
@@ -176,8 +201,13 @@ export function CardView({
     }
   }
 
-  const isDragged = swipeLocked.current === 'h' && dragX !== 0;
-  const transition = isDragged ? 'none' : 'transform 260ms cubic-bezier(0.25,0.46,0.45,0.94)';
+  // Nessuna transizione mentre il dito trascina o durante il reset post-commit;
+  // altrimenti molla morbida per snap-back e per il commit.
+  const transition = (dragging || noTransition)
+    ? 'none'
+    : 'transform 300ms cubic-bezier(0.22, 1, 0.36, 1)';
+  const prevItem = canPrev ? items[index - 1] : null;
+  const nextItem = canNext ? items[index + 1] : null;
 
   return createPortal((
     <div
@@ -217,7 +247,7 @@ export function CardView({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Blurred poster backdrop — cornice stile Letterboxd */}
+        {/* Blurred poster backdrop — cornice stile Letterboxd (segue il film corrente) */}
         {poster && (
           <div className="absolute inset-0 pointer-events-none">
             <img
@@ -230,24 +260,20 @@ export function CardView({
           </div>
         )}
 
-        {/* Poster contenuto, centrato, con margini visibili */}
+        {/* Track filmstrip: prev | current | next, centrata a -100% + dragX.
+            Trascinando, la card adiacente entra dal lato giusto seguendo il dito. */}
         <div
-          className="relative flex items-center justify-center w-full h-full px-6 py-3"
-          style={{ transform: dragX ? `translateX(${dragX}px)` : 'none', transition }}
+          ref={trackRef}
+          className="absolute inset-0 flex"
+          style={{
+            transform: `translateX(calc(-100% + ${dragX}px))`,
+            transition,
+            willChange: 'transform',
+          }}
         >
-          {poster ? (
-            <img
-              src={poster}
-              alt={title}
-              className="max-h-full w-auto object-contain rounded-2xl shadow-2xl"
-              style={{ maxWidth: '80vw' }}
-              onError={() => setImgErr(true)}
-            />
-          ) : (
-            <div className="w-[60vw] aspect-[2/3] bg-film-surface rounded-2xl flex items-center justify-center text-6xl">
-              {item.media_type === 'tv' ? '📺' : '🎬'}
-            </div>
-          )}
+          <PosterSlide item={prevItem} />
+          <PosterSlide item={item} />
+          <PosterSlide item={nextItem} />
         </div>
 
         {/* TMDB rating badge */}
@@ -352,6 +378,31 @@ export function CardView({
       </div>
     </div>
   ), document.body);
+}
+
+// ── Singola slide del carosello ───────────────────────────────────
+
+function PosterSlide({ item }: { item: CardItem | null }) {
+  const [err, setErr] = useState(false);
+  if (!item) return <div className="w-full shrink-0" />;
+  const poster = !err ? getImageUrl(item.poster_path, 'w500') : null;
+  return (
+    <div className="w-full shrink-0 h-full flex items-center justify-center px-6 py-3">
+      {poster ? (
+        <img
+          src={poster}
+          alt={getTitle(item)}
+          className="max-h-full w-auto object-contain rounded-2xl shadow-2xl"
+          style={{ maxWidth: '80vw' }}
+          onError={() => setErr(true)}
+        />
+      ) : (
+        <div className="w-[60vw] aspect-[2/3] bg-film-surface rounded-2xl flex items-center justify-center text-6xl">
+          {item.media_type === 'tv' ? '📺' : '🎬'}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── Inline star rating (swipe/touch, no modal) ───────────────────
