@@ -15,7 +15,7 @@ import {
   getProviderLogoUrl, getPopularProviders,
 } from '../services/tmdb';
 import type { PersonSearchResult, CompanySearchResult } from '../services/tmdb';
-import { TMDB_MOVIE_GENRES, COMMON_LANGUAGES, COMMON_COUNTRIES } from '../types';
+import { TMDB_MOVIE_GENRES, TMDB_TV_GENRES, COMMON_LANGUAGES, COMMON_COUNTRIES } from '../types';
 import { formatYear, formatRating, cn, mkey } from '../utils';
 import { InnerMovieDetail } from './InnerMovieDetail';
 import { PersonDetailScreen } from './PersonDetailScreen';
@@ -81,6 +81,7 @@ export function SearchView({
   const [browseSection, setBrowseSection] = useState<BrowseSection>(null);
   const [selectedDecade, setSelectedDecade] = useState<string | null>(null);
   const [genreTab, setGenreTab] = useState<GenreTab>('genre');
+  const [genreMediaType, setGenreMediaType] = useState<'movie' | 'tv'>('movie');
   // Overlays
   const [openPerson, setOpenPerson] = useState<{ id: number; name: string } | null>(null);
   const [openMovie, setOpenMovie] = useState<{ id: number; mediaType: 'movie' | 'tv' } | null>(null);
@@ -421,10 +422,24 @@ export function SearchView({
                     </button>
                   ))}
                 </div>
-                {genreTab === 'genre' && TMDB_MOVIE_GENRES.map(g => (
-                  <BrowseRow key={g.id} icon={<Film size={14} />} label={g.name}
-                    onTap={() => openBrowse({ type: 'genre', id: g.id, mediaType: 'movie', title: g.name })} />
-                ))}
+                {genreTab === 'genre' && (
+                  <>
+                    {/* Movie / TV toggle per i generi */}
+                    <div className="flex px-4 gap-2 mb-3">
+                      {(['movie', 'tv'] as const).map(mt => (
+                        <button key={mt} onClick={() => setGenreMediaType(mt)}
+                          className={cn('flex-1 py-1.5 rounded-xl text-xs font-medium border transition-all',
+                            genreMediaType === mt ? 'bg-film-accent text-film-black border-film-accent' : 'bg-film-surface text-film-muted border-film-border')}>
+                          {mt === 'movie' ? 'Movies' : 'TV Shows'}
+                        </button>
+                      ))}
+                    </div>
+                    {(genreMediaType === 'tv' ? TMDB_TV_GENRES : TMDB_MOVIE_GENRES).map(g => (
+                      <BrowseRow key={g.id} icon={genreMediaType === 'tv' ? <Tv size={14} /> : <Film size={14} />} label={g.name}
+                        onTap={() => openBrowse({ type: 'genre', id: g.id, mediaType: genreMediaType, title: g.name })} />
+                    ))}
+                  </>
+                )}
                 {genreTab === 'country' && COMMON_COUNTRIES.map(co => (
                   <BrowseRow key={co.code} icon={<Globe size={14} />} label={co.name}
                     onTap={() => openBrowse({ type: 'browse', title: co.name, filters: { originCountry: co.code, sortBy: 'popularity.desc' } })} />

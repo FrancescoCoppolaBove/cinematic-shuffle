@@ -46,6 +46,7 @@ export async function fetchWatchedMovies(uid: string): Promise<WatchedMovie[]> {
         media_type: (data.media_type as 'movie' | 'tv') ?? 'movie',
         addedAt: toISOString(data.addedAt),
         watchedDate: (data.watchedDate as string | undefined) ?? undefined,
+        runtimeBackfilled: (data.runtimeBackfilled as boolean | undefined) ?? false,
       } satisfies WatchedMovie;
     })
     .sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime());
@@ -76,6 +77,11 @@ export async function updatePersonalRating(uid: string, movieId: number, rating:
 
 export async function updateWatchedDate(uid: string, movieId: number, date: string, mt: 'movie' | 'tv' = 'movie') {
   await setDoc(watchedRef(uid, movieId, mt), { watchedDate: date }, { merge: true });
+}
+
+// Backfill una-tantum della durata TV (stima intera serie) sui titoli vecchi.
+export async function updateWatchedRuntime(uid: string, movieId: number, mt: 'movie' | 'tv', runtime: number | null) {
+  await setDoc(watchedRef(uid, movieId, mt), { runtime, runtimeBackfilled: true }, { merge: true });
 }
 
 // Migrazione una-tantum: i doc TV salvati con la vecchia chiave (solo id)

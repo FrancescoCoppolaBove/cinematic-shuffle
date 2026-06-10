@@ -210,6 +210,7 @@ export interface WatchedMovie {
   addedAt: string;
   watchedDate?: string;            // data di visione (YYYY-MM-DD); default = giorno di addedAt
   media_type: 'movie' | 'tv';
+  runtimeBackfilled?: boolean;     // TV: runtime ricalcolato sull'intera serie
 }
 
 export interface WatchlistItem {

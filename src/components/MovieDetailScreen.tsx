@@ -154,14 +154,18 @@ export function MovieDetailScreen({
     return () => { alive = false; };
   }, [isTV, movie.id]);
 
-  const totalEpisodes = useMemo(
+  // Stagioni regolari (escludendo gli Special / stagione 0) usate per il
+  // progresso complessivo; gli Special restano tracciabili a parte.
+  const regularSeasons = useMemo(
     () => (movie.seasons ?? [])
-      .filter(s => s.season_number > 0)
-      .reduce((n, s) => n + (s.episode_count ?? 0), 0),
+      .filter(s => s.season_number > 0 && (s.episode_count ?? 0) > 0)
+      .sort((a, b) => a.season_number - b.season_number),
     [movie.seasons]
   );
-  const watchedEpCount = Math.min(watchedEps.size, totalEpisodes || watchedEps.size);
-  const seriesPct = totalEpisodes > 0 ? Math.round((watchedEpCount / totalEpisodes) * 100) : 0;
+  const totalEpisodes = useMemo(
+    () => regularSeasons.reduce((n, s) => n + (s.episode_count ?? 0), 0),
+    [regularSeasons]
+  );
   const seasonWatched = useCallback(
     (seasonNumber: number) => {
       const prefix = `${seasonNumber}_`;
@@ -171,6 +175,26 @@ export function MovieDetailScreen({
     },
     [watchedEps]
   );
+  // Conta solo gli episodi delle stagioni regolari (no Special).
+  const watchedEpCount = useMemo(() => {
+    let n = 0;
+    for (const s of regularSeasons) n += Math.min(seasonWatched(s.season_number), s.episode_count ?? 0);
+    return n;
+  }, [regularSeasons, seasonWatched]);
+  const seriesPct = totalEpisodes > 0 ? Math.round((watchedEpCount / totalEpisodes) * 100) : 0;
+
+  // Prossimo episodio da vedere: primo non visto scorrendo le stagioni in ordine.
+  const nextToWatch = useMemo(() => {
+    if (totalEpisodes === 0 || watchedEpCount >= totalEpisodes) return null;
+    for (const s of regularSeasons) {
+      for (let ep = 1; ep <= (s.episode_count ?? 0); ep++) {
+        if (!watchedEps.has(`${s.season_number}_${ep}`)) {
+          return { seasonNumber: s.season_number, episodeNumber: ep, seasonName: s.name };
+        }
+      }
+    }
+    return null;
+  }, [regularSeasons, watchedEps, totalEpisodes, watchedEpCount]);
 
   const handleVoteReview = async (reviewId: string, type: 'like' | 'dislike') => {
     const uid = getAuth().currentUser?.uid;
@@ -754,10 +778,30 @@ export function MovieDetailScreen({
                   </div>
                 )}
 
-                {/* Seasons list */}
+                {/* Continua da dove eri rimasto / inizia la serie */}
+                {nextToWatch && (
+                  <button
+                    onClick={() => setOpenSeason({ seriesId: movie.id, seasonNumber: nextToWatch.seasonNumber, seasonName: nextToWatch.seasonName })}
+                    className="w-full mb-4 flex items-center gap-3 px-4 py-3 rounded-2xl bg-film-accent/10 border border-film-accent/30 active:scale-[0.99] transition-transform text-left"
+                  >
+                    <div className="w-9 h-9 rounded-full bg-film-accent flex items-center justify-center shrink-0">
+                      <Play size={15} className="text-film-black" fill="currentColor" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-film-subtle text-[10px] uppercase tracking-widest">
+                        {watchedEpCount > 0 ? 'Continue watching' : 'Start watching'}
+                      </p>
+                      <p className="text-film-text text-sm font-semibold">
+                        S{nextToWatch.seasonNumber} · E{nextToWatch.episodeNumber}
+                      </p>
+                    </div>
+                  </button>
+                )}
+
+                {/* Seasons list (Special / stagione 0 in fondo) */}
                 <div className="space-y-0">
-                  {movie.seasons
-                    ?.filter(s => s.season_number > 0)
+                  {[...(movie.seasons ?? [])]
+                    .sort((a, b) => (a.season_number === 0 ? 1 : b.season_number === 0 ? -1 : a.season_number - b.season_number))
                     .map(s => {
                       const year = s.air_date ? new Date(s.air_date).getFullYear() : null;
                       const isCurrentSeason = movie.next_episode_to_air?.season_number === s.season_number;

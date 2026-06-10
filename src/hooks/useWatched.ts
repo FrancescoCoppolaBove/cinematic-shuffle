@@ -2,9 +2,10 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { mkey } from '../utils';
 import type { User } from 'firebase/auth';
 import type { WatchedMovie, WatchlistItem, TMDBMovieDetail } from '../types';
-import { getTitle, getReleaseDate } from '../services/tmdb';
+import { getTitle, getReleaseDate, getMovieDetail } from '../services/tmdb';
 import {
   fetchWatchedMovies, addWatchedToFirestore, removeWatchedFromFirestore, migrateTvWatchedKeys,
+  updateWatchedRuntime,
   updatePersonalRating as updateRatingFs, updateLiked as updateLikedFs,
   updateRewatchCount as updateRewatchCountFs, updateWatchedDate as updateWatchedDateFs,
   fetchWatchlist, addToWatchlistFirestore, removeFromWatchlistFirestore,
@@ -60,6 +61,34 @@ export function useWatched(user: User | null) {
     // La migrazione delle vecchie chiavi TV (id → tv:id) è solo manutenzione
     // dello storage: la facciamo in background, senza bloccare l'accesso.
     void migrateTvWatchedKeys(uid);
+
+    // Backfill in background della durata TV sui titoli salvati prima del fix:
+    // le serie avevano la durata di UN episodio; la ricalcoliamo sull'intera
+    // serie (durata ep × n. episodi) scaricando il dettaglio una sola volta.
+    void (async () => {
+      const stale = watched.filter(m => m.media_type === 'tv' && !m.runtimeBackfilled);
+      if (stale.length === 0) return;
+      const updates = new Map<number, number | null>();
+      const CHUNK = 5;
+      for (let i = 0; i < stale.length; i += CHUNK) {
+        if (prevUid.current !== uid) return; // account cambiato: interrompi
+        await Promise.all(stale.slice(i, i + CHUNK).map(async m => {
+          try {
+            const detail = await getMovieDetail(m.id, 'tv');
+            const rt = titleRuntimeMinutes({ ...detail, media_type: 'tv' });
+            await updateWatchedRuntime(uid, m.id, 'tv', rt);
+            updates.set(m.id, rt ?? null);
+          } catch { /* salta questo titolo */ }
+        }));
+      }
+      if (updates.size && prevUid.current === uid) {
+        setWatchedMovies(prev => prev.map(m =>
+          m.media_type === 'tv' && updates.has(m.id)
+            ? { ...m, runtime: updates.get(m.id) ?? null, runtimeBackfilled: true }
+            : m
+        ));
+      }
+    })();
   }, []);
 
   useEffect(() => {
