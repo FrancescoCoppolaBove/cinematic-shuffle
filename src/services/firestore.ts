@@ -41,6 +41,7 @@ export async function fetchWatchedMovies(uid: string): Promise<WatchedMovie[]> {
         original_language: (data.original_language as string | undefined) ?? undefined,
         media_type: (data.media_type as 'movie' | 'tv') ?? 'movie',
         addedAt: toISOString(data.addedAt),
+        watchedDate: (data.watchedDate as string | undefined) ?? undefined,
       } satisfies WatchedMovie;
     })
     .sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime());
@@ -67,6 +68,10 @@ export async function removeWatchedFromFirestore(uid: string, movieId: number) {
 
 export async function updatePersonalRating(uid: string, movieId: number, rating: number | null) {
   await setDoc(watchedRef(uid, movieId), { personal_rating: rating }, { merge: true });
+}
+
+export async function updateWatchedDate(uid: string, movieId: number, date: string) {
+  await setDoc(watchedRef(uid, movieId), { watchedDate: date }, { merge: true });
 }
 
 // ─── Watchlist ────────────────────────────────────────────────────

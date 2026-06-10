@@ -11,6 +11,7 @@ import { cn } from '../utils';
 import { WatchedView } from './WatchedView';
 import { TasteInsights } from './TasteInsights';
 import { ListsTab } from './ListsTab';
+import { DiaryView } from './DiaryView';
 import { CanonChecklists } from './CanonChecklists';
 import { ImportLetterboxd } from './ImportLetterboxd';
 import { PersonDetailScreen } from './PersonDetailScreen';
@@ -49,10 +50,11 @@ interface ProfileViewProps {
   onRenameList: (listId: string, name: string) => Promise<void>;
   onDeleteList: (listId: string) => Promise<void>;
   onRemoveFromList: (listId: string, movieId: number) => Promise<void>;
-  onImportWatched: (items: { movie: TMDBMovieDetail; rating: number | null }[]) => Promise<void>;
+  onImportWatched: (items: { movie: TMDBMovieDetail; rating: number | null; watchedDate?: string }[]) => Promise<void>;
+  onUpdateWatchedDate: (id: number, date: string) => Promise<void>;
 }
 
-type MainTab = 'profilo' | 'visti' | 'watchlist' | 'liste' | 'recensioni';
+type MainTab = 'profilo' | 'visti' | 'watchlist' | 'liste' | 'diario' | 'recensioni';
 
 export function ProfileView({
   user, watchedMovies, watchlist,
@@ -62,7 +64,7 @@ export function ProfileView({
   onToggleLiked, onAddToWatchlist, onRemoveFromWatchlist,
   onOpenMovieGlobal, onSignOut,
   lists, onCreateList, onRenameList, onDeleteList, onRemoveFromList,
-  onImportWatched,
+  onImportWatched, onUpdateWatchedDate,
 }: ProfileViewProps) {
   const [tab, setTab] = useState<MainTab>('profilo');
   const [followingUids, setFollowingUids] = useState<string[]>([]);
@@ -119,6 +121,7 @@ export function ProfileView({
     { key: 'visti',      label: 'Visti',       count: watchedMovies.length },
     { key: 'watchlist',  label: 'Watchlist',   count: watchlist.length },
     { key: 'liste',      label: 'Liste',       count: lists.length },
+    { key: 'diario',     label: 'Diario',      count: watchedMovies.length },
     { key: 'recensioni', label: 'Recensioni',  count: myReviews.length },
   ];
 
@@ -304,6 +307,17 @@ export function ProfileView({
             onDeleteList={onDeleteList}
             onRemoveFromList={onRemoveFromList}
             onOpenMovie={(id, mt) => onOpenMovieGlobal(id, mt)}
+          />
+        </div>
+      )}
+
+      {/* ── Tab: Diario ── */}
+      {tab === 'diario' && (
+        <div className="px-4 pt-4 pb-6">
+          <DiaryView
+            watchedMovies={watchedMovies}
+            onOpenMovie={(id, mt) => onOpenMovieGlobal(id, mt)}
+            onUpdateWatchedDate={onUpdateWatchedDate}
           />
         </div>
       )}

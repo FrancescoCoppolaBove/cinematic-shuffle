@@ -208,6 +208,7 @@ export interface WatchedMovie {
   runtime?: number | null;
   original_language?: string;      // ISO 639-1
   addedAt: string;
+  watchedDate?: string;            // data di visione (YYYY-MM-DD); default = giorno di addedAt
   media_type: 'movie' | 'tv';
 }
 

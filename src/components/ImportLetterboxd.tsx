@@ -10,11 +10,11 @@ import type { TMDBMovieDetail } from '../types';
 import { searchMovieByTitleYear, getMovieDetail } from '../services/tmdb';
 
 interface Props {
-  onImport: (items: { movie: TMDBMovieDetail; rating: number | null }[]) => Promise<void>;
+  onImport: (items: { movie: TMDBMovieDetail; rating: number | null; watchedDate?: string }[]) => Promise<void>;
   onClose: () => void;
 }
 
-interface Row { name: string; year: number; rating: number | null }
+interface Row { name: string; year: number; rating: number | null; date?: string }
 
 // Parser CSV minimale che gestisce i campi tra virgolette.
 function parseCSV(text: string): string[][] {
@@ -57,6 +57,7 @@ export function ImportLetterboxd({ onImport, onClose }: Props) {
       const iName = header.indexOf('name');
       const iYear = header.indexOf('year');
       const iRating = header.indexOf('rating');
+      const iDate = header.indexOf('watched date') !== -1 ? header.indexOf('watched date') : header.indexOf('date');
       if (iName === -1 || iYear === -1) {
         setError("Colonne 'Name' e 'Year' non trovate. Usa l'export CSV di Letterboxd.");
         return;
@@ -70,14 +71,16 @@ export function ImportLetterboxd({ onImport, onClose }: Props) {
         const year = parseInt((cells[iYear] ?? '').trim());
         if (!name || Number.isNaN(year)) continue;
         const rating = iRating !== -1 ? parseFloat((cells[iRating] ?? '').trim()) : NaN;
-        map.set(`${name}|${year}`, { name, year, rating: Number.isNaN(rating) ? null : rating });
+        const rawDate = iDate !== -1 ? (cells[iDate] ?? '').trim() : '';
+        const date = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : undefined;
+        map.set(`${name}|${year}`, { name, year, rating: Number.isNaN(rating) ? null : rating, date });
       }
       const list = [...map.values()];
       if (list.length === 0) { setError('Nessun film valido nel file.'); return; }
 
       setPhase('working');
       setProgress(0);
-      const items: { movie: TMDBMovieDetail; rating: number | null }[] = [];
+      const items: { movie: TMDBMovieDetail; rating: number | null; watchedDate?: string }[] = [];
       const notFound: string[] = [];
       const CHUNK = 6;
       for (let i = 0; i < list.length; i += CHUNK) {
@@ -87,7 +90,7 @@ export function ImportLetterboxd({ onImport, onClose }: Props) {
           if (!found) { notFound.push(`${row.name} (${row.year})`); return; }
           try {
             const movie = await getMovieDetail(found.id, 'movie');
-            items.push({ movie, rating: row.rating });
+            items.push({ movie, rating: row.rating, watchedDate: row.date });
           } catch { notFound.push(`${row.name} (${row.year})`); }
         }));
         setProgress(Math.min(1, (i + batch.length) / list.length));

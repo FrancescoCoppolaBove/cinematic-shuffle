@@ -213,6 +213,7 @@ export default function App() {
     watchedMovies, watchedIds, watchlist, watchlistIds,
     loading: watchedLoading,
     markWatched, markManyWatched, unmarkWatched, updateRating, toggleLiked, incrementRewatch,
+    updateWatchedDate,
     addToWatchlist, removeFromWatchlist,
     tvStatus, setFollowing, setCompleted, unsetTVStatus,
   } = useWatched(user);
@@ -575,6 +576,7 @@ export default function App() {
             onDeleteList={deleteList}
             onRemoveFromList={removeFromList}
             onImportWatched={markManyWatched}
+            onUpdateWatchedDate={updateWatchedDate}
           />
         )}
       </main>

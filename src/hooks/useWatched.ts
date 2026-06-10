@@ -5,7 +5,7 @@ import { getTitle, getReleaseDate } from '../services/tmdb';
 import {
   fetchWatchedMovies, addWatchedToFirestore, removeWatchedFromFirestore,
   updatePersonalRating as updateRatingFs, updateLiked as updateLikedFs,
-  updateRewatchCount as updateRewatchCountFs,
+  updateRewatchCount as updateRewatchCountFs, updateWatchedDate as updateWatchedDateFs,
   fetchWatchlist, addToWatchlistFirestore, removeFromWatchlistFirestore,
   fetchAllTVStatus, setTVStatus, markAllEpisodesCompleted, clearAllEpisodes,
   type TVSeriesStatus,
@@ -67,6 +67,7 @@ export function useWatched(user: User | null) {
       genre_ids: movie.genres?.map(g => g.id) ?? [],
       runtime: movie.runtime ?? movie.episode_run_time?.[0] ?? null,
       original_language: movie.original_language,
+      watchedDate: new Date().toISOString().slice(0, 10),
       media_type: movie.media_type,
     };
     await addWatchedToFirestore(user.uid, entry);
@@ -79,12 +80,13 @@ export function useWatched(user: User | null) {
 
   // Import in blocco (es. da Letterboxd / onboarding): scrive tutto e fa un solo refresh.
   const markManyWatched = useCallback(async (
-    items: { movie: TMDBMovieDetail; rating: number | null; liked?: boolean }[]
+    items: { movie: TMDBMovieDetail; rating: number | null; liked?: boolean; watchedDate?: string }[]
   ) => {
     if (!user || items.length === 0) return;
+    const today = new Date().toISOString().slice(0, 10);
     const CHUNK = 20;
     for (let i = 0; i < items.length; i += CHUNK) {
-      await Promise.all(items.slice(i, i + CHUNK).map(({ movie, rating, liked }) =>
+      await Promise.all(items.slice(i, i + CHUNK).map(({ movie, rating, liked, watchedDate }) =>
         addWatchedToFirestore(user.uid, {
           id: movie.id,
           title: getTitle(movie),
@@ -98,12 +100,19 @@ export function useWatched(user: User | null) {
           genre_ids: movie.genres?.map(g => g.id) ?? [],
           runtime: movie.runtime ?? movie.episode_run_time?.[0] ?? null,
           original_language: movie.original_language,
+          watchedDate: watchedDate || today,
           media_type: movie.media_type,
         })
       ));
     }
     await refresh();
   }, [user, refresh]);
+
+  const updateWatchedDate = useCallback(async (movieId: number, date: string) => {
+    if (!user) return;
+    await updateWatchedDateFs(user.uid, movieId, date);
+    setWatchedMovies(prev => prev.map(m => m.id === movieId ? { ...m, watchedDate: date } : m));
+  }, [user]);
 
   const unmarkWatched = useCallback(async (id: number) => {
     if (!user) return;
@@ -186,6 +195,7 @@ export function useWatched(user: User | null) {
       genre_ids: movie.genres?.map(g => g.id) ?? [],
       runtime: movie.episode_run_time?.[0] ?? null,
       original_language: movie.original_language,
+      watchedDate: new Date().toISOString().slice(0, 10),
       media_type: 'tv',
     };
     await addWatchedToFirestore(user.uid, entry);
@@ -203,6 +213,7 @@ export function useWatched(user: User | null) {
     watchedMovies, watchedIds, watchlist, watchlistIds,
     loading, refresh,
     markWatched, markManyWatched, unmarkWatched, updateRating, toggleLiked, incrementRewatch,
+    updateWatchedDate,
     addToWatchlist, removeFromWatchlist,
     tvStatus, setFollowing, setCompleted, unsetTVStatus,
   };
