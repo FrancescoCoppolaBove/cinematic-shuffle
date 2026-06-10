@@ -161,7 +161,7 @@ export function UserProfileScreen({
               </div>
               <div className="text-center">
                 <p className="text-film-text font-bold text-sm">{profile?.followersCount ?? 0}</p>
-                <p className="text-film-subtle text-xs">Follower</p>
+                <p className="text-film-subtle text-xs">Followers</p>
               </div>
               <div className="text-center">
                 <p className="text-film-text font-bold text-sm">{profile?.followingCount ?? 0}</p>

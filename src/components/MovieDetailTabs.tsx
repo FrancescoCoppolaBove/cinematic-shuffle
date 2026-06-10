@@ -16,7 +16,7 @@ interface MovieDetailTabsProps {
   onOpenKeyword: (keywordId: number, keywordName: string, mediaType: 'movie' | 'tv') => void;
 }
 
-type Tab = 'cast' | 'crew' | 'generi';
+type Tab = 'cast' | 'crew' | 'genres';
 
 export function MovieDetailTabs({
   movie, onOpenPerson, onOpenGenre, onOpenKeyword,
@@ -29,7 +29,7 @@ export function MovieDetailTabs({
   useEffect(() => { setCastExpanded(false); }, [movie.id]);
 
   useEffect(() => {
-    if (tab === 'generi' && keywords.length === 0) {
+    if (tab === 'genres' && keywords.length === 0) {
       setLoadingKw(true);
       getMovieKeywords(movie.id, movie.media_type)
         .then(setKeywords)
@@ -44,7 +44,7 @@ export function MovieDetailTabs({
   // Deduplicate crew by person+job, group by department
   type CrewMember = typeof crew[0];
   const crewByDept = crew.reduce<Record<string, CrewMember[]>>((acc: Record<string, CrewMember[]>, m: CrewMember) => {
-    const dept = m.department || 'Altro';
+    const dept = m.department || 'Other';
     if (!acc[dept]) acc[dept] = [];
     if (!acc[dept].find((x: CrewMember) => x.id === m.id && x.job === m.job)) {
       acc[dept].push(m);
@@ -52,13 +52,13 @@ export function MovieDetailTabs({
     return acc;
   }, {});
 
-  const DEPT_ORDER = ['Directing', 'Writing', 'Production', 'Camera', 'Art', 'Sound', 'Editing', 'Visual Effects', 'Crew', 'Altro'];
+  const DEPT_ORDER = ['Directing', 'Writing', 'Production', 'Camera', 'Art', 'Sound', 'Editing', 'Visual Effects', 'Crew', 'Other'];
 
   return (
     <div>
       {/* Tab bar */}
       <div className="flex gap-1 mb-4 bg-film-surface rounded-2xl p-1.5 border border-film-border">
-        {(['cast', 'crew', 'generi'] as Tab[]).map(t => (
+        {(['cast', 'crew', 'genres'] as Tab[]).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -78,7 +78,7 @@ export function MovieDetailTabs({
       {tab === 'cast' && (
         <div className="space-y-1">
           {cast.length === 0 ? (
-            <p className="text-film-muted text-sm py-4 text-center">Cast non disponibile</p>
+            <p className="text-film-muted text-sm py-4 text-center">Cast unavailable</p>
           ) : (
             <>
               {(castExpanded ? cast : cast.slice(0, 10)).map((actor: typeof cast[0]) => (
@@ -116,7 +116,7 @@ export function MovieDetailTabs({
       {tab === 'crew' && (
         <div className="space-y-5">
           {Object.keys(crewByDept).length === 0 ? (
-            <p className="text-film-muted text-sm py-4 text-center">Crew non disponibile</p>
+            <p className="text-film-muted text-sm py-4 text-center">Crew unavailable</p>
           ) : (
             DEPT_ORDER
               .filter(d => crewByDept[d])
@@ -142,7 +142,7 @@ export function MovieDetailTabs({
       )}
 
       {/* ── Generi & Keywords ── */}
-      {tab === 'generi' && (
+      {tab === 'genres' && (
         <div className="space-y-5">
           {/* Generi TMDB */}
           {movie.genres && movie.genres.length > 0 && (
@@ -170,7 +170,7 @@ export function MovieDetailTabs({
             </div>
           ) : keywords.length > 0 ? (
             <div>
-              <h4 className="text-film-subtle text-xs uppercase tracking-widest mb-2">Temi</h4>
+              <h4 className="text-film-subtle text-xs uppercase tracking-widest mb-2">Themes</h4>
               <div className="flex flex-wrap gap-2">
                 {keywords.map(kw => (
                   <button

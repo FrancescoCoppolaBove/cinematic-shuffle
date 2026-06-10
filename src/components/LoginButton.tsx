@@ -17,7 +17,7 @@ export function LoginButton({ user, loading, onSignIn, onSignOut, isConfigured }
     return (
       <div className="flex items-center gap-2 text-film-muted text-xs">
         <Loader2 size={14} className="animate-spin" />
-        <span className="hidden sm:block">Accesso...</span>
+        <span className="hidden sm:block">Signing in...</span>
       </div>
     );
   }

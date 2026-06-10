@@ -81,7 +81,7 @@ export function AddToListModal({
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleCreate(); }}
-                placeholder="Nome della lista…"
+                placeholder="List name..."
                 maxLength={60}
                 className="flex-1 bg-film-card border border-film-border rounded-xl px-3 py-2.5 text-film-text placeholder:text-film-subtle focus:outline-none focus:border-film-accent"
               />
@@ -90,7 +90,7 @@ export function AddToListModal({
                 disabled={!newName.trim() || busy}
                 className="shrink-0 px-4 rounded-xl bg-film-accent text-film-black font-semibold text-sm active:scale-95 disabled:opacity-50"
               >
-                Crea
+                Create
               </button>
             </div>
           ) : (
@@ -128,7 +128,7 @@ export function AddToListModal({
                 </div>
                 <div className="flex-1 text-left min-w-0">
                   <p className="text-film-text text-sm font-medium truncate">{list.name}</p>
-                  <p className="text-film-subtle text-xs">{list.items.length} titoli</p>
+                  <p className="text-film-subtle text-xs">{list.items.length} titles</p>
                 </div>
               </button>
             );

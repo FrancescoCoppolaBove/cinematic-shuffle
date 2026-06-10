@@ -37,7 +37,7 @@ function LoginScreen({ onSignIn, loading, error }: {
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center space-y-3">
           <img
-            src="/logo.png" alt=""
+            src="/brand/cineteca-logo.png" alt=""
             className="w-24 h-24 mx-auto object-contain"
             onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
           />
@@ -501,7 +501,7 @@ export default function App() {
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-center">
           <div className="flex items-center gap-2">
             <img
-              src="/logo.png" alt=""
+              src="/brand/cineteca-logo.png" alt=""
               className="w-6 h-6 object-contain"
               onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
             />

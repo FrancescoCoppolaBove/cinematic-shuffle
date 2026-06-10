@@ -218,7 +218,7 @@ export function BrowseListScreen({
           <div className="flex-1 min-w-0">
             <h2 className="text-film-text font-semibold truncate">{title}</h2>
             {totalResults > 0 && !loading && (
-              <p className="text-film-subtle text-xs">{movies.length.toLocaleString()} di {totalResults.toLocaleString()}</p>
+              <p className="text-film-subtle text-xs">{movies.length.toLocaleString()} of {totalResults.toLocaleString()}</p>
             )}
           </div>
           <div className="w-9" />{/* spacer for centering */}

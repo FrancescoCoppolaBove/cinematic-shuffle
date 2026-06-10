@@ -93,7 +93,7 @@ export function ReviewCard({ review, myVote, onVote, onClick, onUserClick, compa
           <span className="text-xs">{review.replyCount}</span>
         </button>
         <button onClick={onClick} className="ml-auto text-film-accent text-xs active:opacity-60">
-          Leggi
+          Read
         </button>
       </div>
     </div>
@@ -126,7 +126,7 @@ export function PopularReviews({
         <h3 className="text-xs uppercase tracking-widest text-film-subtle font-medium">Popular Reviews</h3>
         {totalCount > 3 && (
           <button onClick={onShowAll} className="text-film-accent text-xs active:opacity-60">
-            Tutte ({totalCount})
+            All ({totalCount})
           </button>
         )}
       </div>
@@ -135,7 +135,7 @@ export function PopularReviews({
           <div key={r.id} className="relative">
             {currentUserId && r.userId === currentUserId && (
               <div className="absolute -top-1 -right-1 z-10 bg-film-accent text-film-black text-[9px] font-bold px-1.5 py-0.5 rounded-full">
-                TU
+                YOU
               </div>
             )}
             <ReviewCard

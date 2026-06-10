@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Key, ExternalLink, ChevronRight } from 'lucide-react';
+import { APP_NAME, BRAND_LOGO_SRC, BRAND_WORDMARK_SRC } from '../constants/brand';
 
 interface ApiKeySetupProps {
   onSave: (key: string) => void;
@@ -11,17 +12,17 @@ export function ApiKeySetup({ onSave }: ApiKeySetupProps) {
   const [testing, setTesting] = useState(false);
 
   async function handleSubmit() {
-    if (!key.trim()) { setError('Inserisci la tua API key'); return; }
+    if (!key.trim()) { setError('Enter your API key'); return; }
     setTesting(true);
     setError('');
     try {
       const res = await fetch(`https://api.themoviedb.org/3/configuration?api_key=${key.trim()}`);
-      if (!res.ok) throw new Error('Key non valida');
+      if (!res.ok) throw new Error('Invalid key');
       // Salva in localStorage per persistenza durante la sessione
       localStorage.setItem('tmdb_runtime_key', key.trim());
       onSave(key.trim());
     } catch {
-      setError('API key non valida. Verificala su themoviedb.org');
+      setError('Invalid API key. Check it on themoviedb.org.');
     } finally {
       setTesting(false);
     }
@@ -31,10 +32,9 @@ export function ApiKeySetup({ onSave }: ApiKeySetupProps) {
     <div className="min-h-screen bg-film-black flex items-center justify-center p-6">
       <div className="max-w-md w-full space-y-8">
         {/* Logo */}
-        <div className="text-center">
-          <div className="text-6xl mb-4">🎬</div>
-          <h1 className="font-display text-4xl text-film-text tracking-widest">CINEMATIC</h1>
-          <h2 className="font-display text-4xl text-film-accent tracking-widest">SHUFFLE</h2>
+        <div className="text-center space-y-4">
+          <img src={BRAND_LOGO_SRC} alt="" className="mx-auto h-24 w-24 rounded-3xl object-contain" />
+          <img src={BRAND_WORDMARK_SRC} alt={APP_NAME} className="mx-auto w-full max-w-[260px] object-contain" />
         </div>
 
         {/* Card */}
@@ -44,15 +44,15 @@ export function ApiKeySetup({ onSave }: ApiKeySetupProps) {
               <Key size={16} className="text-film-accent" />
             </div>
             <div>
-              <p className="text-film-text font-medium text-sm">Configura la tua API key</p>
-              <p className="text-film-muted text-xs">Necessaria per accedere al database dei film</p>
+              <p className="text-film-text font-medium text-sm">Set up your API key</p>
+              <p className="text-film-muted text-xs">Required to access the movie database.</p>
             </div>
           </div>
 
           <div className="space-y-3">
             <p className="text-film-muted text-xs leading-relaxed">
-              Cinematic Shuffle usa le API di <strong className="text-film-text">The Movie Database (TMDB)</strong>, 
-              gratuite per uso personale. Ottieni la tua key in pochi secondi:
+              {APP_NAME} uses <strong className="text-film-text">The Movie Database (TMDB)</strong> APIs,
+              free for personal use. Get your key in a few seconds:
             </p>
             <a
               href="https://www.themoviedb.org/settings/api"
@@ -67,10 +67,10 @@ export function ApiKeySetup({ onSave }: ApiKeySetupProps) {
           </div>
 
           <div className="space-y-2">
-            <label className="text-film-subtle text-xs uppercase tracking-wider">La tua API Key</label>
+            <label className="text-film-subtle text-xs uppercase tracking-wider">Your API key</label>
             <input
               type="text"
-              placeholder="es. a1b2c3d4e5f6..."
+              placeholder="e.g. a1b2c3d4e5f6..."
               value={key}
               onChange={e => { setKey(e.target.value); setError(''); }}
               onKeyDown={e => e.key === 'Enter' && handleSubmit()}
@@ -84,11 +84,11 @@ export function ApiKeySetup({ onSave }: ApiKeySetupProps) {
             disabled={testing || !key.trim()}
             className="w-full py-3 bg-film-accent hover:bg-film-accent-dim text-film-black font-display text-lg tracking-widest rounded-xl transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {testing ? 'VERIFICA...' : 'INIZIA'}
+            {testing ? 'CHECKING...' : 'START'}
           </button>
 
           <p className="text-film-subtle text-xs text-center">
-            La key viene salvata solo nel tuo browser, mai inviata a server esterni.
+            The key is saved only in your browser and never sent to external servers.
           </p>
         </div>
       </div>

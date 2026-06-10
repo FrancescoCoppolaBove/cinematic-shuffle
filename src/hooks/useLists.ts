@@ -47,7 +47,7 @@ export function useLists(user: User | null) {
   const renameList = useCallback(async (listId: string, name: string) => {
     if (!user) return;
     await renameListFs(user.uid, listId, name);
-    setLists(prev => prev.map(l => l.id === listId ? { ...l, name: name.trim() || 'Lista' } : l));
+    setLists(prev => prev.map(l => l.id === listId ? { ...l, name: name.trim() || 'List' } : l));
   }, [user]);
 
   const deleteList = useCallback(async (listId: string) => {
