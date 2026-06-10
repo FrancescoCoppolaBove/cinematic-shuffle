@@ -215,7 +215,7 @@ export default function App() {
     markWatched, markManyWatched, unmarkWatched, updateRating, toggleLiked, incrementRewatch,
     updateWatchedDate,
     addToWatchlist, removeFromWatchlist,
-    tvStatus, setFollowing, setCompleted, unsetTVStatus,
+    tvStatus, followingSeries, setFollowing, setCompleted, unsetTVStatus,
   } = useWatched(user);
 
   // ─── Onboarding del gusto (primo accesso, libreria vuota) ────────
@@ -581,6 +581,8 @@ export default function App() {
             onRemoveFromList={removeFromList}
             onImportWatched={markManyWatched}
             onUpdateWatchedDate={updateWatchedDate}
+            followingSeries={followingSeries}
+            onUnfollow={unsetTVStatus}
           />
         )}
       </main>
@@ -659,7 +661,7 @@ export default function App() {
           onRemoveFromWatchlistFull={removeFromWatchlist}
           loading={detailLoading}
           tvSeriesStatus={detailMovie.media_type === 'tv' ? (tvStatus.get(detailMovie.id) ?? null) : undefined}
-          onSetFollowing={detailMovie.media_type === 'tv' ? async () => { await setFollowing(detailMovie.id); } : undefined}
+          onSetFollowing={detailMovie.media_type === 'tv' ? async () => { await setFollowing(detailMovie.id, detailMovie); } : undefined}
           onSetCompleted={detailMovie.media_type === 'tv' ? async () => { await setCompleted(detailMovie, detailMovie.seasons ?? []); } : undefined}
           onUnsetTVStatus={detailMovie.media_type === 'tv' ? async () => { await unsetTVStatus(detailMovie.id); } : undefined}
           onRequestRating={() => setShowRatingModal(true)}

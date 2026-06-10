@@ -232,6 +232,16 @@ export async function markAllEpisodesInSeason(
 // ── TV Series Status ──────────────────────────────────────────────
 export type TVSeriesStatus = 'following' | 'completed';
 
+// Metadata salvata sul doc di stato così la lista "Following" può mostrare
+// poster/titolo senza dover riscaricare il dettaglio di ogni serie.
+export interface FollowedSeries {
+  id: number;
+  title: string;
+  poster_path: string | null;
+  first_air_date: string;
+  vote_average: number;
+}
+
 const tvStatusRef = (uid: string, seriesId: number) =>
   doc(db, 'users', uid, 'tvStatus', String(seriesId));
 const tvStatusCol = (uid: string) =>
@@ -247,11 +257,40 @@ export async function fetchAllTVStatus(uid: string): Promise<Map<number, TVSerie
   return map;
 }
 
-export async function setTVStatus(uid: string, seriesId: number, status: TVSeriesStatus | null): Promise<void> {
+// Serie attualmente seguite, con metadati, più recenti prima.
+export async function fetchFollowingSeries(uid: string): Promise<FollowedSeries[]> {
+  const snap = await getDocs(tvStatusCol(uid));
+  return snap.docs
+    .filter(d => d.data().status === 'following')
+    .map(d => {
+      const data = d.data();
+      return {
+        id: Number(d.id),
+        title: (data.title as string) ?? 'Series',
+        poster_path: (data.poster_path as string | null) ?? null,
+        first_air_date: (data.first_air_date as string) ?? '',
+        vote_average: (data.vote_average as number) ?? 0,
+        _followedAt: data.followedAt ? toISOString(data.followedAt) : '',
+      };
+    })
+    .sort((a, b) => (b._followedAt).localeCompare(a._followedAt))
+    .map(({ _followedAt, ...s }) => { void _followedAt; return s; });
+}
+
+export async function setTVStatus(
+  uid: string,
+  seriesId: number,
+  status: TVSeriesStatus | null,
+  meta?: Omit<FollowedSeries, 'id'>,
+): Promise<void> {
   if (status === null) {
     await deleteDoc(tvStatusRef(uid, seriesId));
   } else {
-    await setDoc(tvStatusRef(uid, seriesId), { status });
+    await setDoc(
+      tvStatusRef(uid, seriesId),
+      { status, ...(meta ?? {}), followedAt: serverTimestamp() as FieldValue },
+      { merge: true },
+    );
   }
 }
 

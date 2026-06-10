@@ -8,8 +8,8 @@ import {
   updatePersonalRating as updateRatingFs, updateLiked as updateLikedFs,
   updateRewatchCount as updateRewatchCountFs, updateWatchedDate as updateWatchedDateFs,
   fetchWatchlist, addToWatchlistFirestore, removeFromWatchlistFirestore,
-  fetchAllTVStatus, setTVStatus, markAllEpisodesCompleted, clearAllEpisodes,
-  type TVSeriesStatus,
+  fetchAllTVStatus, fetchFollowingSeries, setTVStatus, markAllEpisodesCompleted, clearAllEpisodes,
+  type TVSeriesStatus, type FollowedSeries,
 } from '../services/firestore';
 
 /**
@@ -34,6 +34,7 @@ export function useWatched(user: User | null) {
   const [watchedIds, setWatchedIds] = useState<Set<string>>(new Set());
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [tvStatus, setTvStatus] = useState<Map<number, TVSeriesStatus>>(new Map());
+  const [followingSeries, setFollowingSeries] = useState<FollowedSeries[]>([]);
   const [watchlistIds, setWatchlistIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const prevUid = useRef<string | null>(null);
@@ -43,16 +44,18 @@ export function useWatched(user: User | null) {
     // Carichiamo SUBITO i dati in parallelo (percorso critico del login).
     // I dati in memoria sono indicizzati per chiave composita mkey(id, tipo),
     // quindi sono già corretti a prescindere dalla chiave del documento.
-    const [watched, wl, tvStat] = await Promise.all([
+    const [watched, wl, tvStat, following] = await Promise.all([
       fetchWatchedMovies(uid),
       fetchWatchlist(uid),
       fetchAllTVStatus(uid),
+      fetchFollowingSeries(uid),
     ]);
     setWatchedMovies(watched);
     setWatchedIds(new Set(watched.map(m => mkey(m.id, m.media_type))));
     setWatchlist(wl);
     setWatchlistIds(new Set(wl.map(m => mkey(m.id, m.media_type))));
     setTvStatus(tvStat);
+    setFollowingSeries(following);
     setLoading(false);
     // La migrazione delle vecchie chiavi TV (id → tv:id) è solo manutenzione
     // dello storage: la facciamo in background, senza bloccare l'accesso.
@@ -68,6 +71,7 @@ export function useWatched(user: User | null) {
       prevUid.current = null;
       setWatchedMovies([]); setWatchedIds(new Set());
       setWatchlist([]); setWatchlistIds(new Set());
+      setTvStatus(new Map()); setFollowingSeries([]);
     }
   }, [user, loadAll]);
 
@@ -197,10 +201,19 @@ export function useWatched(user: User | null) {
     await refresh();
   }, [user, refresh, watchlist]);
 
-  const setFollowing = useCallback(async (seriesId: number) => {
+  const setFollowing = useCallback(async (seriesId: number, movie?: TMDBMovieDetail) => {
     if (!user) return;
-    await setTVStatus(user.uid, seriesId, 'following');
+    const meta = movie ? {
+      title: getTitle(movie),
+      poster_path: movie.poster_path,
+      first_air_date: getReleaseDate(movie),
+      vote_average: movie.vote_average,
+    } : undefined;
+    await setTVStatus(user.uid, seriesId, 'following', meta);
     setTvStatus(prev => new Map(prev).set(seriesId, 'following'));
+    if (meta) {
+      setFollowingSeries(prev => [{ id: seriesId, ...meta }, ...prev.filter(s => s.id !== seriesId)]);
+    }
   }, [user]);
 
   const setCompleted = useCallback(async (
@@ -210,6 +223,7 @@ export function useWatched(user: User | null) {
     if (!user) return;
     await markAllEpisodesCompleted(user.uid, movie.id, seasons);
     setTvStatus(prev => new Map(prev).set(movie.id, 'completed'));
+    setFollowingSeries(prev => prev.filter(s => s.id !== movie.id));
     // Also mark in watchedMovies if not already there
     const entry: Omit<import('../types').WatchedMovie, 'addedAt'> = {
       id: movie.id,
@@ -236,6 +250,7 @@ export function useWatched(user: User | null) {
     await setTVStatus(user.uid, seriesId, null);
     await clearAllEpisodes(user.uid, seriesId);
     setTvStatus(prev => { const m = new Map(prev); m.delete(seriesId); return m; });
+    setFollowingSeries(prev => prev.filter(s => s.id !== seriesId));
   }, [user]);
 
   return {
@@ -244,6 +259,6 @@ export function useWatched(user: User | null) {
     markWatched, markManyWatched, unmarkWatched, updateRating, toggleLiked, incrementRewatch,
     updateWatchedDate,
     addToWatchlist, removeFromWatchlist,
-    tvStatus, setFollowing, setCompleted, unsetTVStatus,
+    tvStatus, followingSeries, setFollowing, setCompleted, unsetTVStatus,
   };
 }

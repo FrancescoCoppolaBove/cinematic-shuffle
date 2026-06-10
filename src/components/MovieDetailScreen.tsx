@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   ChevronLeft, ChevronRight, Star, Clock, Play,
   Eye, Bookmark, BookmarkCheck, Heart,
@@ -138,6 +138,40 @@ export function MovieDetailScreen({
   const poster = !posterError ? getImageUrl(movie.poster_path, 'w500') : null;
   const backdrop = getImageUrl(movie.backdrop_path, 'w780');
   const isTV = movie.media_type === 'tv';
+
+  // ── Avanzamento serie (episodi visti) ──────────────────────────
+  // Lo stato vive qui (non nell'overlay) così la barra di avanzamento e le
+  // singole stagioni restano sincronizzate quando l'utente spunta gli episodi.
+  const [watchedEps, setWatchedEps] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!isTV) { setWatchedEps(new Set()); return; }
+    const uid = getAuth().currentUser?.uid;
+    if (!uid) return;
+    let alive = true;
+    fetchWatchedEpisodes(uid, movie.id)
+      .then(s => { if (alive) setWatchedEps(s); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [isTV, movie.id]);
+
+  const totalEpisodes = useMemo(
+    () => (movie.seasons ?? [])
+      .filter(s => s.season_number > 0)
+      .reduce((n, s) => n + (s.episode_count ?? 0), 0),
+    [movie.seasons]
+  );
+  const watchedEpCount = Math.min(watchedEps.size, totalEpisodes || watchedEps.size);
+  const seriesPct = totalEpisodes > 0 ? Math.round((watchedEpCount / totalEpisodes) * 100) : 0;
+  const seasonWatched = useCallback(
+    (seasonNumber: number) => {
+      const prefix = `${seasonNumber}_`;
+      let n = 0;
+      for (const k of watchedEps) if (k.startsWith(prefix)) n++;
+      return n;
+    },
+    [watchedEps]
+  );
+
   const handleVoteReview = async (reviewId: string, type: 'like' | 'dislike') => {
     const uid = getAuth().currentUser?.uid;
     if (!uid) return;
@@ -703,6 +737,23 @@ export function MovieDetailScreen({
                   )}
                 </div>
 
+                {/* Avanzamento complessivo della serie */}
+                {totalEpisodes > 0 && watchedEpCount > 0 && (
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-film-text text-xs font-medium">
+                        {watchedEpCount}/{totalEpisodes} episodes watched
+                      </span>
+                      <span className={cn('text-xs font-semibold', seriesPct === 100 ? 'text-film-accent' : 'text-film-subtle')}>
+                        {seriesPct === 100 ? 'Completed ✓' : `${seriesPct}%`}
+                      </span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-film-card overflow-hidden">
+                      <div className="h-full rounded-full bg-film-accent transition-all duration-300" style={{ width: `${Math.max(2, seriesPct)}%` }} />
+                    </div>
+                  </div>
+                )}
+
                 {/* Seasons list */}
                 <div className="space-y-0">
                   {movie.seasons
@@ -711,6 +762,8 @@ export function MovieDetailScreen({
                       const year = s.air_date ? new Date(s.air_date).getFullYear() : null;
                       const isCurrentSeason = movie.next_episode_to_air?.season_number === s.season_number;
                       const hasNoEpisodes = (s.episode_count ?? 0) === 0;
+                      const sWatched = seasonWatched(s.season_number);
+                      const sDone = !hasNoEpisodes && sWatched >= (s.episode_count ?? 0);
                       // Stagione senza episodi: determina stato
                       const noEpLabel = !s.air_date
                         ? 'In the works'
@@ -743,11 +796,15 @@ export function MovieDetailScreen({
                             <p className="text-film-subtle text-xs mt-0.5">
                               {hasNoEpisodes
                                 ? noEpLabel
-                                : `${s.episode_count} episodes${year ? ` · ${year}` : ''}`}
+                                : sWatched > 0
+                                  ? `${sWatched}/${s.episode_count} watched${year ? ` · ${year}` : ''}`
+                                  : `${s.episode_count} episodes${year ? ` · ${year}` : ''}`}
                             </p>
                           </div>
                           {!hasNoEpisodes && (
-                            <ChevronRight size={14} className="text-film-subtle/50 shrink-0" />
+                            sDone
+                              ? <div className="shrink-0 w-5 h-5 rounded-full bg-film-accent flex items-center justify-center"><Check size={12} className="text-film-black" strokeWidth={3} /></div>
+                              : <ChevronRight size={14} className="text-film-subtle/50 shrink-0" />
                           )}
                         </>
                       );
@@ -907,6 +964,8 @@ export function MovieDetailScreen({
           seriesId={openSeason.seriesId}
           seasonNumber={openSeason.seasonNumber}
           seasonName={openSeason.seasonName}
+          watchedEps={watchedEps}
+          onChangeWatched={setWatchedEps}
           onBack={() => setOpenSeason(null)}
         />
       )}
@@ -1111,11 +1170,13 @@ function EpisodeOverview({ text }: { text: string }) {
 
 // ── SeasonDetailOverlay — episodi di una stagione ─────────────────
 function SeasonDetailOverlay({
-  seriesId, seasonNumber, seasonName, onBack,
+  seriesId, seasonNumber, seasonName, watchedEps, onChangeWatched, onBack,
 }: {
   seriesId: number;
   seasonNumber: number;
   seasonName: string;
+  watchedEps: Set<string>;
+  onChangeWatched: (next: Set<string>) => void;
   onBack: () => void;
 }) {
   const [data, setData] = useState<{
@@ -1125,7 +1186,6 @@ function SeasonDetailOverlay({
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
-  const [watchedEps, setWatchedEps] = useState<Set<string>>(new Set());
   const [uid, setUid] = useState<string | null>(null);
 
   // Get current user uid
@@ -1143,25 +1203,19 @@ function SeasonDetailOverlay({
       .finally(() => setLoading(false));
   }, [seriesId, seasonNumber]);
 
-  // Load watched episodes from Firestore
-  useEffect(() => {
-    if (!uid) return;
-    fetchWatchedEpisodes(uid, seriesId).then(setWatchedEps).catch(() => {});
-  }, [uid, seriesId]);
-
   const epKey = (epNum: number) => `${seasonNumber}_${epNum}`;
 
   const handleToggleEp = async (epNum: number) => {
     if (!uid) return;
     const next = await toggleWatchedEpisode(uid, seriesId, epKey(epNum), watchedEps);
-    setWatchedEps(next);
+    onChangeWatched(next);
   };
 
   const handleToggleSeason = async () => {
     if (!uid || !data) return;
     const keys = data.episodes.map(ep => epKey(ep.episode_number));
     const next = await markAllEpisodesInSeason(uid, seriesId, keys, watchedEps);
-    setWatchedEps(next);
+    onChangeWatched(next);
   };
 
   const seasonKeys = data?.episodes.map(ep => epKey(ep.episode_number)) ?? [];

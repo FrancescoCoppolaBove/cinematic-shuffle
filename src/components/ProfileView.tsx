@@ -29,7 +29,8 @@ import type { ReviewDraft } from './ReviewEditor';
 import { saveReview } from '../services/firestore';
 import { fetchFollowing, fetchFollowers, fetchUserPublicProfile, upsertUserPublicProfile, fetchUserReviews } from '../services/firestore';
 import type { Review } from '../services/firestore';
-import type { UserPublicProfile } from '../services/firestore';
+import type { UserPublicProfile, FollowedSeries } from '../services/firestore';
+import { getImageUrl } from '../services/tmdb';
 
 interface ProfileViewProps {
   user: User;
@@ -56,9 +57,11 @@ interface ProfileViewProps {
   onRemoveFromList: (listId: string, movieId: number) => Promise<void>;
   onImportWatched: (items: { movie: TMDBMovieDetail; rating: number | null; watchedDate?: string }[]) => Promise<void>;
   onUpdateWatchedDate: (id: number, date: string) => Promise<void>;
+  followingSeries: FollowedSeries[];
+  onUnfollow: (seriesId: number) => Promise<void>;
 }
 
-type MainTab = 'profilo' | 'visti' | 'watchlist' | 'liste' | 'diario' | 'recensioni';
+type MainTab = 'profilo' | 'visti' | 'watchlist' | 'following' | 'liste' | 'diario' | 'recensioni';
 
 export function ProfileView({
   user, watchedMovies, watchlist,
@@ -69,6 +72,7 @@ export function ProfileView({
   onOpenMovieGlobal, onSignOut,
   lists, onCreateList, onRenameList, onDeleteList, onRemoveFromList,
   onImportWatched, onUpdateWatchedDate,
+  followingSeries, onUnfollow,
 }: ProfileViewProps) {
   const [tab, setTab] = useState<MainTab>('profilo');
   const [followingUids, setFollowingUids] = useState<string[]>([]);
@@ -125,6 +129,7 @@ export function ProfileView({
     { key: 'profilo',    label: 'Profile' },
     { key: 'visti',      label: 'Watched',     count: watchedMovies.length },
     { key: 'watchlist',  label: 'Watchlist',   count: watchlist.length },
+    { key: 'following',  label: 'Following',   count: followingSeries.length },
     { key: 'liste',      label: 'Lists',       count: lists.length },
     { key: 'diario',     label: 'Diary',       count: watchedMovies.length },
     { key: 'recensioni', label: 'Reviews',     count: myReviews.length },
@@ -314,6 +319,17 @@ export function ProfileView({
           />
         </div>
       )}
+
+      {/* ── Tab: Following — serie TV seguite ── */}
+      {tab === 'following' && (
+        <div className="px-4 pt-4 pb-6">
+          <FollowingTab
+            series={followingSeries}
+            onOpen={(id) => onOpenMovieGlobal(id, 'tv')}
+            onUnfollow={onUnfollow}
+          />
+        </div>
+      )}
       {/* ── Tab: Liste ── */}
       {tab === 'liste' && (
         <div className="px-4 pt-4 pb-6">
@@ -429,7 +445,7 @@ export function ProfileView({
           >
             <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-film-border shrink-0">
               <h3 className="text-film-text font-semibold">
-                {openSocialPanel === 'following' ? `Seguiti (${followingUids.length})` : `Follower (${followerUids.length})`}
+                {openSocialPanel === 'following' ? `Following (${followingUids.length})` : `Followers (${followerUids.length})`}
               </h3>
               <button onClick={() => setOpenSocialPanel(null)} className="text-film-subtle active:opacity-60">
                 ✕
@@ -502,10 +518,61 @@ function UserRow({ profile, onClick }: { profile: UserPublicProfile; onClick: ()
       )}
       <div className="flex-1 text-left min-w-0">
         <p className="text-film-text text-sm font-semibold truncate">{profile.displayName}</p>
-        <p className="text-film-subtle text-xs">{profile.moviesWatchedCount} film · {profile.reviewsCount} review</p>
+        <p className="text-film-subtle text-xs">{profile.moviesWatchedCount} watched · {profile.reviewsCount} reviews</p>
       </div>
       <span className="text-film-accent text-xs shrink-0">View →</span>
     </button>
+  );
+}
+
+function FollowingTab({ series, onOpen, onUnfollow }: {
+  series: FollowedSeries[];
+  onOpen: (id: number) => void;
+  onUnfollow: (id: number) => Promise<void>;
+}) {
+  if (series.length === 0) {
+    return (
+      <div className="text-center py-14">
+        <Tv size={32} className="text-film-subtle mx-auto mb-3" />
+        <p className="text-film-text text-sm font-medium">No series followed yet</p>
+        <p className="text-film-subtle text-xs mt-1 max-w-[260px] mx-auto leading-relaxed">
+          Tap <span className="text-film-text">Follow</span> on a show you're currently watching to keep it here.
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-2.5">
+      {series.map(s => {
+        const poster = getImageUrl(s.poster_path, 'w185');
+        const year = s.first_air_date ? s.first_air_date.slice(0, 4) : null;
+        return (
+          <div key={s.id} className="flex items-center gap-3 bg-film-surface border border-film-border rounded-xl p-2.5">
+            <button onClick={() => onOpen(s.id)} className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-70">
+              <div className="w-11 h-16 rounded-lg overflow-hidden bg-film-card border border-film-border shrink-0">
+                {poster
+                  ? <img src={poster} alt={s.title} className="w-full h-full object-cover" />
+                  : <div className="w-full h-full flex items-center justify-center text-film-subtle"><Tv size={16} /></div>}
+              </div>
+              <div className="min-w-0">
+                <p className="text-film-text text-sm font-semibold truncate">{s.title}</p>
+                <p className="text-film-subtle text-xs mt-0.5 flex items-center gap-1.5">
+                  <span className="text-blue-400">● Following</span>
+                  {year && <><span className="text-film-border">·</span><span>{year}</span></>}
+                  {s.vote_average > 0 && <><span className="text-film-border">·</span><span className="text-film-accent">★ {s.vote_average.toFixed(1)}</span></>}
+                </p>
+              </div>
+            </button>
+            <button
+              onClick={() => onUnfollow(s.id)}
+              className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border border-film-border bg-film-card text-film-muted active:opacity-60"
+            >
+              Unfollow
+            </button>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
