@@ -12,6 +12,23 @@ import {
   type TVSeriesStatus,
 } from '../services/firestore';
 
+/**
+ * Minuti "guardati" da attribuire a un titolo nella libreria.
+ * - Film: la durata del film.
+ * - Serie TV: durata episodio × numero di episodi (stima dell'intera serie),
+ *   così le ore guardate non contano una serie da 60 episodi come ~45 minuti.
+ *   Fallback: durata di un singolo episodio se mancano i conteggi.
+ */
+function titleRuntimeMinutes(movie: TMDBMovieDetail): number | null {
+  if (movie.media_type === 'tv') {
+    const perEp = movie.episode_run_time?.[0] ?? 0;
+    const eps = movie.number_of_episodes ?? 0;
+    if (perEp > 0 && eps > 0) return perEp * eps;
+    return perEp > 0 ? perEp : null;
+  }
+  return movie.runtime ?? null;
+}
+
 export function useWatched(user: User | null) {
   const [watchedMovies, setWatchedMovies] = useState<WatchedMovie[]>([]);
   const [watchedIds, setWatchedIds] = useState<Set<string>>(new Set());
@@ -23,8 +40,9 @@ export function useWatched(user: User | null) {
 
   const loadAll = useCallback(async (uid: string) => {
     setLoading(true);
-    // Migra le vecchie chiavi TV (id → tv:id) prima di leggere, una sola volta.
-    await migrateTvWatchedKeys(uid);
+    // Carichiamo SUBITO i dati in parallelo (percorso critico del login).
+    // I dati in memoria sono indicizzati per chiave composita mkey(id, tipo),
+    // quindi sono già corretti a prescindere dalla chiave del documento.
     const [watched, wl, tvStat] = await Promise.all([
       fetchWatchedMovies(uid),
       fetchWatchlist(uid),
@@ -36,6 +54,9 @@ export function useWatched(user: User | null) {
     setWatchlistIds(new Set(wl.map(m => mkey(m.id, m.media_type))));
     setTvStatus(tvStat);
     setLoading(false);
+    // La migrazione delle vecchie chiavi TV (id → tv:id) è solo manutenzione
+    // dello storage: la facciamo in background, senza bloccare l'accesso.
+    void migrateTvWatchedKeys(uid);
   }, []);
 
   useEffect(() => {
@@ -68,7 +89,7 @@ export function useWatched(user: User | null) {
       liked: false,
       rewatchCount: 0,
       genre_ids: movie.genres?.map(g => g.id) ?? [],
-      runtime: movie.runtime ?? movie.episode_run_time?.[0] ?? null,
+      runtime: titleRuntimeMinutes(movie),
       original_language: movie.original_language,
       watchedDate: new Date().toISOString().slice(0, 10),
       media_type: movie.media_type,
@@ -101,7 +122,7 @@ export function useWatched(user: User | null) {
           liked: liked ?? false,
           rewatchCount: 0,
           genre_ids: movie.genres?.map(g => g.id) ?? [],
-          runtime: movie.runtime ?? movie.episode_run_time?.[0] ?? null,
+          runtime: titleRuntimeMinutes(movie),
           original_language: movie.original_language,
           watchedDate: watchedDate || today,
           media_type: movie.media_type,
@@ -161,7 +182,7 @@ export function useWatched(user: User | null) {
       release_date: getReleaseDate(movie),
       vote_average: movie.vote_average,
       genre_ids: movie.genres?.map(g => g.id) ?? [],
-      runtime: movie.runtime ?? movie.episode_run_time?.[0] ?? null,
+      runtime: titleRuntimeMinutes(movie),
       original_language: movie.original_language,
       media_type: movie.media_type,
     };
@@ -201,7 +222,7 @@ export function useWatched(user: User | null) {
       liked: false,
       rewatchCount: 0,
       genre_ids: movie.genres?.map(g => g.id) ?? [],
-      runtime: movie.episode_run_time?.[0] ?? null,
+      runtime: titleRuntimeMinutes({ ...movie, media_type: 'tv' }),
       original_language: movie.original_language,
       watchedDate: new Date().toISOString().slice(0, 10),
       media_type: 'tv',

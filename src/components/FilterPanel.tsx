@@ -282,8 +282,8 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
         )}
       </FilterSection> : null}
 
-      {/* Regista — solo per film */}
-      {filters.mediaType !== 'tv' ? <FilterSection icon={<User size={14} />} label="Regista">
+      {/* Director — solo per film */}
+      {filters.mediaType !== 'tv' ? <FilterSection icon={<User size={14} />} label="Director">
         <input
           type="text"
           placeholder="es. Christopher Nolan"

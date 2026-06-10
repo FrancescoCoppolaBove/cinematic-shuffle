@@ -31,7 +31,8 @@ export function TasteInsights({ watchedMovies, onOpenPerson }: {
   watchedMovies: WatchedMovie[];
   onOpenPerson?: (id: number, name: string) => void;
 }) {
-  const { topDirectors, topActors, loading: creditsLoading } = useWatchedCredits(watchedMovies);
+  const { topDirectors, topActors, loading: creditsLoading, progress } = useWatchedCredits(watchedMovies);
+  const pct = Math.round(progress * 100);
 
   const stats = useMemo(() => {
     if (watchedMovies.length === 0) return null;
@@ -146,12 +147,13 @@ export function TasteInsights({ watchedMovies, onOpenPerson }: {
         <InsightTile icon={<Clock size={14} />} label="Hours" value={stats.totalHours > 0 ? `${stats.totalHours}h` : '—'} />
       </div>
 
-      {/* Registi più visti (top 5) */}
+      {/* Registi più visti (top 5) — niente "contatore": skeleton finché pronto */}
       <PeopleRanking
         icon={<Megaphone size={14} />}
         title="Most-watched directors"
         people={topDirectors.slice(0, 5)}
         loading={creditsLoading && topDirectors.length === 0}
+        pct={pct}
         onOpenPerson={onOpenPerson}
       />
 
@@ -162,7 +164,21 @@ export function TasteInsights({ watchedMovies, onOpenPerson }: {
           <span className="text-film-subtle text-xs uppercase tracking-widest">Most-watched actors</span>
         </div>
         {topActors.length === 0 ? (
-          <p className="text-film-subtle text-xs">{creditsLoading ? 'Calculating…' : 'No data'}</p>
+          creditsLoading ? (
+            <>
+              <div className="flex gap-3 -mx-1 px-1">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="flex flex-col items-center gap-1.5 w-16 shrink-0">
+                    <div className="w-16 h-16 rounded-full bg-film-card animate-pulse" />
+                    <div className="w-12 h-2 rounded bg-film-card animate-pulse" />
+                  </div>
+                ))}
+              </div>
+              <LoadingHint pct={pct} />
+            </>
+          ) : (
+            <p className="text-film-subtle text-xs">No data</p>
+          )
         ) : (
           <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-1 px-1">
             {topActors.slice(0, 10).map((p, i) => (
@@ -185,8 +201,19 @@ export function TasteInsights({ watchedMovies, onOpenPerson }: {
   );
 }
 
-function PeopleRanking({ icon, title, people, loading, onOpenPerson }: {
-  icon: React.ReactNode; title: string; people: RankedPerson[]; loading: boolean;
+function LoadingHint({ pct }: { pct: number }) {
+  return (
+    <div className="mt-3 flex items-center gap-2">
+      <div className="flex-1 h-1 rounded-full bg-film-card overflow-hidden">
+        <div className="h-full rounded-full bg-film-accent/70 transition-all duration-300" style={{ width: `${Math.max(6, pct)}%` }} />
+      </div>
+      <span className="text-film-subtle text-[10px] tabular-nums">Analyzing your library… {pct}%</span>
+    </div>
+  );
+}
+
+function PeopleRanking({ icon, title, people, loading, pct, onOpenPerson }: {
+  icon: React.ReactNode; title: string; people: RankedPerson[]; loading: boolean; pct: number;
   onOpenPerson?: (id: number, name: string) => void;
 }) {
   return (
@@ -196,7 +223,20 @@ function PeopleRanking({ icon, title, people, loading, onOpenPerson }: {
         <span className="text-film-subtle text-xs uppercase tracking-widest">{title}</span>
       </div>
       {people.length === 0 ? (
-        <p className="text-film-subtle text-xs">{loading ? 'Calculating…' : 'No data'}</p>
+        loading ? (
+          <div className="space-y-2.5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <span className="w-4" />
+                <div className="w-9 h-9 rounded-full bg-film-card animate-pulse shrink-0" />
+                <div className="flex-1 h-3 rounded bg-film-card animate-pulse" style={{ maxWidth: `${70 - i * 8}%` }} />
+              </div>
+            ))}
+            <LoadingHint pct={pct} />
+          </div>
+        ) : (
+          <p className="text-film-subtle text-xs">No data</p>
+        )
       ) : (
         <div className="space-y-2.5">
           {people.map((p, i) => {
@@ -215,7 +255,7 @@ function PeopleRanking({ icon, title, people, loading, onOpenPerson }: {
                     : <div className="w-full h-full flex items-center justify-center text-film-subtle text-xs">{p.name[0]}</div>}
                 </div>
                 <span className="flex-1 text-film-text text-sm truncate">{getPersonName(p.name)}</span>
-                <span className="text-film-subtle text-xs shrink-0">{p.count} film</span>
+                <span className="text-film-subtle text-xs shrink-0">{p.count} {p.count === 1 ? 'title' : 'titles'}</span>
               </button>
             );
           })}
@@ -245,7 +285,7 @@ function ActorAvatar({ person, rank, onOpenPerson }: {
         </span>
       </div>
       <span className="text-film-text text-[11px] text-center leading-tight line-clamp-2">{getPersonName(person.name)}</span>
-      <span className="text-film-subtle text-[10px]">{person.count} film</span>
+      <span className="text-film-subtle text-[10px]">{person.count} {person.count === 1 ? 'title' : 'titles'}</span>
     </button>
   );
 }

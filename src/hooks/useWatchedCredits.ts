@@ -11,7 +11,7 @@ import type { WatchedMovie } from '../types';
 import { getCredits, type TitleCredits, type CreditPerson } from '../services/tmdb';
 
 const CACHE_PREFIX = 'cinematic_credits_v1_';
-const BATCH_SIZE = 8;
+const BATCH_SIZE = 16;
 
 export interface RankedPerson extends CreditPerson { count: number }
 
@@ -40,24 +40,34 @@ export function useWatchedCredits(watchedMovies: WatchedMovie[]) {
 
   useEffect(() => {
     const runId = ++runIdRef.current;
-    const next = new Map<number, TitleCredits>();
+    const cached = new Map<number, TitleCredits>();
     const missing: WatchedMovie[] = [];
 
     // Prima passa: prendi tutto ciò che è già in cache.
     for (const m of watchedMovies) {
-      const cached = readCache(m.media_type, m.id);
-      if (cached) next.set(m.id, cached);
+      const c = readCache(m.media_type, m.id);
+      if (c) cached.set(m.id, c);
       else missing.push(m);
     }
-    setCreditsMap(new Map(next));
 
-    if (missing.length === 0) { setLoading(false); setProgress(1); return; }
+    // Niente da scaricare → rivela subito la classifica completa e definitiva.
+    if (missing.length === 0) {
+      setCreditsMap(cached);
+      setLoading(false);
+      setProgress(1);
+      return;
+    }
 
+    // Scarico in background SENZA aggiornare le classifiche a ogni lotto:
+    // l'utente non deve vedere i numeri "salire come un contatore". Teniamo
+    // visibile l'eventuale classifica completa precedente (o lo skeleton al
+    // primo accesso) finché non sono pronti TUTTI i crediti, poi un solo reveal.
     setLoading(true);
-    setProgress(next.size / watchedMovies.length);
+    setProgress(watchedMovies.length ? cached.size / watchedMovies.length : 0);
 
     let cancelled = false;
     (async () => {
+      const acc = new Map(cached);
       for (let i = 0; i < missing.length; i += BATCH_SIZE) {
         if (cancelled || runId !== runIdRef.current) return;
         const batch = missing.slice(i, i + BATCH_SIZE);
@@ -71,11 +81,14 @@ export function useWatchedCredits(watchedMovies: WatchedMovie[]) {
           })
         );
         if (cancelled || runId !== runIdRef.current) return;
-        for (const [id, c] of results) if (c) next.set(id, c);
-        setCreditsMap(new Map(next));
-        setProgress(Math.min(1, (next.size) / watchedMovies.length));
+        for (const [id, c] of results) if (c) acc.set(id, c);
+        // Solo la barra di avanzamento si muove, NON le classifiche.
+        setProgress(Math.min(0.99, acc.size / watchedMovies.length));
       }
-      if (!cancelled && runId === runIdRef.current) { setLoading(false); setProgress(1); }
+      if (cancelled || runId !== runIdRef.current) return;
+      setCreditsMap(acc);   // reveal unico, dati completi
+      setLoading(false);
+      setProgress(1);
     })();
 
     return () => { cancelled = true; };

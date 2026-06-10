@@ -12,7 +12,7 @@ import {
   SlidersHorizontal, X, ChevronDown, Search, LayoutGrid, Rows3,
 } from 'lucide-react';
 import { cn } from '../utils';
-import { TMDB_MOVIE_GENRES, COMMON_LANGUAGES, COMMON_COUNTRIES } from '../types';
+import { TMDB_MOVIE_GENRES, TMDB_TV_GENRES, COMMON_LANGUAGES, COMMON_COUNTRIES } from '../types';
 import { getPopularProviders } from '../services/tmdb';
 
 export interface ApiFilters {
@@ -191,7 +191,7 @@ export function ListFilterBar({
           <FilterRow label="Type">
             <div className="flex gap-2">
               {(['any', 'movie', 'tv'] as const).map(t => (
-                <button key={t} onClick={() => onApiFiltersChange({ ...apiFilters, mediaType: t === 'any' ? 'movie' : t })}
+                <button key={t} onClick={() => onApiFiltersChange({ ...apiFilters, mediaType: t === 'any' ? 'movie' : t, genreId: undefined })}
                   className={cn('flex-1 py-1.5 rounded-xl text-xs border capitalize',
                     (t === 'any' ? apiFilters.mediaType === 'movie' && !apiFilters.mediaType : apiFilters.mediaType === t)
                       || (t === 'any' && apiFilters.mediaType === 'movie')
@@ -231,7 +231,7 @@ export function ListFilterBar({
                 className="w-full bg-film-card border border-film-border rounded-lg px-3 py-2 text-sm text-film-text appearance-none focus:outline-none focus:border-film-accent"
               >
                 <option value="">Any genre</option>
-                {TMDB_MOVIE_GENRES.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                {(apiFilters.mediaType === 'tv' ? TMDB_TV_GENRES : TMDB_MOVIE_GENRES).map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
               <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-film-muted pointer-events-none" />
             </div>
