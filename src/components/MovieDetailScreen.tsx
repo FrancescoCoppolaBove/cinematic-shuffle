@@ -271,6 +271,17 @@ export function MovieDetailScreen({
         if (scrollRef.current) scrollRef.current.scrollTop = 0;
         onSwipeToIndex!(playlistIndex + dir);
       }, 300);
+      // Rete di sicurezza: se il nuovo film non arriva (fetch fallito),
+      // riporta la pagina corrente al centro invece di restare bloccati
+      // fuori schermo con lo spinner infinito.
+      window.setTimeout(() => {
+        if (pendingDir.current !== null) {
+          pendingDir.current = null;
+          setSpinning(false);
+          setDragX(0);
+          setIsAnimating(false);
+        }
+      }, 8000);
     };
 
     if (dx <= -threshold && canGoNext) commit(1);
