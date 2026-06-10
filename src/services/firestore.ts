@@ -7,8 +7,12 @@ import { db } from './firebase';
 import type { WatchedMovie, WatchlistItem, MovieList, ListMovie } from '../types';
 
 // ─── Refs ─────────────────────────────────────────────────────────
-const watchedRef   = (uid: string, id: number) => doc(db, 'users', uid, 'watched',   String(id));
-const watchlistRef = (uid: string, id: number) => doc(db, 'users', uid, 'watchlist', String(id));
+// Chiave doc watched/watchlist: i film restano su `id` (compat con i dati
+// esistenti), le serie TV usano `tv:id` per evitare collisioni tra gli spazi
+// di id (un film e una serie possono avere lo stesso id numerico su TMDB).
+const watchedKey   = (id: number, mt: 'movie' | 'tv' = 'movie') => mt === 'tv' ? `tv:${id}` : String(id);
+const watchedRef   = (uid: string, id: number, mt: 'movie' | 'tv' = 'movie') => doc(db, 'users', uid, 'watched',   watchedKey(id, mt));
+const watchlistRef = (uid: string, id: number, mt: 'movie' | 'tv' = 'movie') => doc(db, 'users', uid, 'watchlist', watchedKey(id, mt));
 const watchedCol   = (uid: string) => collection(db, 'users', uid, 'watched');
 const watchlistCol = (uid: string) => collection(db, 'users', uid, 'watchlist');
 
@@ -48,30 +52,47 @@ export async function fetchWatchedMovies(uid: string): Promise<WatchedMovie[]> {
 }
 
 export async function addWatchedToFirestore(uid: string, movie: Omit<WatchedMovie, 'addedAt'>) {
-  await setDoc(watchedRef(uid, movie.id), {
+  await setDoc(watchedRef(uid, movie.id, movie.media_type), {
     ...movie,
     addedAt: serverTimestamp() as FieldValue,
   }, { merge: true });
 }
 
-export async function updateRewatchCount(uid: string, movieId: number, count: number) {
-  await setDoc(watchedRef(uid, movieId), { rewatchCount: count }, { merge: true });
+export async function updateRewatchCount(uid: string, movieId: number, count: number, mt: 'movie' | 'tv' = 'movie') {
+  await setDoc(watchedRef(uid, movieId, mt), { rewatchCount: count }, { merge: true });
 }
 
-export async function updateLiked(uid: string, movieId: number, liked: boolean) {
-  await setDoc(watchedRef(uid, movieId), { liked }, { merge: true });
+export async function updateLiked(uid: string, movieId: number, liked: boolean, mt: 'movie' | 'tv' = 'movie') {
+  await setDoc(watchedRef(uid, movieId, mt), { liked }, { merge: true });
 }
 
-export async function removeWatchedFromFirestore(uid: string, movieId: number) {
-  await deleteDoc(watchedRef(uid, movieId));
+export async function removeWatchedFromFirestore(uid: string, movieId: number, mt: 'movie' | 'tv' = 'movie') {
+  await deleteDoc(watchedRef(uid, movieId, mt));
 }
 
-export async function updatePersonalRating(uid: string, movieId: number, rating: number | null) {
-  await setDoc(watchedRef(uid, movieId), { personal_rating: rating }, { merge: true });
+export async function updatePersonalRating(uid: string, movieId: number, rating: number | null, mt: 'movie' | 'tv' = 'movie') {
+  await setDoc(watchedRef(uid, movieId, mt), { personal_rating: rating }, { merge: true });
 }
 
-export async function updateWatchedDate(uid: string, movieId: number, date: string) {
-  await setDoc(watchedRef(uid, movieId), { watchedDate: date }, { merge: true });
+export async function updateWatchedDate(uid: string, movieId: number, date: string, mt: 'movie' | 'tv' = 'movie') {
+  await setDoc(watchedRef(uid, movieId, mt), { watchedDate: date }, { merge: true });
+}
+
+// Migrazione una-tantum: i doc TV salvati con la vecchia chiave (solo id)
+// vengono spostati su `tv:id`. Pochi documenti (le serie viste), costo minimo.
+export async function migrateTvWatchedKeys(uid: string): Promise<void> {
+  try {
+    const snap = await getDocs(watchedCol(uid));
+    const ops: Promise<unknown>[] = [];
+    snap.docs.forEach(d => {
+      const data = d.data();
+      if (data.media_type === 'tv' && d.id === String(data.id)) {
+        ops.push(setDoc(watchedRef(uid, data.id as number, 'tv'), data, { merge: true }));
+        ops.push(deleteDoc(d.ref));
+      }
+    });
+    if (ops.length) await Promise.all(ops);
+  } catch { /* best-effort */ }
 }
 
 // ─── Watchlist ────────────────────────────────────────────────────
@@ -98,14 +119,14 @@ export async function fetchWatchlist(uid: string): Promise<WatchlistItem[]> {
 }
 
 export async function addToWatchlistFirestore(uid: string, item: Omit<WatchlistItem, 'addedAt'>) {
-  await setDoc(watchlistRef(uid, item.id), {
+  await setDoc(watchlistRef(uid, item.id, item.media_type), {
     ...item,
     addedAt: serverTimestamp() as FieldValue,
   });
 }
 
-export async function removeFromWatchlistFirestore(uid: string, itemId: number) {
-  await deleteDoc(watchlistRef(uid, itemId));
+export async function removeFromWatchlistFirestore(uid: string, itemId: number, mt: 'movie' | 'tv' = 'movie') {
+  await deleteDoc(watchlistRef(uid, itemId, mt));
 }
 
 // ─── User Preferences ──────────────────────────────────────────────

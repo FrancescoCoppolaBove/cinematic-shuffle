@@ -3,7 +3,7 @@ import type { User } from 'firebase/auth';
 import type { WatchedMovie, WatchlistItem, TMDBMovieDetail } from '../types';
 import { getTitle, getReleaseDate } from '../services/tmdb';
 import {
-  fetchWatchedMovies, addWatchedToFirestore, removeWatchedFromFirestore,
+  fetchWatchedMovies, addWatchedToFirestore, removeWatchedFromFirestore, migrateTvWatchedKeys,
   updatePersonalRating as updateRatingFs, updateLiked as updateLikedFs,
   updateRewatchCount as updateRewatchCountFs, updateWatchedDate as updateWatchedDateFs,
   fetchWatchlist, addToWatchlistFirestore, removeFromWatchlistFirestore,
@@ -22,6 +22,8 @@ export function useWatched(user: User | null) {
 
   const loadAll = useCallback(async (uid: string) => {
     setLoading(true);
+    // Migra le vecchie chiavi TV (id → tv:id) prima di leggere, una sola volta.
+    await migrateTvWatchedKeys(uid);
     const [watched, wl, tvStat] = await Promise.all([
       fetchWatchedMovies(uid),
       fetchWatchlist(uid),
@@ -73,7 +75,7 @@ export function useWatched(user: User | null) {
     await addWatchedToFirestore(user.uid, entry);
     // If it was on watchlist, remove it
     if (watchlistIds.has(movie.id)) {
-      await removeFromWatchlistFirestore(user.uid, movie.id);
+      await removeFromWatchlistFirestore(user.uid, movie.id, movie.media_type);
     }
     await refresh();
   }, [user, watchlistIds, refresh]);
@@ -108,29 +110,33 @@ export function useWatched(user: User | null) {
     await refresh();
   }, [user, refresh]);
 
+  // media type di un titolo già in libreria (per indirizzare la doc giusta)
+  const mtOf = useCallback((id: number): 'movie' | 'tv' =>
+    watchedMovies.find(m => m.id === id)?.media_type ?? 'movie', [watchedMovies]);
+
   const updateWatchedDate = useCallback(async (movieId: number, date: string) => {
     if (!user) return;
-    await updateWatchedDateFs(user.uid, movieId, date);
+    await updateWatchedDateFs(user.uid, movieId, date, mtOf(movieId));
     setWatchedMovies(prev => prev.map(m => m.id === movieId ? { ...m, watchedDate: date } : m));
-  }, [user]);
+  }, [user, mtOf]);
 
   const unmarkWatched = useCallback(async (id: number) => {
     if (!user) return;
-    await removeWatchedFromFirestore(user.uid, id);
+    await removeWatchedFromFirestore(user.uid, id, mtOf(id));
     await refresh();
-  }, [user, refresh]);
+  }, [user, refresh, mtOf]);
 
   const updateRating = useCallback(async (movieId: number, rating: number | null) => {
     if (!user) return;
-    await updateRatingFs(user.uid, movieId, rating);
+    await updateRatingFs(user.uid, movieId, rating, mtOf(movieId));
     setWatchedMovies(prev => prev.map(m => m.id === movieId ? { ...m, personal_rating: rating } : m));
-  }, [user]);
+  }, [user, mtOf]);
 
   const incrementRewatch = useCallback(async (movieId: number, delta: number) => {
     if (!user) return;
     const current = watchedMovies.find(m => m.id === movieId);
     const newCount = Math.max(0, (current?.rewatchCount ?? 0) + delta);
-    await updateRewatchCountFs(user.uid, movieId, newCount);
+    await updateRewatchCountFs(user.uid, movieId, newCount, current?.media_type ?? 'movie');
     setWatchedMovies(prev => prev.map(m => m.id === movieId ? { ...m, rewatchCount: newCount } : m));
   }, [user, watchedMovies]);
 
@@ -138,7 +144,7 @@ export function useWatched(user: User | null) {
     if (!user) return;
     const current = watchedMovies.find(m => m.id === movieId);
     const newLiked = !(current?.liked ?? false);
-    await updateLikedFs(user.uid, movieId, newLiked);
+    await updateLikedFs(user.uid, movieId, newLiked, current?.media_type ?? 'movie');
     setWatchedMovies(prev => prev.map(m => m.id === movieId ? { ...m, liked: newLiked } : m));
   }, [user, watchedMovies]);
 
@@ -164,9 +170,10 @@ export function useWatched(user: User | null) {
 
   const removeFromWatchlist = useCallback(async (id: number) => {
     if (!user) return;
-    await removeFromWatchlistFirestore(user.uid, id);
+    const mt = watchlist.find(i => i.id === id)?.media_type ?? 'movie';
+    await removeFromWatchlistFirestore(user.uid, id, mt);
     await refresh();
-  }, [user, refresh]);
+  }, [user, refresh, watchlist]);
 
   const setFollowing = useCallback(async (seriesId: number) => {
     if (!user) return;
