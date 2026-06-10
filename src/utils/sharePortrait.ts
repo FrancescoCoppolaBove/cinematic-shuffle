@@ -1,8 +1,9 @@
 /**
  * sharePortrait — builds a 9:16 "cinephile portrait" image and shares it via
  * the native share sheet (Web Share API, files). Fallback: PNG download.
- * Full-bleed cinematic background (no black bars in Stories). No user name,
- * no logo image — just the data and a "CINETECA" wordmark at the bottom.
+ * Full-bleed cinematic background (no black bars in Stories). No user name.
+ * The footer carries a curiosity hook + the app mark + the CINETECA wordmark
+ * (rendered from the brand SVGs), Letterboxd-style.
  */
 import { TMDB_MOVIE_GENRES, TMDB_TV_GENRES, type WatchedMovie } from '../types';
 import { cinephileName } from './cinephileName';
@@ -84,6 +85,12 @@ export async function sharePortrait(d: PortraitData): Promise<void> {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
+  // Preload brand assets (same-origin SVGs → no canvas taint)
+  const [markImg, wordImg] = await Promise.all([
+    loadImg('/brand/cineteca-mark.svg'),
+    loadImg('/brand/cineteca-word.svg'),
+  ]);
+
   // Full-bleed cinematic background: vertical gradient + accent glows
   const vg = ctx.createLinearGradient(0, 0, 0, H);
   vg.addColorStop(0, '#0E0C14');
@@ -96,29 +103,32 @@ export async function sharePortrait(d: PortraitData): Promise<void> {
     g.addColorStop(1, 'rgba(237,195,50,0)');
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   };
-  glow(W / 2, 360, 760, 0.18);
-  glow(W / 2, H - 120, 620, 0.08);
+  glow(W / 2, 320, 720, 0.18);
+  glow(W / 2, H - 220, 640, 0.10);
 
   const PAD = 96;
   const CW = W - PAD * 2;
-  let y = 300; // below Instagram's top safe zone
+  // Footer occupies the bottom band — everything else flows above this ceiling.
+  const FOOTER_TOP = H - 360;
+
+  let y = 244; // below Instagram's top safe zone
 
   ctx.textAlign = 'center';
   ctx.fillStyle = MUTED;
-  ctx.font = '500 36px sans-serif';
+  ctx.font = '500 34px sans-serif';
   ctx.fillText('MY CINEPHILE PORTRAIT', W / 2, y);
-  y += 110;
+  y += 84;
 
   // Hero — cinephile name (adaptive, never clipped)
   ctx.fillStyle = ACCENT;
-  const hero = fitText(ctx, d.cinephileName, CW, 2, [108, 94, 80, 68, 58]);
-  const lh = hero.size * 1.06;
+  const hero = fitText(ctx, d.cinephileName, CW, 2, [100, 86, 74, 64, 56]);
+  const lh = hero.size * 1.04;
   for (const line of hero.lines) { y += lh * 0.78; ctx.fillText(line, W / 2, y); y += lh * 0.22; }
-  y += 50;
+  y += 36;
   ctx.fillStyle = TEXT;
-  ctx.font = '600 46px sans-serif';
-  ctx.fillText(d.subtitle, W / 2, y);
-  y += 120;
+  ctx.font = '600 44px sans-serif';
+  ctx.fillText(truncate(ctx, d.subtitle, CW, '600 44px sans-serif'), W / 2, y);
+  y += 100;
 
   // Stats row
   const stats: [string, string][] = [
@@ -129,47 +139,76 @@ export async function sharePortrait(d: PortraitData): Promise<void> {
   const colW = CW / 3;
   stats.forEach(([val, label], i) => {
     const cx = PAD + colW * i + colW / 2;
-    ctx.fillStyle = ACCENT; ctx.font = '800 82px sans-serif';
-    ctx.fillText(val, cx, y + 60);
+    ctx.fillStyle = ACCENT; ctx.font = '800 78px sans-serif';
+    ctx.fillText(val, cx, y + 56);
     ctx.fillStyle = MUTED; ctx.font = '400 30px sans-serif';
-    ctx.fillText(label, cx, y + 110);
+    ctx.fillText(label, cx, y + 104);
   });
-  y += 210;
+  y += 178;
 
   // Top genres (5) with bars
   ctx.textAlign = 'left';
-  section(ctx, 'TOP GENRES', PAD, y); y += 52;
+  section(ctx, 'TOP GENRES', PAD, y); y += 50;
   const maxG = d.topGenres[0]?.count ?? 1;
   for (const g of d.topGenres) {
-    ctx.fillStyle = TEXT; ctx.font = '600 40px sans-serif';
-    ctx.fillText(truncate(ctx, g.name, CW, '600 40px sans-serif'), PAD, y);
-    const by = y + 24;
+    ctx.fillStyle = TEXT; ctx.font = '600 38px sans-serif';
+    ctx.fillText(truncate(ctx, g.name, CW, '600 38px sans-serif'), PAD, y);
+    const by = y + 22;
     ctx.fillStyle = SURFACE; roundRect(ctx, PAD, by, CW, 14, 7); ctx.fill();
     ctx.fillStyle = ACCENT; roundRect(ctx, PAD, by, Math.max(40, CW * (g.count / maxG)), 14, 7); ctx.fill();
-    y += 84;
+    y += 76;
   }
-  y += 28;
+  y += 18;
 
   // Directors (4) + Actors (4), two columns
   const half = CW / 2;
   const startY = y;
   const people = (title: string, names: string[], x: number) => {
     section(ctx, title, x, startY);
-    let yy = startY + 54;
+    let yy = startY + 52;
     for (const n of names.slice(0, 4)) {
-      ctx.fillStyle = TEXT; ctx.font = '600 38px sans-serif';
-      ctx.fillText(truncate(ctx, n, half - 24, '600 38px sans-serif'), x, yy);
-      yy += 60;
+      ctx.fillStyle = TEXT; ctx.font = '600 36px sans-serif';
+      ctx.fillText(truncate(ctx, n, half - 24, '600 36px sans-serif'), x, yy);
+      yy += 54;
     }
   };
   if (d.directors.length) people('DIRECTORS', d.directors, PAD);
   if (d.actors.length) people('ACTORS', d.actors, PAD + half);
 
-  // Bottom wordmark — text only
+  // ── Footer: curiosity hook + brand lockup (Letterboxd-style "ON ___") ──
+  // Hairline divider separating the data from the brand sign-off.
+  ctx.strokeStyle = 'rgba(237,195,50,0.22)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(PAD, FOOTER_TOP); ctx.lineTo(W - PAD, FOOTER_TOP); ctx.stroke();
+
   ctx.textAlign = 'center';
-  ctx.fillStyle = ACCENT;
-  ctx.font = '800 64px sans-serif';
-  ctx.fillText('CINETECA', W / 2, H - 170);
+  // The hook — makes the viewer wonder "what app is this?!"
+  ctx.fillStyle = TEXT;
+  const hook = fitText(ctx, 'WHAT KIND OF CINEPHILE ARE YOU?', CW, 1, [50, 46, 42, 38]);
+  ctx.font = `800 ${hook.size}px sans-serif`;
+  ctx.fillText(hook.lines[0], W / 2, FOOTER_TOP + 74);
+  // The CTA
+  ctx.fillStyle = MUTED;
+  ctx.font = '600 30px sans-serif';
+  ctx.fillText('CREATE YOUR FREE PORTRAIT ON', W / 2, FOOTER_TOP + 126);
+
+  // Brand lockup: app mark + CINETECA wordmark, centered
+  const lockTop = FOOTER_TOP + 160;
+  const mh = wordImg || markImg ? 104 : 0;
+  const wh = 104;
+  const ww = wordImg ? wh * (wordImg.naturalWidth / wordImg.naturalHeight) : 0;
+  const gap = markImg && wordImg ? 26 : 0;
+  const total = (markImg ? mh : 0) + gap + (wordImg ? ww : 0);
+  if (markImg || wordImg) {
+    let lx = W / 2 - total / 2;
+    if (markImg) { ctx.drawImage(markImg, lx, lockTop, mh, mh); lx += mh + gap; }
+    if (wordImg) { ctx.drawImage(wordImg, lx, lockTop + (mh - wh) / 2, ww, wh); }
+  } else {
+    // Fallback if assets fail to load
+    ctx.fillStyle = ACCENT;
+    ctx.font = '800 64px sans-serif';
+    ctx.fillText('CINETECA', W / 2, lockTop + 64);
+  }
 
   const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/png', 0.92));
   if (!blob) return;
@@ -189,6 +228,14 @@ export async function sharePortrait(d: PortraitData): Promise<void> {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
+function loadImg(src: string): Promise<HTMLImageElement | null> {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
 function section(ctx: CanvasRenderingContext2D, t: string, x: number, y: number) {
   ctx.fillStyle = MUTED; ctx.font = '600 30px sans-serif'; ctx.textAlign = 'left';
   ctx.fillText(t, x, y);

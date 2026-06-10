@@ -64,7 +64,7 @@ export function ListsTab({
           />
           <button onClick={handleCreate} disabled={!newName.trim()}
             className="shrink-0 px-4 rounded-xl bg-film-accent text-film-black font-semibold text-sm active:scale-95 disabled:opacity-50">
-            Crea
+            Create
           </button>
           <button onClick={() => { setCreating(false); setNewName(''); }}
             className="shrink-0 w-10 flex items-center justify-center rounded-xl border border-film-border text-film-subtle active:bg-film-surface">

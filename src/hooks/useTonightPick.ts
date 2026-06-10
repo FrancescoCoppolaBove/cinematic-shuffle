@@ -146,20 +146,20 @@ function buildWatchlistReason(item: WatchlistItem, slot: TonightPick['slot'], ct
 
   if (slot === 'acclaimed') return { reason: `Top rated in your list · ${item.vote_average.toFixed(1)}/10`, reasonEmoji: '⭐' };
   if (slot === 'waiting') return days >= 30
-    ? { reason: `In watchlist da ${days} giorni — è ora`, reasonEmoji: '⏳' }
-    : { reason: `Salvato ${days > 7 ? `${Math.floor(days / 7)} sett.` : `${days} gg`} fa`, reasonEmoji: '📌' };
+    ? { reason: `In your watchlist for ${days} days — it's time`, reasonEmoji: '⏳' }
+    : { reason: `Saved ${days > 7 ? `${Math.floor(days / 7)}w` : `${days}d`} ago`, reasonEmoji: '📌' };
 
   const candidates: { reason: string; emoji: string }[] = [];
-  if (ctx.isWeekend && rt && rt > 120) candidates.push({ reason: `Weekend ideale per ${rt} min`, emoji: '🎬' });
+  if (ctx.isWeekend && rt && rt > 120) candidates.push({ reason: `Ideal weekend watch at ${rt} min`, emoji: '🎬' });
   if (!ctx.isWeekend && rt && rt <= 100) candidates.push({ reason: `${rt} min — perfect for tonight`, emoji: '🌙' });
   if (ctx.isLateNight && gids.some(g => HORROR.includes(g))) candidates.push({ reason: 'Perfect for tonight — if you trust us', emoji: '👻' });
-  if (ctx.isAfternoon && gids.some(g => COMEDY.includes(g))) candidates.push({ reason: 'Leggero per il pomeriggio', emoji: '☀️' });
-  if (gids.some(g => ACTION.includes(g)) && ctx.isEvening) candidates.push({ reason: 'Adrenalina per la serata', emoji: '⚡' });
-  if (gids.some(g => DRAMA.includes(g)) && taste.hasData && taste.avgPersonalRating >= 4) candidates.push({ reason: 'In linea con i film che hai amato', emoji: '❤️' });
-  if (item.vote_average >= 8) candidates.push({ reason: `Eccellente: ${item.vote_average.toFixed(1)}/10`, emoji: '🏆' });
-  if (taste.hasData && gids.filter(g => taste.genreWeights[g] > 0.7).length > 0) candidates.push({ reason: 'Genere che apprezzi particolarmente', emoji: '🎯' });
-  if (days > 14) candidates.push({ reason: `In lista da ${days} giorni`, emoji: '📅' });
-  const c = candidates[0] ?? { reason: 'Scelto per te questa sera', emoji: '✨' };
+  if (ctx.isAfternoon && gids.some(g => COMEDY.includes(g))) candidates.push({ reason: 'Light pick for the afternoon', emoji: '☀️' });
+  if (gids.some(g => ACTION.includes(g)) && ctx.isEvening) candidates.push({ reason: 'Adrenaline for the evening', emoji: '⚡' });
+  if (gids.some(g => DRAMA.includes(g)) && taste.hasData && taste.avgPersonalRating >= 4) candidates.push({ reason: 'In line with the films you loved', emoji: '❤️' });
+  if (item.vote_average >= 8) candidates.push({ reason: `Excellent: ${item.vote_average.toFixed(1)}/10`, emoji: '🏆' });
+  if (taste.hasData && gids.filter(g => taste.genreWeights[g] > 0.7).length > 0) candidates.push({ reason: 'A genre you particularly enjoy', emoji: '🎯' });
+  if (days > 14) candidates.push({ reason: `On your list for ${days} days`, emoji: '📅' });
+  const c = candidates[0] ?? { reason: 'Picked for you tonight', emoji: '✨' };
   return { reason: c.reason, reasonEmoji: c.emoji };
 }
 
