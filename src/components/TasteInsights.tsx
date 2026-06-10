@@ -12,6 +12,7 @@ import { TMDB_MOVIE_GENRES, TMDB_TV_GENRES, COMMON_LANGUAGES } from '../types';
 import { getImageUrl, getPersonName } from '../services/tmdb';
 import { useWatchedCredits, type RankedPerson } from '../hooks/useWatchedCredits';
 import { sharePortrait } from '../utils/sharePortrait';
+import { cinephileName } from '../utils/cinephileName';
 import { cn } from '../utils';
 
 const GENRE_NAME = new Map<number, string>(
@@ -20,16 +21,6 @@ const GENRE_NAME = new Map<number, string>(
 const LANG_NAME = new Map<string, string>(
   COMMON_LANGUAGES.map(l => [l.code, l.name.replace(/\s*\(.*\)/, '')])
 );
-
-// Etichetta "tipo di cinefilo" in base al genere dominante
-const TASTE_LABEL: Record<number, string> = {
-  28: 'Adrenalina pura', 12: 'Avventuriero', 16: 'Sognatore animato',
-  35: 'Spirito leggero', 80: 'Detective nato', 99: 'Mente curiosa',
-  18: 'Cuore drammatico', 10751: 'Anima di famiglia', 14: 'Sognatore fantasy',
-  36: 'Viaggiatore nel tempo', 27: 'Anima dark', 10402: 'Anima musicale',
-  9648: 'Investigatore', 10749: 'Inguaribile romantico', 878: 'Esploratore di mondi',
-  53: 'Amante del brivido', 10752: 'Stratega', 37: 'Spirito di frontiera',
-};
 
 function decadeLabel(decade: string): string {
   const start = parseInt(decade);
@@ -80,6 +71,7 @@ export function TasteInsights({ watchedMovies, onOpenPerson, userName }: {
       if (m.original_language) langCount.set(m.original_language, (langCount.get(m.original_language) ?? 0) + 1);
     }
     const topLangEntry = [...langCount.entries()].sort((a, b) => b[1] - a[1])[0];
+    const topLangCode = topLangEntry?.[0];
     const topLang = topLangEntry ? (LANG_NAME.get(topLangEntry[0]) ?? topLangEntry[0].toUpperCase()) : null;
 
     // Ore guardate
@@ -93,9 +85,14 @@ export function TasteInsights({ watchedMovies, onOpenPerson, userName }: {
       return !Number.isNaN(t) && new Date(t).getFullYear() === thisYear;
     }).length;
 
-    const tasteLabel = topGenres[0] ? (TASTE_LABEL[topGenres[0].id] ?? 'Cinefilo eclettico') : null;
+    const cine = cinephileName({
+      topGenreIds: topGenres.map(g => g.id),
+      topDecade,
+      topLangCode,
+      watchedCount: watchedMovies.length,
+    });
 
-    return { topGenres, maxGenre, topDecade, topLang, totalHours, thisYear, thisYearCount, tasteLabel };
+    return { topGenres, maxGenre, topDecade, topLang, topLangCode, totalHours, thisYear, thisYearCount, cine };
   }, [watchedMovies]);
 
   if (!stats || stats.topGenres.length === 0) return null;
@@ -108,14 +105,15 @@ export function TasteInsights({ watchedMovies, onOpenPerson, userName }: {
         <button
           onClick={() => sharePortrait({
             name: userName ?? 'Il mio profilo',
-            tasteLabel: stats.tasteLabel,
+            cinephileName: stats.cine.name,
+            cinephileSubtitle: stats.cine.subtitle,
             watchedCount: watchedMovies.length,
             topGenres: stats.topGenres,
             topDecade: stats.topDecade,
             topLang: stats.topLang,
             totalHours: stats.totalHours,
-            topDirector: topDirectors[0] ? getPersonName(topDirectors[0].name) : null,
-            topActor: topActors[0] ? getPersonName(topActors[0].name) : null,
+            directors: topDirectors.slice(0, 3).map(d => getPersonName(d.name)),
+            actors: topActors.slice(0, 3).map(a => getPersonName(a.name)),
           })}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-film-accent/15 border border-film-accent/30 text-film-accent text-xs font-medium active:scale-95 transition-transform"
         >
@@ -123,13 +121,13 @@ export function TasteInsights({ watchedMovies, onOpenPerson, userName }: {
         </button>
       </div>
 
-      {/* Etichetta di gusto */}
-      {stats.tasteLabel && (
+      {/* Nome da cinefilo */}
+      {stats.cine && (
         <div className="bg-gradient-to-r from-film-accent/20 to-transparent border border-film-accent/30 rounded-2xl px-4 py-3 flex items-center gap-3">
           <Sparkles size={18} className="text-film-accent shrink-0" />
-          <div>
-            <p className="text-film-subtle text-[10px] uppercase tracking-widest">Sei un</p>
-            <p className="text-film-text font-display text-lg tracking-wide leading-tight">{stats.tasteLabel}</p>
+          <div className="min-w-0">
+            <p className="text-film-subtle text-[10px] uppercase tracking-widest">{stats.cine.subtitle}</p>
+            <p className="text-film-text font-display text-lg tracking-wide leading-tight">{stats.cine.name}</p>
           </div>
         </div>
       )}
