@@ -92,8 +92,10 @@ export function useWatchedCredits(watchedMovies: WatchedMovie[]) {
       else map.set(p.id, { ...p, count: 1 });
     };
     for (const c of creditsMap.values()) {
-      for (const d of c.directors) bump(dir, d);
-      for (const a of c.cast) bump(act, a);
+      // Difensivo: voci di cache localStorage vecchie/corrotte potrebbero
+      // non avere gli array — non devono far crashare le classifiche.
+      for (const d of c.directors ?? []) bump(dir, d);
+      for (const a of c.cast ?? []) bump(act, a);
     }
     const sort = (m: Map<number, RankedPerson>) =>
       [...m.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
