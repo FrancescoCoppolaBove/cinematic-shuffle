@@ -44,37 +44,34 @@ export async function sharePortrait(d: PortraitData): Promise<void> {
 
   const PAD = 96;
   const CW = W - PAD * 2;
-  let y = 300; // inizia sotto la safe zone superiore di IG
+  let y = 320; // inizia sotto la safe zone superiore di IG
 
   ctx.textAlign = 'center';
 
-  // Brand + etichetta
+  // Etichetta (niente nome app qui: resta solo in basso)
   ctx.fillStyle = MUTED;
-  ctx.font = '600 32px sans-serif';
-  ctx.fillText('CINEMATIC SHUFFLE', W / 2, y);
-  y += 64;
-  ctx.fillStyle = MUTED;
-  ctx.font = '400 34px sans-serif';
+  ctx.font = '500 36px sans-serif';
   ctx.fillText('IL MIO RITRATTO CINEFILO', W / 2, y);
-  y += 110;
+  y += 96;
 
-  // HERO: nome cinefilo (eventualmente su due righe)
+  // HERO: nome cinefilo con font adattivo (mai tagliato, max 2 righe)
   ctx.fillStyle = ACCENT;
-  const heroLines = wrap(ctx, d.cinephileName, CW, '800 96px sans-serif', 2);
-  ctx.font = '800 96px sans-serif';
-  for (const line of heroLines) { ctx.fillText(line, W / 2, y); y += 104; }
-  y += 8;
+  const hero = fitText(ctx, d.cinephileName, CW, 2, [104, 92, 80, 68, 58]);
+  const heroLH = hero.size * 1.06;
+  for (const line of hero.lines) { y += heroLH * 0.78; ctx.fillText(line, W / 2, y); y += heroLH * 0.22; }
+  y += 24;
+
   if (d.cinephileSubtitle) {
     ctx.fillStyle = TEXT;
-    ctx.font = '500 40px sans-serif';
+    ctx.font = '600 44px sans-serif';
     ctx.fillText(d.cinephileSubtitle, W / 2, y);
-    y += 40;
+    y += 52;
   }
   // @nome
   ctx.fillStyle = MUTED;
   ctx.font = '400 34px sans-serif';
-  ctx.fillText(truncate(ctx, d.name, CW, '400 34px sans-serif'), W / 2, y + 18);
-  y += 90;
+  ctx.fillText(truncate(ctx, d.name, CW, '400 34px sans-serif'), W / 2, y);
+  y += 80;
 
   // Statistiche (3 colonne)
   const stats: [string, string][] = [
@@ -96,50 +93,43 @@ export async function sharePortrait(d: PortraitData): Promise<void> {
 
   // GENERI con barre
   ctx.textAlign = 'left';
-  sectionTitle(ctx, 'GENERI PIÙ VISTI', PAD, y); y += 56;
+  sectionTitle(ctx, 'GENERI PIÙ VISTI', PAD, y); y += 50;
   const top5 = d.topGenres.slice(0, 5);
   const maxG = top5[0]?.count ?? 1;
   for (const g of top5) {
     ctx.fillStyle = TEXT;
-    ctx.font = '600 40px sans-serif';
-    ctx.fillText(g.name, PAD, y);
-    const by = y + 24;
-    ctx.fillStyle = SURFACE; roundRect(ctx, PAD, by, CW, 16, 8); ctx.fill();
-    ctx.fillStyle = ACCENT; roundRect(ctx, PAD, by, Math.max(44, CW * (g.count / maxG)), 16, 8); ctx.fill();
-    y += 92;
+    ctx.font = '600 38px sans-serif';
+    ctx.fillText(truncate(ctx, g.name, CW, '600 38px sans-serif'), PAD, y);
+    const by = y + 22;
+    ctx.fillStyle = SURFACE; roundRect(ctx, PAD, by, CW, 14, 7); ctx.fill();
+    ctx.fillStyle = ACCENT; roundRect(ctx, PAD, by, Math.max(40, CW * (g.count / maxG)), 14, 7); ctx.fill();
+    y += 82;
   }
-  y += 24;
+  y += 20;
 
   // REGISTI e ATTORI (due colonne)
   const half = CW / 2;
   const startY = y;
-  if (d.directors.length) {
-    sectionTitle(ctx, 'REGISTI', PAD, y);
-    let yy = y + 56;
-    for (const name of d.directors.slice(0, 3)) {
-      ctx.fillStyle = TEXT; ctx.font = '600 38px sans-serif';
-      ctx.fillText(truncate(ctx, name, half - 30, '600 38px sans-serif'), PAD, yy);
-      yy += 58;
+  const drawPeople = (title: string, names: string[], x: number) => {
+    sectionTitle(ctx, title, x, startY);
+    let yy = startY + 52;
+    for (const name of names.slice(0, 3)) {
+      ctx.fillStyle = TEXT; ctx.font = '600 36px sans-serif';
+      ctx.fillText(truncate(ctx, name, half - 24, '600 36px sans-serif'), x, yy);
+      yy += 56;
     }
-  }
-  if (d.actors.length) {
-    let yy = startY + 56;
-    sectionTitle(ctx, 'ATTORI', PAD + half, startY);
-    for (const name of d.actors.slice(0, 3)) {
-      ctx.fillStyle = TEXT; ctx.font = '600 38px sans-serif';
-      ctx.fillText(truncate(ctx, name, half - 30, '600 38px sans-serif'), PAD + half, yy);
-      yy += 58;
-    }
-  }
+  };
+  if (d.directors.length) drawPeople('REGISTI', d.directors, PAD);
+  if (d.actors.length) drawPeople('ATTORI', d.actors, PAD + half);
 
-  // Footer (sopra la safe zone inferiore di IG)
+  // Footer: nome app SOLO qui (sopra la safe zone inferiore di IG)
   ctx.textAlign = 'center';
-  ctx.fillStyle = ACCENT;
-  ctx.font = '700 38px sans-serif';
-  ctx.fillText('🎬 Cinematic Shuffle', W / 2, H - 230);
   ctx.fillStyle = MUTED;
-  ctx.font = '400 30px sans-serif';
-  ctx.fillText('Crea il tuo ritratto cinefilo', W / 2, H - 185);
+  ctx.font = '400 32px sans-serif';
+  ctx.fillText('Crea il tuo ritratto cinefilo con', W / 2, H - 250);
+  ctx.fillStyle = ACCENT;
+  ctx.font = '800 46px sans-serif';
+  ctx.fillText('🎬 CINEMATIC SHUFFLE', W / 2, H - 196);
 
   const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/png', 0.92));
   if (!blob) return;
@@ -174,24 +164,39 @@ function truncate(ctx: CanvasRenderingContext2D, text: string, maxW: number, fon
   return t + '…';
 }
 
-// Manda a capo su più righe (max righe), troncando l'ultima.
-function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number, font: string, maxLines: number): string[] {
-  ctx.font = font;
+// Manda a capo (greedy) senza perdere parole.
+function greedyWrap(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
   const words = text.split(' ');
   const lines: string[] = [];
   let cur = '';
   for (const w of words) {
     const test = cur ? `${cur} ${w}` : w;
-    if (ctx.measureText(test).width <= maxW) { cur = test; }
-    else {
-      if (cur) lines.push(cur);
-      cur = w;
-      if (lines.length === maxLines - 1) break;
-    }
+    if (ctx.measureText(test).width <= maxW) cur = test;
+    else { if (cur) lines.push(cur); cur = w; }
   }
-  if (cur && lines.length < maxLines) lines.push(cur);
-  if (lines.length === maxLines) lines[maxLines - 1] = truncate(ctx, lines[maxLines - 1], maxW, font);
+  if (cur) lines.push(cur);
   return lines.length ? lines : [text];
+}
+
+// Sceglie il font più grande (tra i candidati) per cui il testo sta in ≤ maxLines.
+// Imposta ctx.font sul valore scelto. Garantisce che il testo non venga tagliato.
+function fitText(
+  ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLines: number, sizes: number[],
+  weight = '800', family = 'sans-serif',
+): { lines: string[]; size: number } {
+  for (const size of sizes) {
+    ctx.font = `${weight} ${size}px ${family}`;
+    const lines = greedyWrap(ctx, text, maxW);
+    if (lines.length <= maxLines) return { lines, size };
+  }
+  const size = sizes[sizes.length - 1];
+  ctx.font = `${weight} ${size}px ${family}`;
+  let lines = greedyWrap(ctx, text, maxW);
+  if (lines.length > maxLines) {
+    lines = lines.slice(0, maxLines);
+    lines[maxLines - 1] = truncate(ctx, lines[maxLines - 1], maxW, ctx.font);
+  }
+  return { lines, size };
 }
 
 function decadeShort(decade: string): string {
