@@ -104,7 +104,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Clapperboard size={16} className="text-film-accent" />
-          <span className="font-body font-medium text-film-text text-sm tracking-wide uppercase">Filtri</span>
+          <span className="font-body font-medium text-film-text text-sm tracking-wide uppercase">Filters</span>
           {activeFiltersCount > 0 && (
             <span className="bg-film-accent text-film-black text-xs font-bold px-2 py-0.5 rounded-full">
               {activeFiltersCount}
@@ -119,7 +119,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
       </div>
 
       {/* Già visto */}
-      <FilterSection icon={<Film size={14} />} label="Già visto">
+      <FilterSection icon={<Film size={14} />} label="Watched">
         <div className="flex gap-2">
           {(['all', 'unwatched', 'watched'] as const).map(opt => (
             <button
@@ -132,7 +132,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
                   : 'bg-film-card text-film-muted hover:text-film-text border border-film-border'
               )}
             >
-              {opt === 'all' ? 'Tutti' : opt === 'unwatched' ? 'Non visti' : 'Già visti'}
+              {opt === 'all' ? 'Tutti' : opt === 'unwatched' ? 'Unwatched' : 'Watched'}
             </button>
           ))}
         </div>
@@ -162,7 +162,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
           </div>
           {/* Anno specifico */}
           <div>
-            <label className="text-film-subtle text-xs mb-1 block">Anno specifico</label>
+            <label className="text-film-subtle text-xs mb-1 block">Specific year</label>
             <input
               type="number"
               min={1900}
@@ -203,7 +203,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
       </FilterSection>
 
       {/* Voto IMDB */}
-      <FilterSection icon={<Star size={14} />} label="Voto minimo IMDB">
+      <FilterSection icon={<Star size={14} />} label="Min IMDb rating">
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs text-film-muted">
             <span>Qualsiasi</span>
@@ -233,13 +233,13 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
       </FilterSection>
 
       {/* Attori — solo per film */}
-      {filters.mediaType !== 'tv' ? <FilterSection icon={<User size={14} />} label="Attori">
+      {filters.mediaType !== 'tv' ? <FilterSection icon={<User size={14} />} label="Actors">
         <div ref={actorRef} className="relative">
           <div className="flex items-center gap-2 bg-film-card border border-film-border rounded-lg px-3 py-2 focus-within:border-film-accent transition-colors">
             <Search size={13} className="text-film-muted shrink-0" />
             <input
               type="text"
-              placeholder="Cerca attore..."
+              placeholder="Search actor..."
               value={actorQuery}
               onChange={e => handleActorSearch(e.target.value)}
               className="bg-transparent text-sm text-film-text placeholder:text-film-subtle focus:outline-none w-full"
@@ -297,7 +297,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
       </FilterSection> : null}
 
       {/* Piattaforme */}
-      <FilterSection icon={<Film size={14} />} label="Piattaforma">
+      <FilterSection icon={<Film size={14} />} label="Platform">
         <div className="flex flex-wrap gap-2">
           {getPopularProviders().map(p => {
             const active = (filters.withProviders ?? []).includes(p.provider_id);

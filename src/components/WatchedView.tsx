@@ -112,7 +112,7 @@ onOpenMovieGlobal,
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Eye size={16} className="text-film-accent" />
-          <span className="text-film-text font-medium">Film visti</span>
+          <span className="text-film-text font-medium">Films watched</span>
           <span className="bg-film-card border border-film-border text-film-muted text-xs px-2 py-0.5 rounded-full">
             {watchedMovies.length}
           </span>
@@ -123,7 +123,7 @@ onOpenMovieGlobal,
       {watchedMovies.length === 0 ? (
         <div className="text-center py-20 text-film-muted space-y-3">
           <Eye size={44} className="mx-auto opacity-20" />
-          <p className="text-sm">Nessun film o serie nella lista</p>
+          <p className="text-sm">No movies or shows in this list</p>
         </div>
       ) : (
         <>
@@ -169,7 +169,7 @@ onOpenMovieGlobal,
           )}
 
           {filtered.length === 0 && (
-            <p className="text-center text-film-muted text-sm py-8">Nessun risultato</p>
+            <p className="text-center text-film-muted text-sm py-8">No results</p>
           )}
         </>
       )}

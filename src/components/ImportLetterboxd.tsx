@@ -76,7 +76,7 @@ export function ImportLetterboxd({ onImport, onClose }: Props) {
         map.set(`${name}|${year}`, { name, year, rating: Number.isNaN(rating) ? null : rating, date });
       }
       const list = [...map.values()];
-      if (list.length === 0) { setError('Nessun film valido nel file.'); return; }
+      if (list.length === 0) { setError('No valid films in the file.'); return; }
 
       setPhase('working');
       setProgress(0);
@@ -114,7 +114,7 @@ export function ImportLetterboxd({ onImport, onClose }: Props) {
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-film-border">
-          <h3 className="text-film-text font-semibold">Importa da Letterboxd</h3>
+          <h3 className="text-film-text font-semibold">Import from Letterboxd</h3>
           {phase !== 'working' && (
             <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-full active:bg-film-surface">
               <X size={18} className="text-film-subtle" />
@@ -126,13 +126,13 @@ export function ImportLetterboxd({ onImport, onClose }: Props) {
           {phase === 'idle' && (
             <>
               <div className="text-film-muted text-sm space-y-2 leading-relaxed">
-                <p>Su Letterboxd: <span className="text-film-text">Settings → Import &amp; Export → Export your data</span>.</p>
-                <p>Carica qui il file <span className="text-film-text font-mono text-xs">ratings.csv</span> (o <span className="font-mono text-xs">watched.csv</span>) dallo zip scaricato.</p>
+                <p>On Letterboxd: <span className="text-film-text">Settings → Import &amp; Export → Export your data</span>.</p>
+                <p>Upload the <span className="text-film-text font-mono text-xs">ratings.csv</span> (or <span className="font-mono text-xs">watched.csv</span>) file from the downloaded zip here.</p>
               </div>
               <label className="flex flex-col items-center gap-2 p-6 rounded-2xl border border-dashed border-film-border bg-film-surface active:opacity-70 cursor-pointer">
                 <Upload size={26} className="text-film-accent" />
-                <span className="text-film-text text-sm font-medium">Scegli file CSV</span>
-                <span className="text-film-subtle text-xs">i voti (0,5–5) vengono importati come tuoi</span>
+                <span className="text-film-text text-sm font-medium">Choose CSV file</span>
+                <span className="text-film-subtle text-xs">ratings (0.5–5) are imported as yours</span>
                 <input type="file" accept=".csv,text/csv" className="hidden" onChange={handleFile} />
               </label>
               {error && <p className="text-film-red text-xs">{error}</p>}
@@ -146,7 +146,7 @@ export function ImportLetterboxd({ onImport, onClose }: Props) {
               <div className="w-full h-1.5 rounded-full bg-film-surface overflow-hidden">
                 <div className="h-full bg-film-accent rounded-full transition-all" style={{ width: `${progress * 100}%` }} />
               </div>
-              <p className="text-film-subtle text-xs text-center">Non chiudere l'app durante l'importazione</p>
+              <p className="text-film-subtle text-xs text-center">Don't close the app during import</p>
             </div>
           )}
 

@@ -1,6 +1,6 @@
 /**
  * ReviewEditor — overlay fullscreen per scrivere/modificare una recensione.
- * Si apre dal RatingModal tramite CTA "Recensisci".
+ * Si apre dal RatingModal tramite CTA "Review".
  */
 import { useState, useRef } from 'react';
 import { X, Star, Heart, Eye, AlertTriangle, MessageSquareOff, Users, User, ChevronDown } from 'lucide-react';
@@ -54,7 +54,7 @@ export function ReviewEditor({
   const year = formatYear(getReleaseDate(movie));
   const today = new Date().toISOString().split('T')[0];
 
-  const repliesLabel = { all: 'Tutti possono rispondere', following: 'Solo chi seguo', none: 'Nessuno' };
+  const repliesLabel = { all: 'Tutti possono rispondere', following: 'Solo chi seguo', none: 'None' };
 
   async function handleSave() {
     setSaving(true);
@@ -63,7 +63,7 @@ export function ReviewEditor({
       await onSave({ text, rating, liked, watchedOn: watchedOn || null, firstView, hasSpoilers, repliesAllowed });
       setSaving(false);
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Errore nel salvataggio');
+      setSaveError(err instanceof Error ? err.message : 'Error saving');
       setSaving(false);
     }
   }
@@ -87,7 +87,7 @@ export function ReviewEditor({
           disabled={saving}
           className="shrink-0 bg-film-accent text-film-black text-xs font-bold px-4 py-2 rounded-xl active:opacity-60 disabled:opacity-50"
         >
-          {saving ? '...' : 'Salva'}
+          {saving ? '...' : 'Save'}
         </button>
       </div>
 
@@ -127,7 +127,7 @@ export function ReviewEditor({
 
         {/* Text */}
         <div>
-          <p className="text-film-subtle text-xs uppercase tracking-widest mb-2">La tua recensione</p>
+          <p className="text-film-subtle text-xs uppercase tracking-widest mb-2">Your review</p>
           <textarea
             ref={textRef}
             value={text}
@@ -165,7 +165,7 @@ export function ReviewEditor({
           >
             <Eye size={16} className={firstView ? 'text-film-accent' : 'text-film-muted'} />
             <span className={cn('text-sm flex-1 text-left', firstView ? 'text-film-accent' : 'text-film-muted')}>
-              {firstView ? 'Prima visione 🎬' : 'L\'ho già visto prima'}
+              {firstView ? 'First watch 🎬' : 'Seen it before'}
             </span>
           </button>
 
@@ -179,8 +179,8 @@ export function ReviewEditor({
           >
             <AlertTriangle size={16} className={hasSpoilers && hasText ? 'text-yellow-400' : 'text-film-muted'} />
             <span className={cn('text-sm flex-1 text-left', hasSpoilers && hasText ? 'text-yellow-400' : 'text-film-muted')}>
-              {hasSpoilers && hasText ? 'Contiene spoiler ⚠️' : 'Segna come spoiler'}
-              {!hasText && <span className="text-film-subtle text-xs ml-2">(scrivi prima del testo)</span>}
+              {hasSpoilers && hasText ? 'Contains spoilers ⚠️' : 'Mark as spoiler'}
+              {!hasText && <span className="text-film-subtle text-xs ml-2">(type before the text)</span>}
             </span>
           </button>
 

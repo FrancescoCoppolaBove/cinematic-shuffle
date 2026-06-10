@@ -147,7 +147,7 @@ export function ListFilterBar({
           )}
         >
           <SlidersHorizontal size={13} />
-          {totalActive > 0 ? `Filtri (${totalActive})` : 'Filtri'}
+          {totalActive > 0 ? `Filtri (${totalActive})` : 'Filters'}
         </button>
 
         {/* View mode */}

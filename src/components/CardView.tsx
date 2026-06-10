@@ -351,7 +351,7 @@ export function CardView({
               onClick={() => setBottomMode('cta')}
               className="w-full mt-5 py-3 bg-film-surface border border-film-border rounded-2xl text-film-text text-sm font-medium active:scale-[0.98] transition-transform"
             >
-              {personalRating ? 'Fatto' : 'Salta'}
+              {personalRating ? 'Done' : 'Skip'}
             </button>
           </div>
         )}

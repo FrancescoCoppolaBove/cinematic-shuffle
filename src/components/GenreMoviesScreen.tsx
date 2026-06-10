@@ -122,7 +122,7 @@ export function GenreMoviesScreen({
           <div className="flex-1 min-w-0">
             <p className="text-film-text font-semibold truncate">{name}</p>
             <p className="text-film-subtle text-xs">
-              {type === 'genre' ? 'Genere' : 'Tema'} · {mediaType === 'tv' ? 'Serie TV' : 'Film'}
+              {type === 'genre' ? 'Genre' : 'Tema'} · {mediaType === 'tv' ? 'Serie TV' : 'Film'}
               {watchedCount > 0 && (
                 <span className="text-green-400 ml-1.5">· {watchedCount} visti</span>
               )}
@@ -153,7 +153,7 @@ export function GenreMoviesScreen({
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-film-muted">
-            <p className="text-sm">Nessun film trovato</p>
+            <p className="text-sm">No films found</p>
           </div>
         ) : viewMode === 'grid' ? (
           <div className="p-4">
@@ -202,7 +202,7 @@ export function GenreMoviesScreen({
             {!loadingMore && page < totalPages && (
               <div className="flex justify-center py-4">
                 <button onClick={loadMore} className="text-film-accent text-sm active:opacity-60">
-                  Carica altri
+                  Load more
                 </button>
               </div>
             )}

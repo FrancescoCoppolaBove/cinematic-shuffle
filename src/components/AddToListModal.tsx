@@ -63,7 +63,7 @@ export function AddToListModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-film-border shrink-0">
           <div className="min-w-0">
-            <h3 className="text-film-text font-semibold">Aggiungi a lista</h3>
+            <h3 className="text-film-text font-semibold">Add to list</h3>
             <p className="text-film-subtle text-xs truncate">{getTitle(movie)}</p>
           </div>
           <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-full active:bg-film-surface">
@@ -99,7 +99,7 @@ export function AddToListModal({
               className="w-full flex items-center gap-3 p-3 rounded-xl border border-dashed border-film-border text-film-accent active:bg-film-surface"
             >
               <Plus size={18} />
-              <span className="text-sm font-medium">Nuova lista</span>
+              <span className="text-sm font-medium">New list</span>
             </button>
           )}
 
@@ -107,7 +107,7 @@ export function AddToListModal({
           {lists.length === 0 && !creating && (
             <div className="flex flex-col items-center text-center py-8 text-film-muted">
               <ListPlus size={28} className="mb-2 opacity-50" />
-              <p className="text-sm">Nessuna lista ancora.<br />Creane una per organizzare i tuoi film.</p>
+              <p className="text-sm">No lists yet.<br />Create one to organize your films.</p>
             </div>
           )}
 

@@ -1,5 +1,5 @@
 /**
- * TasteInsights — il "ritratto cinefilo" dell'utente, stile Wrapped.
+ * TasteInsights — il "cinephile portrait" dell'utente, stile Wrapped.
  * Generi top, decade/lingua preferite, ore guardate, classifiche di registi e
  * attori più visti (crediti recuperati da TMDB con cache) e un'etichetta di gusto.
  */
@@ -25,7 +25,7 @@ const LANG_NAME = new Map<string, string>(
 function decadeLabel(decade: string): string {
   const start = parseInt(decade);
   if (Number.isNaN(start)) return decade;
-  return start >= 2000 ? `Anni ${start}` : `Anni '${String(start).slice(2)}`;
+  return `${start}s`;
 }
 
 export function TasteInsights({ watchedMovies, onOpenPerson, userName }: {
@@ -101,10 +101,10 @@ export function TasteInsights({ watchedMovies, onOpenPerson, userName }: {
     <div className="space-y-3">
       <div className="flex items-center gap-2 px-0.5">
         <TrendingUp size={15} className="text-film-accent" />
-        <h2 className="flex-1 text-film-text text-sm font-semibold tracking-wide">Il tuo ritratto cinefilo</h2>
+        <h2 className="flex-1 text-film-text text-sm font-semibold tracking-wide">Your cinephile portrait</h2>
         <button
           onClick={() => sharePortrait({
-            name: userName ?? 'Il mio profilo',
+            name: userName ?? 'My profile',
             cinephileName: stats.cine.name,
             cinephileSubtitle: stats.cine.subtitle,
             watchedCount: watchedMovies.length,
@@ -136,7 +136,7 @@ export function TasteInsights({ watchedMovies, onOpenPerson, userName }: {
       <div className="bg-film-surface border border-film-border rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <Clapperboard size={14} className="text-film-accent" />
-          <span className="text-film-subtle text-xs uppercase tracking-widest">Generi preferiti</span>
+          <span className="text-film-subtle text-xs uppercase tracking-widest">Top genres</span>
         </div>
         <div className="space-y-2.5">
           {stats.topGenres.map((g, i) => (
@@ -162,13 +162,13 @@ export function TasteInsights({ watchedMovies, onOpenPerson, userName }: {
       <div className="grid grid-cols-3 gap-2">
         <InsightTile icon={<CalendarRange size={14} />} label="Decade" value={stats.topDecade ? decadeLabel(stats.topDecade) : '—'} />
         <InsightTile icon={<Globe size={14} />} label="Cinema" value={stats.topLang ?? '—'} />
-        <InsightTile icon={<Clock size={14} />} label="Ore viste" value={stats.totalHours > 0 ? `${stats.totalHours}h` : '—'} />
+        <InsightTile icon={<Clock size={14} />} label="Hours" value={stats.totalHours > 0 ? `${stats.totalHours}h` : '—'} />
       </div>
 
       {/* Registi più visti (top 5) */}
       <PeopleRanking
         icon={<Megaphone size={14} />}
-        title="Registi più visti"
+        title="Most-watched directors"
         people={topDirectors.slice(0, 5)}
         loading={creditsLoading && topDirectors.length === 0}
         onOpenPerson={onOpenPerson}
@@ -178,10 +178,10 @@ export function TasteInsights({ watchedMovies, onOpenPerson, userName }: {
       <div className="bg-film-surface border border-film-border rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <Users size={14} className="text-film-accent" />
-          <span className="text-film-subtle text-xs uppercase tracking-widest">Attori più visti</span>
+          <span className="text-film-subtle text-xs uppercase tracking-widest">Most-watched actors</span>
         </div>
         {topActors.length === 0 ? (
-          <p className="text-film-subtle text-xs">{creditsLoading ? 'Calcolo in corso…' : 'Dati non disponibili'}</p>
+          <p className="text-film-subtle text-xs">{creditsLoading ? 'Calculating…' : 'No data'}</p>
         ) : (
           <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-1 px-1">
             {topActors.slice(0, 10).map((p, i) => (
@@ -215,7 +215,7 @@ function PeopleRanking({ icon, title, people, loading, onOpenPerson }: {
         <span className="text-film-subtle text-xs uppercase tracking-widest">{title}</span>
       </div>
       {people.length === 0 ? (
-        <p className="text-film-subtle text-xs">{loading ? 'Calcolo in corso…' : 'Dati non disponibili'}</p>
+        <p className="text-film-subtle text-xs">{loading ? 'Calculating…' : 'No data'}</p>
       ) : (
         <div className="space-y-2.5">
           {people.map((p, i) => {

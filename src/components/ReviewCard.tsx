@@ -40,7 +40,7 @@ export function ReviewCard({ review, myVote, onVote, onClick, onUserClick, compa
             <p className="text-film-text text-sm font-semibold truncate">{review.userName}</p>
           </button>
           <p className="text-film-subtle text-xs">
-            {new Date(review.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}
+            {new Date(review.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -62,7 +62,7 @@ export function ReviewCard({ review, myVote, onVote, onClick, onUserClick, compa
           {isSpoiler ? (
             <div className="flex items-center gap-2 py-2 px-3 rounded-xl bg-yellow-900/20 border border-yellow-500/20">
               <AlertTriangle size={14} className="text-yellow-400 shrink-0" />
-              <p className="text-yellow-400 text-xs">Questa recensione contiene spoiler. Tocca per leggere.</p>
+              <p className="text-yellow-400 text-xs">This review contains spoilers. Tap to read.</p>
             </div>
           ) : (
             <p className={cn('text-film-text/80 text-sm leading-relaxed', compact && 'line-clamp-3')}>
@@ -154,7 +154,7 @@ export function PopularReviews({
           onClick={() => setExpanded(v => !v)}
           className="w-full flex items-center justify-center gap-1 py-2 text-film-subtle text-sm active:opacity-60"
         >
-          {expanded ? <><ChevronUp size={14} /> Mostra meno</> : <><ChevronDown size={14} /> Mostra tutte le {reviews.length}</>}
+          {expanded ? <><ChevronUp size={14} /> Show less</> : <><ChevronDown size={14} /> Show all {reviews.length}</>}
         </button>
       )}
     </div>

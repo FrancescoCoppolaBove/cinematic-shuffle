@@ -18,10 +18,10 @@ interface AllReviewsScreenProps {
 }
 
 const SORT_OPTIONS: { value: ReviewSortMode; label: string }[] = [
-  { value: 'popular',  label: 'Più popolari' },
-  { value: 'highest',  label: 'Voto più alto' },
-  { value: 'lowest',   label: 'Voto più basso' },
-  { value: 'newest',   label: 'Più recenti' },
+  { value: 'popular',  label: 'Most popular' },
+  { value: 'highest',  label: 'Highest rated' },
+  { value: 'lowest',   label: 'Lowest rated' },
+  { value: 'newest',   label: 'Newest' },
   { value: 'friends',  label: 'Amici prima' },
 ];
 
@@ -75,7 +75,7 @@ export function AllReviewsScreen({
     await voteReview(reviewId, currentUser.uid, prev === type ? null : type);
   }
 
-  const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortMode)?.label ?? 'Più popolari';
+  const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortMode)?.label ?? 'Most popular';
 
   return (
     <div
@@ -90,7 +90,7 @@ export function AllReviewsScreen({
           </div>
         </button>
         <div className="flex-1 min-w-0">
-          <p className="text-film-text font-semibold truncate">Recensioni</p>
+          <p className="text-film-text font-semibold truncate">Reviews</p>
           <p className="text-film-subtle text-xs truncate">{movieTitle}</p>
         </div>
         {/* Sort button */}
@@ -128,7 +128,7 @@ export function AllReviewsScreen({
           </div>
         ) : reviews.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-film-muted">
-            <p className="text-sm">Nessuna recensione ancora</p>
+            <p className="text-sm">No reviews yet</p>
           </div>
         ) : (
           <div className="px-4 py-4 space-y-4">

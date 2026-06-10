@@ -61,7 +61,7 @@ export function GridControls({
         {/* Search */}
         <input
           type="text"
-          placeholder="Cerca..."
+          placeholder="Search..."
           value={filters.search}
           onChange={e => onFiltersChange({ ...filters, search: e.target.value })}
           className="flex-1 bg-film-surface border border-film-border rounded-xl px-3 py-2 text-sm text-film-text placeholder:text-film-subtle focus:outline-none focus:border-film-accent transition-colors"
@@ -148,7 +148,7 @@ export function GridControls({
           {/* Voto TMDB minimo */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-film-subtle text-xs uppercase tracking-wider">Voto minimo TMDB</label>
+              <label className="text-film-subtle text-xs uppercase tracking-wider">Min TMDB rating</label>
               <span className={cn(
                 'font-mono font-bold text-sm',
                 filters.minRating > 0 ? 'text-film-accent' : 'text-film-subtle'
@@ -171,7 +171,7 @@ export function GridControls({
           {/* Solo votati */}
           {showRatingFilter && (
             <div className="flex items-center justify-between">
-              <label className="text-film-text text-sm">Solo con voto personale</label>
+              <label className="text-film-text text-sm">Rated only</label>
               <button
                 onClick={() => onFiltersChange({ ...filters, onlyRated: !filters.onlyRated })}
                 className={cn(
@@ -189,13 +189,13 @@ export function GridControls({
 
           {/* Ordina per */}
           <div className="space-y-2">
-            <label className="text-film-subtle text-xs uppercase tracking-wider">Ordina per</label>
+            <label className="text-film-subtle text-xs uppercase tracking-wider">Sort by</label>
             <div className="grid grid-cols-2 gap-2">
               {([
                 { value: 'date', label: 'Data aggiunta' },
-                { value: 'title', label: 'Titolo A-Z' },
-                { value: 'tmdb_rating', label: 'Voto TMDB' },
-                { value: 'rating', label: 'Voto personale' },
+                { value: 'title', label: 'Title A-Z' },
+                { value: 'tmdb_rating', label: 'TMDB rating' },
+                { value: 'rating', label: 'Your rating' },
               ] as const).map(opt => (
                 <button
                   key={opt.value}

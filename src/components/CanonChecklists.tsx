@@ -1,5 +1,5 @@
 /**
- * CanonChecklists — sezione "Premi & Canoni" nel profilo.
+ * CanonChecklists — sezione "Awards & Canon" nel profilo.
  * Accordion (risolve i dati solo quando aperto) con una card per lista che
  * mostra l'avanzamento; tap → schermata con la griglia completa dei film.
  */
@@ -39,7 +39,7 @@ export function CanonChecklists({ watchedIds, ...actions }: Props) {
       <button onClick={() => setOpen(v => !v)} className="w-full flex items-center justify-between px-4 py-3 active:opacity-60">
         <div className="flex items-center gap-2">
           <Award size={15} className="text-film-accent" />
-          <span className="text-film-text text-sm font-medium">Premi & Canoni</span>
+          <span className="text-film-text text-sm font-medium">Awards & Canon</span>
         </div>
         <ChevronDown size={16} className={cn('text-film-subtle transition-transform', open && 'rotate-180')} />
       </button>
@@ -122,11 +122,11 @@ function CanonListScreen({ list, watchedIds, actions, onBack }: {
             {watchedCount}<span className="text-film-subtle text-lg">/{total || list.films.length}</span>
           </p>
           <div className="flex-1 min-w-0">
-            <p className="text-film-text text-sm font-medium">{pct}% completata</p>
+            <p className="text-film-text text-sm font-medium">{pct}% complete</p>
             <div className="h-1.5 rounded-full bg-film-card overflow-hidden mt-2">
               <div className="h-full bg-film-accent rounded-full" style={{ width: `${pct}%` }} />
             </div>
-            {loading && <p className="text-film-subtle text-[11px] mt-1">Caricamento lista… {Math.round(progress * 100)}%</p>}
+            {loading && <p className="text-film-subtle text-[11px] mt-1">Loading list… {Math.round(progress * 100)}%</p>}
           </div>
         </div>
 
@@ -136,7 +136,7 @@ function CanonListScreen({ list, watchedIds, actions, onBack }: {
           className={cn('text-xs px-3 py-1.5 rounded-full border transition-colors',
             onlyUnseen ? 'bg-film-accent text-film-black border-film-accent' : 'bg-film-surface text-film-muted border-film-border')}
         >
-          {onlyUnseen ? '✓ ' : ''}Solo da recuperare
+          {onlyUnseen ? '✓ ' : ''}To watch only
         </button>
 
         {/* Grid */}
@@ -166,7 +166,7 @@ function CanonListScreen({ list, watchedIds, actions, onBack }: {
         </div>
         {!loading && visible.length === 0 && (
           <p className="text-film-muted text-sm text-center py-8">
-            {onlyUnseen ? 'Li hai visti tutti! 🎉' : 'Nessun film disponibile'}
+            {onlyUnseen ? "You've seen them all! 🎉" : 'No films available'}
           </p>
         )}
       </div>

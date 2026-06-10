@@ -74,15 +74,15 @@ export function ListsTab({
       ) : (
         <button onClick={() => setCreating(true)}
           className="w-full flex items-center gap-3 p-3 rounded-xl border border-dashed border-film-border text-film-accent active:bg-film-surface">
-          <Plus size={18} /><span className="text-sm font-medium">Nuova lista</span>
+          <Plus size={18} /><span className="text-sm font-medium">New list</span>
         </button>
       )}
 
       {lists.length === 0 && !creating && (
         <div className="flex flex-col items-center text-center py-12 text-film-muted">
           <ListPlus size={32} className="mb-3 opacity-50" />
-          <p className="text-sm">Crea liste tematiche come<br />"Maratona Nolan" o "Da vedere con lei".</p>
-          <p className="text-film-subtle text-xs mt-2">Aggiungi film dalla scheda di ogni titolo.</p>
+          <p className="text-sm">Create themed lists like<br />"Maratona Nolan" o "Da vedere con lei".</p>
+          <p className="text-film-subtle text-xs mt-2">Add films from each title's page.</p>
         </div>
       )}
 
@@ -166,16 +166,16 @@ function ListDetail({
 
       {confirmDelete && (
         <div className="bg-film-surface border border-film-red/40 rounded-xl p-3 flex items-center gap-2">
-          <span className="text-film-text text-sm flex-1">Eliminare "{list.name}"?</span>
-          <button onClick={() => setConfirmDelete(false)} className="px-3 py-1.5 rounded-lg border border-film-border text-film-subtle text-sm active:bg-film-card">Annulla</button>
-          <button onClick={() => onDelete(list.id)} className="px-3 py-1.5 rounded-lg bg-film-red text-white text-sm font-semibold active:opacity-80">Elimina</button>
+          <span className="text-film-text text-sm flex-1">Delete "{list.name}"?</span>
+          <button onClick={() => setConfirmDelete(false)} className="px-3 py-1.5 rounded-lg border border-film-border text-film-subtle text-sm active:bg-film-card">Cancel</button>
+          <button onClick={() => onDelete(list.id)} className="px-3 py-1.5 rounded-lg bg-film-red text-white text-sm font-semibold active:opacity-80">Delete</button>
         </div>
       )}
 
       {/* Grid film */}
       {list.items.length === 0 ? (
         <p className="text-film-muted text-sm text-center py-10">
-          Lista vuota. Aggiungi film dalla scheda di un titolo con il pulsante "Lista".
+          Empty list. Add films from a title page using the "List" button.
         </p>
       ) : (
         <div className="grid grid-cols-3 gap-2.5">
@@ -193,7 +193,7 @@ function ListDetail({
               <button
                 onClick={() => onRemoveItem(list.id, it.id)}
                 className="absolute top-1 right-1 w-6 h-6 rounded-full bg-film-black/70 backdrop-blur-sm flex items-center justify-center text-white active:bg-film-red"
-                aria-label="Rimuovi dalla lista"
+                aria-label="Remove from list"
               >
                 <X size={13} />
               </button>

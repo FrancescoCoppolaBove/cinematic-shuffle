@@ -113,7 +113,7 @@ export function UserProfileScreen({
             <ChevronLeft size={18} className="text-film-text" />
           </div>
         </button>
-        <span className="text-film-text font-semibold flex-1 truncate">{profile?.displayName ?? 'Profilo'}</span>
+        <span className="text-film-text font-semibold flex-1 truncate">{profile?.displayName ?? 'Profile'}</span>
         {!isSelf && currentUser && (
           <button
             onClick={handleFollow}
@@ -124,7 +124,7 @@ export function UserProfileScreen({
                 : 'border-film-accent bg-film-accent text-film-black'
             )}
           >
-            {following ? 'Seguito' : 'Segui'}
+            {following ? 'Following' : 'Follow'}
           </button>
         )}
       </div>
@@ -146,14 +146,14 @@ export function UserProfileScreen({
             {compatibility !== null && (
               <div className="inline-flex items-center gap-1.5 mt-1.5 px-2.5 py-1 rounded-full bg-film-accent/15 border border-film-accent/30">
                 <span className="text-film-accent font-bold text-sm">{compatibility}%</span>
-                <span className="text-film-accent/80 text-xs">affinità di gusto</span>
+                <span className="text-film-accent/80 text-xs">taste match</span>
               </div>
             )}
             {profile?.bio && <p className="text-film-muted text-sm mt-1 leading-relaxed">{profile.bio}</p>}
             <div className="flex gap-4 mt-3">
               <div className="text-center">
                 <p className="text-film-text font-bold text-sm">{watchedMovies.length}</p>
-                <p className="text-film-subtle text-xs">Visti</p>
+                <p className="text-film-subtle text-xs">Watched</p>
               </div>
               <div className="text-center">
                 <p className="text-film-text font-bold text-sm">{reviews.length}</p>
@@ -165,7 +165,7 @@ export function UserProfileScreen({
               </div>
               <div className="text-center">
                 <p className="text-film-text font-bold text-sm">{profile?.followingCount ?? 0}</p>
-                <p className="text-film-subtle text-xs">Seguiti</p>
+                <p className="text-film-subtle text-xs">Following</p>
               </div>
             </div>
           </div>
@@ -174,8 +174,8 @@ export function UserProfileScreen({
         {/* Tabs */}
         <div className="flex border-b border-film-border sticky top-0 bg-film-black z-10">
           {([
-            { key: 'activity', label: 'Attività', icon: Film },
-            { key: 'watched', label: 'Visti', icon: Film },
+            { key: 'activity', label: 'Activity', icon: Film },
+            { key: 'watched', label: 'Watched', icon: Film },
             { key: 'reviews', label: 'Review', icon: MessageSquare },
             { key: 'likes', label: 'Like', icon: Star },
           ] as { key: ProfileTab; label: string; icon: typeof Film }[]).map(({ key, label }) => (
@@ -197,7 +197,7 @@ export function UserProfileScreen({
         <div className="px-4 py-4">
           {tab === 'activity' && (
             <div>
-              <p className="text-film-subtle text-xs uppercase tracking-widest mb-3">Attività recente</p>
+              <p className="text-film-subtle text-xs uppercase tracking-widest mb-3">Recent activity</p>
               <div className="grid grid-cols-3 gap-2 mb-4">
                 {recentActivity.slice(0, 3).map(m => (
                   <button key={m.id} onClick={() => onOpenMovie(m.id, m.media_type)} className="active:opacity-60">
@@ -216,7 +216,7 @@ export function UserProfileScreen({
                       {m.poster_path && <img src={getImageUrl(m.poster_path, 'w92') ?? ''} alt="" className="w-9 h-[54px] rounded-lg object-cover border border-film-border shrink-0" />}
                       <div className="min-w-0">
                         <p className="text-film-text text-sm font-medium truncate">{m.title}</p>
-                        <p className="text-film-subtle text-xs">{new Date(m.addedAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                        <p className="text-film-subtle text-xs">{new Date(m.addedAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                       </div>
                       {m.personal_rating && <span className="ml-auto text-yellow-400 text-xs">★ {m.personal_rating}</span>}
                     </button>
@@ -236,7 +236,7 @@ export function UserProfileScreen({
                   }
                 </button>
               ))}
-              {watchedMovies.length === 0 && <p className="col-span-3 text-film-muted text-sm text-center py-8">Nessun film ancora</p>}
+              {watchedMovies.length === 0 && <p className="col-span-3 text-film-muted text-sm text-center py-8">No films yet</p>}
             </div>
           )}
 
@@ -254,11 +254,11 @@ export function UserProfileScreen({
                       )}
                     </div>
                     {r.text && <p className="text-film-text/70 text-xs line-clamp-2 leading-relaxed">{r.text}</p>}
-                    <p className="text-film-subtle text-xs mt-2">{new Date(r.createdAt).toLocaleDateString('it-IT')}</p>
+                    <p className="text-film-subtle text-xs mt-2">{new Date(r.createdAt).toLocaleDateString('en-US')}</p>
                   </div>
                 </button>
               ))}
-              {reviews.length === 0 && <p className="text-film-muted text-sm text-center py-8">Nessuna recensione ancora</p>}
+              {reviews.length === 0 && <p className="text-film-muted text-sm text-center py-8">No reviews yet</p>}
             </div>
           )}
 
@@ -272,7 +272,7 @@ export function UserProfileScreen({
                   }
                 </button>
               ))}
-              {likedMovies.length === 0 && <p className="col-span-3 text-film-muted text-sm text-center py-8">Nessun like ancora</p>}
+              {likedMovies.length === 0 && <p className="col-span-3 text-film-muted text-sm text-center py-8">No likes yet</p>}
             </div>
           )}
         </div>

@@ -48,35 +48,35 @@ export async function sharePortrait(d: PortraitData): Promise<void> {
 
   ctx.textAlign = 'center';
 
-  // Etichetta (niente nome app qui: resta solo in basso)
+  // Label (no app name here: only at the bottom)
   ctx.fillStyle = MUTED;
   ctx.font = '500 36px sans-serif';
-  ctx.fillText('IL MIO RITRATTO CINEFILO', W / 2, y);
-  y += 96;
+  ctx.fillText('MY CINEPHILE PORTRAIT', W / 2, y);
+  y += 104;
 
-  // HERO: nome cinefilo con font adattivo (mai tagliato, max 2 righe)
+  // HERO: cinephile name with adaptive font (never clipped, max 2 lines)
   ctx.fillStyle = ACCENT;
   const hero = fitText(ctx, d.cinephileName, CW, 2, [104, 92, 80, 68, 58]);
   const heroLH = hero.size * 1.06;
   for (const line of hero.lines) { y += heroLH * 0.78; ctx.fillText(line, W / 2, y); y += heroLH * 0.22; }
-  y += 24;
+  y += 56; // margine generoso tra il nome e i dati
 
   if (d.cinephileSubtitle) {
     ctx.fillStyle = TEXT;
     ctx.font = '600 44px sans-serif';
     ctx.fillText(d.cinephileSubtitle, W / 2, y);
-    y += 52;
+    y += 58;
   }
-  // @nome
+  // @name
   ctx.fillStyle = MUTED;
   ctx.font = '400 34px sans-serif';
   ctx.fillText(truncate(ctx, d.name, CW, '400 34px sans-serif'), W / 2, y);
-  y += 80;
+  y += 96;
 
-  // Statistiche (3 colonne)
+  // Stats (3 columns)
   const stats: [string, string][] = [
-    [String(d.watchedCount), 'titoli'],
-    [d.totalHours > 0 ? `${d.totalHours}h` : '—', 'ore'],
+    [String(d.watchedCount), 'titles'],
+    [d.totalHours > 0 ? `${d.totalHours}h` : '—', 'hours'],
     [d.topDecade ? decadeShort(d.topDecade) : '—', 'decade'],
   ];
   const colW = CW / 3;
@@ -93,7 +93,7 @@ export async function sharePortrait(d: PortraitData): Promise<void> {
 
   // GENERI con barre
   ctx.textAlign = 'left';
-  sectionTitle(ctx, 'GENERI PIÙ VISTI', PAD, y); y += 50;
+  sectionTitle(ctx, 'TOP GENRES', PAD, y); y += 50;
   const top5 = d.topGenres.slice(0, 5);
   const maxG = top5[0]?.count ?? 1;
   for (const g of top5) {
@@ -119,32 +119,32 @@ export async function sharePortrait(d: PortraitData): Promise<void> {
       yy += 56;
     }
   };
-  if (d.directors.length) drawPeople('REGISTI', d.directors, PAD);
-  if (d.actors.length) drawPeople('ATTORI', d.actors, PAD + half);
+  if (d.directors.length) drawPeople('DIRECTORS', d.directors, PAD);
+  if (d.actors.length) drawPeople('ACTORS', d.actors, PAD + half);
 
-  // Footer: nome app SOLO qui (sopra la safe zone inferiore di IG)
+  // Footer: app name ONLY here (above IG bottom safe zone), no emoji
   ctx.textAlign = 'center';
   ctx.fillStyle = MUTED;
   ctx.font = '400 32px sans-serif';
-  ctx.fillText('Crea il tuo ritratto cinefilo con', W / 2, H - 250);
+  ctx.fillText('Create your cinephile portrait with', W / 2, H - 250);
   ctx.fillStyle = ACCENT;
-  ctx.font = '800 46px sans-serif';
-  ctx.fillText('🎬 CINEMATIC SHUFFLE', W / 2, H - 196);
+  ctx.font = '800 52px sans-serif';
+  ctx.fillText('CINETECA', W / 2, H - 192);
 
   const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/png', 0.92));
   if (!blob) return;
-  const file = new File([blob], 'ritratto-cinefilo.png', { type: 'image/png' });
+  const file = new File([blob], 'cinephile-portrait.png', { type: 'image/png' });
 
   const nav = navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean };
   if (nav.canShare?.({ files: [file] }) && navigator.share) {
     try {
-      await navigator.share({ files: [file], title: 'Il mio ritratto cinefilo', text: 'Il mio ritratto cinefilo 🎬' });
+      await navigator.share({ files: [file], title: 'My cinephile portrait', text: 'My cinephile portrait — CINETECA' });
       return;
-    } catch { /* annullato → fallback */ }
+    } catch { /* cancelled → fallback */ }
   }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'ritratto-cinefilo.png';
+  a.href = url; a.download = 'cinephile-portrait.png';
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }

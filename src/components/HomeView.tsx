@@ -88,8 +88,8 @@ function HomeMainView({
     <div className="space-y-7">
       {/* Section: movies */}
       <TrendingSection
-        title="Film popolari"
-        subtitle="questa settimana"
+        title="Popular movies"
+        subtitle="this week"
         items={movies}
         loading={loadingM}
         watchedIds={watchedIds}
@@ -100,8 +100,8 @@ function HomeMainView({
       />
       {/* Section: TV */}
       <TrendingSection
-        title="Serie TV popolari"
-        subtitle="questa settimana"
+        title="Popular shows"
+        subtitle="this week"
         items={tv}
         loading={loadingT}
         watchedIds={watchedIds}
@@ -143,7 +143,7 @@ function TrendingSection({
         </div>
         <button onClick={onSeeAll}
           className="flex items-center gap-1 text-film-muted text-xs transition-colors">
-          Vedi tutti <ChevronRight size={13} />
+          See all <ChevronRight size={13} />
         </button>
       </div>
 
@@ -251,7 +251,7 @@ function PopularFullPage({
             : <Tv size={16} className="text-purple-400" />
           }
           <h2 className="font-display text-xl tracking-wider text-film-text">
-            {isMovie ? 'FILM POPOLARI' : 'SERIE TV POPOLARI'}
+            {isMovie ? 'POPULAR MOVIES' : 'POPULAR SHOWS'}
           </h2>
         </div>
       </div>
@@ -313,9 +313,9 @@ function PopularFullPage({
               {loadingMore ? (
                 <span className="flex items-center justify-center gap-2">
                   <div className="w-4 h-4 border-2 border-film-accent border-t-transparent rounded-full animate-spin" />
-                  Caricamento...
+                  Loading...
                 </span>
-              ) : `Carica altri (${items.length} di ${totalPages * 20})`}
+              ) : `Load more (${items.length} of ${totalPages * 20})`}
             </button>
           )}
         </>

@@ -224,7 +224,7 @@ export function MovieCard({
                 )}
                 {creator && (
                   <div className="flex items-center gap-1.5">
-                    <span className="text-film-subtle text-xs">Creato da</span>
+                    <span className="text-film-subtle text-xs">Created by</span>
                     <span className="text-film-text text-xs font-medium">{creator.name}</span>
                   </div>
                 )}
@@ -234,7 +234,7 @@ export function MovieCard({
             {/* Personal rating if watched */}
             {isWatched && (
               <div className="mt-3 flex items-center gap-3 px-3 py-2.5 bg-film-card rounded-xl border border-film-border">
-                <span className="text-film-subtle text-xs uppercase tracking-wider shrink-0">Il tuo voto</span>
+                <span className="text-film-subtle text-xs uppercase tracking-wider shrink-0">Your rating</span>
                 <StarRating value={personalRating ?? null} onChange={r => onUpdateRating?.(r)} size="sm" />
               </div>
             )}
@@ -246,7 +246,7 @@ export function MovieCard({
                 <button onClick={onShuffle} disabled={loading}
                   className="flex items-center gap-2 bg-film-accent hover:bg-film-accent-dim text-film-black font-semibold px-4 py-2.5 rounded-xl text-sm transition-all active:scale-95 disabled:opacity-50">
                   <Shuffle size={15} className={loading ? 'animate-spin-slow' : ''} />
-                  {loading ? 'Cercando...' : 'Altro'}
+                  {loading ? 'Searching...' : 'Altro'}
                 </button>
               )}
 
@@ -267,7 +267,7 @@ export function MovieCard({
               ) : (
                 <button onClick={onUnmarkWatched}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border border-film-red/50 bg-film-red/10 text-film-red transition-all active:scale-95">
-                  <EyeOff size={14} />Rimuovi
+                  <EyeOff size={14} />Remove
                 </button>
               )}
 
@@ -289,7 +289,7 @@ export function MovieCard({
             {/* ── Trama ── */}
             {movie.overview && (
               <div className="mt-5">
-                <h3 className="text-xs uppercase tracking-widest text-film-subtle font-medium mb-2">Trama</h3>
+                <h3 className="text-xs uppercase tracking-widest text-film-subtle font-medium mb-2">Overview</h3>
                 <p className="text-film-text/80 text-sm leading-relaxed">{movie.overview}</p>
               </div>
             )}
@@ -299,7 +299,7 @@ export function MovieCard({
               <div className="mt-5">
                 <div className="flex items-center gap-2 mb-3">
                   <MapPin size={13} className="text-film-accent" />
-                  <h3 className="text-xs uppercase tracking-widest text-film-subtle font-medium">Dove guardarlo</h3>
+                  <h3 className="text-xs uppercase tracking-widest text-film-subtle font-medium">Where to watch</h3>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {allProviders.map(p => (
@@ -345,7 +345,7 @@ export function MovieCard({
                 {showFullCast && (
                   <button onClick={() => setShowFullCast(false)}
                     className="flex items-center gap-1 text-film-muted text-xs mt-2 hover:text-film-accent transition-colors">
-                    <ChevronUp size={13} />Mostra meno
+                    <ChevronUp size={13} />Show less
                   </button>
                 )}
               </div>
@@ -383,7 +383,7 @@ export function MovieCard({
             {similar.length > 0 && (
               <div className="mt-5">
                 <h3 className="text-xs uppercase tracking-widest text-film-subtle font-medium mb-3">
-                  {isTV ? 'Serie simili' : 'Film simili'}
+                  {isTV ? 'Similar shows' : 'Similar movies'}
                 </h3>
                 <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide">
                   {similar.map(item => (

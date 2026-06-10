@@ -247,7 +247,7 @@ export function BrowseListScreen({
           </div>
         ) : movies.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-film-muted">
-            <p className="text-sm">Nessun film trovato</p>
+            <p className="text-sm">No films found</p>
           </div>
         ) : viewMode === 'grid' ? (
           <div className="p-4">
@@ -268,7 +268,7 @@ export function BrowseListScreen({
             )}
             {!loadingMore && page < totalPages && (
               <div className="flex justify-center py-4">
-                <button onClick={loadMore} className="text-film-accent text-sm active:opacity-60">Carica altri</button>
+                <button onClick={loadMore} className="text-film-accent text-sm active:opacity-60">Load more</button>
               </div>
             )}
           </div>

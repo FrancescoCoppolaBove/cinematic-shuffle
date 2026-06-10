@@ -145,7 +145,7 @@ export function RatingModal({
           {/* Stars — solo attive se watched */}
           <div className="mb-2 text-center">
             <p className="text-white/40 text-xs uppercase tracking-widest mb-4">
-              {!watched ? 'Segna come visto per votare' : rating ? `${rating} / 5` : 'Rate'}
+              {!watched ? 'Mark as watched to rate' : rating ? `${rating} / 5` : 'Rate'}
             </p>
             <div className={cn('flex justify-center', !watched && 'opacity-30 pointer-events-none')}>
               <StarRating value={rating} onChange={setRating} size="xl" />
@@ -159,7 +159,7 @@ export function RatingModal({
                 onClick={() => { handleDone(); setTimeout(() => onReview?.(), 50); }}
                 className="flex-1 py-4 bg-film-surface border border-film-accent/40 text-film-accent font-semibold text-sm rounded-2xl active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
               >
-                <MessageSquare size={16} />Recensisci
+                <MessageSquare size={16} />Review
               </button>
             )}
             <button

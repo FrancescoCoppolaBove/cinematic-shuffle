@@ -90,8 +90,8 @@ export function InstallPrompt() {
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="text-film-text text-sm font-semibold">Installa Cinematic Shuffle</p>
-            <p className="text-film-muted text-xs mt-0.5">Aggiungila alla schermata home per un'esperienza app</p>
+            <p className="text-film-text text-sm font-semibold">Install CINETECA</p>
+            <p className="text-film-muted text-xs mt-0.5">Add it to your home screen for an app-like experience</p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
@@ -142,7 +142,7 @@ export function InstallPrompt() {
                 <p className="text-film-text text-xs">Tocca</p>
                 <div className="flex items-center gap-1 bg-film-surface border border-film-border rounded-lg px-2 py-1">
                   <Share size={11} className="text-blue-400" />
-                  <span className="text-blue-400 text-xs">Condividi</span>
+                  <span className="text-blue-400 text-xs">Share</span>
                 </div>
                 <p className="text-film-text text-xs">in Safari</p>
               </div>
@@ -153,10 +153,10 @@ export function InstallPrompt() {
                 <span className="text-film-accent font-bold text-xs">2</span>
               </div>
               <div className="flex items-center gap-2 flex-1">
-                <p className="text-film-text text-xs">Seleziona</p>
+                <p className="text-film-text text-xs">Select</p>
                 <div className="flex items-center gap-1 bg-film-surface border border-film-border rounded-lg px-2 py-1">
                   <Plus size={11} className="text-film-text" />
-                  <span className="text-film-text text-xs">Aggiungi a Home</span>
+                  <span className="text-film-text text-xs">Add to Home</span>
                 </div>
               </div>
             </div>

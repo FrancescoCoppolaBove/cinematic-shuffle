@@ -117,12 +117,12 @@ export function ProfileView({
     : null;
 
   const TABS: { key: MainTab; label: string; count?: number }[] = [
-    { key: 'profilo',    label: 'Profilo' },
-    { key: 'visti',      label: 'Visti',       count: watchedMovies.length },
+    { key: 'profilo',    label: 'Profile' },
+    { key: 'visti',      label: 'Watched',     count: watchedMovies.length },
     { key: 'watchlist',  label: 'Watchlist',   count: watchlist.length },
-    { key: 'liste',      label: 'Liste',       count: lists.length },
-    { key: 'diario',     label: 'Diario',      count: watchedMovies.length },
-    { key: 'recensioni', label: 'Recensioni',  count: myReviews.length },
+    { key: 'liste',      label: 'Lists',       count: lists.length },
+    { key: 'diario',     label: 'Diary',       count: watchedMovies.length },
+    { key: 'recensioni', label: 'Reviews',     count: myReviews.length },
   ];
 
   // Shared props for WatchedView/WatchlistView
@@ -209,10 +209,10 @@ export function ProfileView({
             <StatPill icon={<Film size={14} />}    label="Film"     value={films.length}    color="text-film-accent" />
             <StatPill icon={<Tv size={14} />}      label="Serie"    value={series.length}   color="text-purple-400" />
             <StatPill icon={<Bookmark size={14} />} label="In lista" value={watchlist.length} color="text-blue-400" />
-            <StatPill icon={<Heart size={14} />}   label="Preferiti" value={liked.length}   color="text-pink-400" />
+            <StatPill icon={<Heart size={14} />}   label="Favorites" value={liked.length}   color="text-pink-400" />
             <StatPill
               icon={<Star size={14} />}
-              label="Voto medio"
+              label="Avg rating"
               value={avgRating ? `${avgRating}★` : '—'}
               color="text-film-accent"
             />
@@ -256,7 +256,7 @@ export function ProfileView({
                 className="flex-1 flex flex-col items-center py-3 active:bg-film-surface/60"
               >
                 <span className="text-film-text font-bold text-lg">{followingUids.length}</span>
-                <span className="text-film-subtle text-xs">Seguiti</span>
+                <span className="text-film-subtle text-xs">Following</span>
               </button>
               <button
                 onClick={() => setOpenSocialPanel('followers')}
@@ -327,7 +327,7 @@ export function ProfileView({
       {tab === 'recensioni' && (
         <div className="px-4 pt-4 pb-6 space-y-3">
           {myReviews.length === 0 ? (
-            <p className="text-film-muted text-sm text-center py-8">Nessuna recensione ancora</p>
+            <p className="text-film-muted text-sm text-center py-8">No reviews yet</p>
           ) : myReviews.map(r => (
             <button
               key={r.id}
@@ -340,7 +340,7 @@ export function ProfileView({
                   {r.text.trim().length > 0 && (
                     <p className="text-film-muted text-xs mt-1 line-clamp-2 leading-relaxed">{r.text}</p>
                   )}
-                  <p className="text-film-subtle text-xs mt-1">{new Date(r.createdAt).toLocaleDateString('it-IT')}</p>
+                  <p className="text-film-subtle text-xs mt-1">{new Date(r.createdAt).toLocaleDateString('en-US')}</p>
                 </div>
                 <div className="shrink-0 flex flex-col items-end gap-1">
                   {r.rating !== null && (
@@ -422,7 +422,7 @@ export function ProfileView({
             <div className="overflow-y-auto flex-1 px-4 py-3 space-y-3">
               {(openSocialPanel === 'following' ? followingProfiles : followerProfiles).length === 0 ? (
                 <p className="text-film-muted text-sm text-center py-8">
-                  {openSocialPanel === 'following' ? 'Non segui ancora nessuno' : 'Nessun follower ancora'}
+                  {openSocialPanel === 'following' ? "You're not following anyone yet" : 'No followers yet'}
                 </p>
               ) : (openSocialPanel === 'following' ? followingProfiles : followerProfiles).map(p => (
                 <UserRow key={p.uid} profile={p} onClick={() => { setOpenSocialPanel(null); setOpenUserProfile(p.uid); }} />
@@ -487,7 +487,7 @@ function UserRow({ profile, onClick }: { profile: UserPublicProfile; onClick: ()
         <p className="text-film-text text-sm font-semibold truncate">{profile.displayName}</p>
         <p className="text-film-subtle text-xs">{profile.moviesWatchedCount} film · {profile.reviewsCount} review</p>
       </div>
-      <span className="text-film-accent text-xs shrink-0">Vedi →</span>
+      <span className="text-film-accent text-xs shrink-0">View →</span>
     </button>
   );
 }
@@ -553,9 +553,9 @@ function ProviderSelector({ selected, onChange, liveLogos }: {
         onClick={() => setOpen(v => !v)}
         className="w-full flex items-center justify-between px-4 py-3 active:opacity-60"
       >
-        <p className="text-film-text text-sm font-medium">Le mie piattaforme</p>
+        <p className="text-film-text text-sm font-medium">My platforms</p>
         <div className="flex items-center gap-2">
-          <p className="text-film-subtle text-xs">{selected.length > 0 ? `${selected.length} selezionate` : 'Nessuna'}</p>
+          <p className="text-film-subtle text-xs">{selected.length > 0 ? `${selected.length} selezionate` : 'None'}</p>
           <span className={cn('text-film-subtle text-xs transition-transform duration-200', open ? 'rotate-180' : '')}>▾</span>
         </div>
       </button>

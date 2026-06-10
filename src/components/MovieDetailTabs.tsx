@@ -69,7 +69,7 @@ export function MovieDetailTabs({
                 : 'text-film-muted'
             )}
           >
-            {t === 'cast' ? `Cast (${cast.length})` : t === 'crew' ? 'Crew' : 'Generi'}
+            {t === 'cast' ? `Cast (${cast.length})` : t === 'crew' ? 'Crew' : 'Genres'}
           </button>
         ))}
       </div>
@@ -147,7 +147,7 @@ export function MovieDetailTabs({
           {/* Generi TMDB */}
           {movie.genres && movie.genres.length > 0 && (
             <div>
-              <h4 className="text-film-subtle text-xs uppercase tracking-widest mb-2">Generi</h4>
+              <h4 className="text-film-subtle text-xs uppercase tracking-widest mb-2">Genres</h4>
               <div className="space-y-1">
                 {movie.genres.map((g: {id:number;name:string}) => (
                   <button

@@ -122,8 +122,8 @@ export function OnboardingTaste({ onConfirm, onSkip }: Props) {
         <button onClick={confirm} disabled={selected.size < MIN_PICKS || saving}
           className="flex-1 py-3.5 rounded-2xl bg-film-accent text-film-black font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40 flex items-center justify-center gap-2">
           {saving
-            ? <><div className="w-4 h-4 border-2 border-film-black/40 border-t-transparent rounded-full animate-spin" />Preparo i consigli…</>
-            : selected.size >= MIN_PICKS ? `Conferma (${selected.size})` : `Scegline almeno ${MIN_PICKS}`}
+            ? <><div className="w-4 h-4 border-2 border-film-black/40 border-t-transparent rounded-full animate-spin" />Preparing your picks…</>
+            : selected.size >= MIN_PICKS ? `Confirm (${selected.size})` : `Pick at least ${MIN_PICKS}`}
         </button>
       </div>
     </div>

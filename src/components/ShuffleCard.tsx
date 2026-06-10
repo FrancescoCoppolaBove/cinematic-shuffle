@@ -1,7 +1,7 @@
 /**
  * ShuffleCard — card nella sezione Shuffle.
  * Contiene tutte le informazioni utili inline (no click extra per i dettagli).
- * "Già visto" apre la RatingModal per votare subito.
+ * "Watched" apre la RatingModal per votare subito.
  */
 import { useState } from 'react';
 import { Play, Eye, Bookmark, BookmarkCheck, Shuffle, ChevronRight, Star, Clock, Tv, Film, MapPin } from 'lucide-react';
@@ -207,7 +207,7 @@ export function ShuffleCard({
               )}
             >
               <Eye size={20} />
-              <span>{isWatched ? 'Visto ✓' : 'Già visto'}</span>
+              <span>{isWatched ? 'Visto ✓' : 'Watched'}</span>
             </button>
 
             {/* Watchlist */}
@@ -221,7 +221,7 @@ export function ShuffleCard({
               )}
             >
               {isOnWatchlist ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
-              <span>{isOnWatchlist ? 'Salvato' : 'Watchlist'}</span>
+              <span>{isOnWatchlist ? 'Saved' : 'Watchlist'}</span>
             </button>
           </div>
 
@@ -231,7 +231,7 @@ export function ShuffleCard({
               <div>
                 <p className="text-film-muted text-xs font-medium">Rewatch</p>
                 <p className="text-film-subtle text-xs">
-                  {rewatchCount === 0 ? 'Prima visione' : `Rivisto ${rewatchCount}×`}
+                  {rewatchCount === 0 ? 'First watch' : `Rewatched ${rewatchCount}×`}
                 </p>
               </div>
               <div className="flex items-center gap-3">
