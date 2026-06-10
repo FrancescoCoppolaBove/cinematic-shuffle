@@ -223,6 +223,7 @@ export function ProfileView({
           <TasteInsights
             watchedMovies={watchedMovies}
             onOpenPerson={(id, name) => setOpenPerson({ id, name })}
+            userName={user.displayName ?? undefined}
           />
 
           {/* Premi & Canoni — checklist completismo */}

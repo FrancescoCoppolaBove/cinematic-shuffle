@@ -5,12 +5,13 @@
  */
 import { useMemo } from 'react';
 import {
-  Clapperboard, Globe, CalendarRange, Clock, TrendingUp, Megaphone, Users, Sparkles,
+  Clapperboard, Globe, CalendarRange, Clock, TrendingUp, Megaphone, Users, Sparkles, Share2,
 } from 'lucide-react';
 import type { WatchedMovie } from '../types';
 import { TMDB_MOVIE_GENRES, TMDB_TV_GENRES, COMMON_LANGUAGES } from '../types';
 import { getImageUrl, getPersonName } from '../services/tmdb';
 import { useWatchedCredits, type RankedPerson } from '../hooks/useWatchedCredits';
+import { sharePortrait } from '../utils/sharePortrait';
 import { cn } from '../utils';
 
 const GENRE_NAME = new Map<number, string>(
@@ -36,9 +37,10 @@ function decadeLabel(decade: string): string {
   return start >= 2000 ? `Anni ${start}` : `Anni '${String(start).slice(2)}`;
 }
 
-export function TasteInsights({ watchedMovies, onOpenPerson }: {
+export function TasteInsights({ watchedMovies, onOpenPerson, userName }: {
   watchedMovies: WatchedMovie[];
   onOpenPerson?: (id: number, name: string) => void;
+  userName?: string;
 }) {
   const { topDirectors, topActors, loading: creditsLoading } = useWatchedCredits(watchedMovies);
 
@@ -102,7 +104,23 @@ export function TasteInsights({ watchedMovies, onOpenPerson }: {
     <div className="space-y-3">
       <div className="flex items-center gap-2 px-0.5">
         <TrendingUp size={15} className="text-film-accent" />
-        <h2 className="text-film-text text-sm font-semibold tracking-wide">Il tuo ritratto cinefilo</h2>
+        <h2 className="flex-1 text-film-text text-sm font-semibold tracking-wide">Il tuo ritratto cinefilo</h2>
+        <button
+          onClick={() => sharePortrait({
+            name: userName ?? 'Il mio profilo',
+            tasteLabel: stats.tasteLabel,
+            watchedCount: watchedMovies.length,
+            topGenres: stats.topGenres,
+            topDecade: stats.topDecade,
+            topLang: stats.topLang,
+            totalHours: stats.totalHours,
+            topDirector: topDirectors[0] ? getPersonName(topDirectors[0].name) : null,
+            topActor: topActors[0] ? getPersonName(topActors[0].name) : null,
+          })}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-film-accent/15 border border-film-accent/30 text-film-accent text-xs font-medium active:scale-95 transition-transform"
+        >
+          <Share2 size={13} />Condividi
+        </button>
       </div>
 
       {/* Etichetta di gusto */}
