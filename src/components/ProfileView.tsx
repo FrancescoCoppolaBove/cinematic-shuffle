@@ -14,6 +14,8 @@ import { ListsTab } from './ListsTab';
 import { DiaryView } from './DiaryView';
 import { CanonChecklists } from './CanonChecklists';
 import { ImportLetterboxd } from './ImportLetterboxd';
+import { CinephileProfileShare } from './CinephileProfileShare';
+import { Share2 } from 'lucide-react';
 import { PersonDetailScreen } from './PersonDetailScreen';
 import { fetchItalianProviders } from '../services/tmdb';
 
@@ -79,6 +81,7 @@ export function ProfileView({
   const [showProfileReviewEditor, setShowProfileReviewEditor] = useState(false);
   const [openPerson, setOpenPerson] = useState<{ id: number; name: string } | null>(null);
   const [showImport, setShowImport] = useState(false);
+  const [showShare, setShowShare] = useState(false);
 
   useEffect(() => {
     // Ensure own public profile exists
@@ -141,27 +144,25 @@ export function ProfileView({
 
   return (
     <div className="flex flex-col h-full">
-      {/* ── Top tab bar ── */}
-      {/* flex-1 distribuisce su schermi larghi; min-w + overflow-x-auto evita che
-          le 5 voci si schiaccino/vadano a capo su iPhone stretti (scroll orizzontale). */}
-      <div className="flex border-b border-film-border mb-0 overflow-x-auto scrollbar-hide">
+      {/* ── Top tab bar — natural widths, horizontally scrollable ── */}
+      <div className="flex border-b border-film-border overflow-x-auto scrollbar-hide">
         {TABS.map(({ key, label, count }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
             className={cn(
-              'flex-1 min-w-[84px] whitespace-nowrap py-3.5 text-sm font-medium transition-all relative active:opacity-70',
+              'shrink-0 px-4 py-3.5 text-sm font-medium whitespace-nowrap relative transition-colors active:opacity-70',
               tab === key ? 'text-film-accent' : 'text-film-muted'
             )}
           >
             {label}
             {count !== undefined && (
-              <span className={cn('ml-1.5 text-xs', tab === key ? 'text-film-accent/70' : 'text-film-subtle')}>
+              <span className={cn('ml-1.5 text-xs', tab === key ? 'text-film-accent/60' : 'text-film-subtle')}>
                 {count}
               </span>
             )}
             {tab === key && (
-              <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-film-accent rounded-full" />
+              <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-film-accent rounded-full" />
             )}
           </button>
         ))}
@@ -197,6 +198,16 @@ export function ProfileView({
             </button>
           </div>
 
+          {/* Share Cinephile Profile — single CTA (Instagram-ready formats) */}
+          {watchedMovies.length > 0 && (
+            <button
+              onClick={() => setShowShare(true)}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-film-accent/40 bg-film-accent/10 text-film-accent font-semibold text-sm active:scale-[0.98] transition-transform"
+            >
+              <Share2 size={16} />Share Cinephile Profile
+            </button>
+          )}
+
           {/* Provider selector */}
           <ProviderSelector
             selected={favoriteProviderIds}
@@ -206,9 +217,9 @@ export function ProfileView({
 
           {/* Stats grid 3×2 */}
           <div className="grid grid-cols-3 gap-2">
-            <StatPill icon={<Film size={14} />}    label="Film"     value={films.length}    color="text-film-accent" />
-            <StatPill icon={<Tv size={14} />}      label="Serie"    value={series.length}   color="text-purple-400" />
-            <StatPill icon={<Bookmark size={14} />} label="In lista" value={watchlist.length} color="text-blue-400" />
+            <StatPill icon={<Film size={14} />}    label="Movies"   value={films.length}    color="text-film-accent" />
+            <StatPill icon={<Tv size={14} />}      label="Shows"    value={series.length}   color="text-purple-400" />
+            <StatPill icon={<Bookmark size={14} />} label="Listed"  value={watchlist.length} color="text-blue-400" />
             <StatPill icon={<Heart size={14} />}   label="Favorites" value={liked.length}   color="text-pink-400" />
             <StatPill
               icon={<Star size={14} />}
@@ -223,7 +234,6 @@ export function ProfileView({
           <TasteInsights
             watchedMovies={watchedMovies}
             onOpenPerson={(id, name) => setOpenPerson({ id, name })}
-            userName={user.displayName ?? undefined}
           />
 
           {/* Premi & Canoni — checklist completismo */}
@@ -438,6 +448,14 @@ export function ProfileView({
         <ImportLetterboxd
           onImport={onImportWatched}
           onClose={() => setShowImport(false)}
+        />
+      )}
+
+      {showShare && (
+        <CinephileProfileShare
+          user={user}
+          watchedMovies={watchedMovies}
+          onClose={() => setShowShare(false)}
         />
       )}
 

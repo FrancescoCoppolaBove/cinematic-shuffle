@@ -5,13 +5,12 @@
  */
 import { useMemo } from 'react';
 import {
-  Clapperboard, Globe, CalendarRange, Clock, TrendingUp, Megaphone, Users, Sparkles, Share2,
+  Clapperboard, Globe, CalendarRange, Clock, TrendingUp, Megaphone, Users, Sparkles,
 } from 'lucide-react';
 import type { WatchedMovie } from '../types';
 import { TMDB_MOVIE_GENRES, TMDB_TV_GENRES, COMMON_LANGUAGES } from '../types';
 import { getImageUrl, getPersonName } from '../services/tmdb';
 import { useWatchedCredits, type RankedPerson } from '../hooks/useWatchedCredits';
-import { sharePortrait } from '../utils/sharePortrait';
 import { cinephileName } from '../utils/cinephileName';
 import { cn } from '../utils';
 
@@ -28,10 +27,9 @@ function decadeLabel(decade: string): string {
   return `${start}s`;
 }
 
-export function TasteInsights({ watchedMovies, onOpenPerson, userName }: {
+export function TasteInsights({ watchedMovies, onOpenPerson }: {
   watchedMovies: WatchedMovie[];
   onOpenPerson?: (id: number, name: string) => void;
-  userName?: string;
 }) {
   const { topDirectors, topActors, loading: creditsLoading } = useWatchedCredits(watchedMovies);
 
@@ -102,23 +100,6 @@ export function TasteInsights({ watchedMovies, onOpenPerson, userName }: {
       <div className="flex items-center gap-2 px-0.5">
         <TrendingUp size={15} className="text-film-accent" />
         <h2 className="flex-1 text-film-text text-sm font-semibold tracking-wide">Your cinephile portrait</h2>
-        <button
-          onClick={() => sharePortrait({
-            name: userName ?? 'My profile',
-            cinephileName: stats.cine.name,
-            cinephileSubtitle: stats.cine.subtitle,
-            watchedCount: watchedMovies.length,
-            topGenres: stats.topGenres,
-            topDecade: stats.topDecade,
-            topLang: stats.topLang,
-            totalHours: stats.totalHours,
-            directors: topDirectors.slice(0, 3).map(d => getPersonName(d.name)),
-            actors: topActors.slice(0, 3).map(a => getPersonName(a.name)),
-          })}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-film-accent/15 border border-film-accent/30 text-film-accent text-xs font-medium active:scale-95 transition-transform"
-        >
-          <Share2 size={13} />Condividi
-        </button>
       </div>
 
       {/* Nome da cinefilo */}
