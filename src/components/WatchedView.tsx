@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { Eye } from 'lucide-react';
 import type { WatchedMovie, TMDBMovieDetail } from '../types';
 import { getImageUrl, getMovieDetail, getEnglishTitle, getReleaseDate } from '../services/tmdb';
-import { formatYear, formatRating, mkey } from '../utils';
+import { formatYear, formatRating, mkey, cn } from '../utils';
 import { MovieCard } from './MovieCard';
 import { GridControls, DEFAULT_GRID_FILTERS } from './GridControls';
 import type { GridFilters, ViewMode } from './GridControls';
@@ -87,7 +87,7 @@ onOpenMovieGlobal,
       <div className="space-y-4">
         <button onClick={() => setSelectedMovie(null)}
           className="flex items-center gap-2 text-film-muted text-sm transition-colors active:opacity-70">
-          ← Torna alla lista
+          ← Back to list
         </button>
         <MovieCard
           movie={selectedMovie}
@@ -106,19 +106,43 @@ onOpenMovieGlobal,
     );
   }
 
+  const movieCount = useMemo(() => watchedMovies.filter(m => m.media_type === 'movie').length, [watchedMovies]);
+  const tvCount = watchedMovies.length - movieCount;
+
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Eye size={16} className="text-film-accent" />
-          <span className="text-film-text font-medium">Films watched</span>
-          <span className="bg-film-card border border-film-border text-film-muted text-xs px-2 py-0.5 rounded-full">
-            {watchedMovies.length}
-          </span>
+          <span className="text-film-text font-medium">Watched</span>
         </div>
         {loading && <div className="w-4 h-4 border border-film-accent border-t-transparent rounded-full animate-spin" />}
       </div>
+
+      {/* Movies / TV split — sempre visibile */}
+      {watchedMovies.length > 0 && (
+        <div className="flex gap-2">
+          {([
+            ['all', 'All', watchedMovies.length],
+            ['movie', 'Movies', movieCount],
+            ['tv', 'TV Shows', tvCount],
+          ] as const).map(([val, label, count]) => (
+            <button
+              key={val}
+              onClick={() => setFilters(f => ({ ...f, mediaType: val }))}
+              className={cn(
+                'flex-1 py-2 rounded-xl text-xs font-semibold border transition-all active:scale-95',
+                filters.mediaType === val
+                  ? 'bg-film-accent text-film-black border-film-accent'
+                  : 'bg-film-surface border-film-border text-film-muted'
+              )}
+            >
+              {label} <span className="opacity-60">{count}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {watchedMovies.length === 0 ? (
         <div className="text-center py-20 text-film-muted space-y-3">

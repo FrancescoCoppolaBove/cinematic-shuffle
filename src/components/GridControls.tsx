@@ -93,7 +93,7 @@ export function GridControls({
               'p-2 transition-colors',
               viewMode === 'grid' ? 'bg-film-accent text-film-black' : 'text-film-muted hover:text-film-text'
             )}
-            title="Griglia"
+            title="Grid"
           >
             <LayoutGrid size={15} />
           </button>
@@ -113,21 +113,21 @@ export function GridControls({
       {/* Counter */}
       {(activeCount > 0 || filters.search) && (
         <p className="text-film-subtle text-xs">
-          {filteredCount} di {totalCount} risultati
+          {filteredCount} of {totalCount} results
         </p>
       )}
 
       {/* Filter panel */}
       {showPanel && (
         <div className="bg-film-surface border border-film-border rounded-2xl p-4 space-y-4 animate-slide-up">
-          {/* Tipo */}
+          {/* Type */}
           <div className="space-y-2">
-            <label className="text-film-subtle text-xs uppercase tracking-wider">Tipo</label>
+            <label className="text-film-subtle text-xs uppercase tracking-wider">Type</label>
             <div className="flex gap-2">
               {([
-                { value: 'all', label: 'Tutti' },
-                { value: 'movie', label: 'Film' },
-                { value: 'tv', label: 'Serie TV' },
+                { value: 'all', label: 'All' },
+                { value: 'movie', label: 'Movies' },
+                { value: 'tv', label: 'TV Shows' },
               ] as const).map(opt => (
                 <button
                   key={opt.value}
@@ -153,7 +153,7 @@ export function GridControls({
                 'font-mono font-bold text-sm',
                 filters.minRating > 0 ? 'text-film-accent' : 'text-film-subtle'
               )}>
-                {filters.minRating > 0 ? `≥ ${filters.minRating.toFixed(1)}` : 'Qualsiasi'}
+                {filters.minRating > 0 ? `≥ ${filters.minRating.toFixed(1)}` : 'Any'}
               </span>
             </div>
             <input
@@ -192,7 +192,7 @@ export function GridControls({
             <label className="text-film-subtle text-xs uppercase tracking-wider">Sort by</label>
             <div className="grid grid-cols-2 gap-2">
               {([
-                { value: 'date', label: 'Data aggiunta' },
+                { value: 'date', label: 'Date added' },
                 { value: 'title', label: 'Title A-Z' },
                 { value: 'tmdb_rating', label: 'TMDB rating' },
                 { value: 'rating', label: 'Your rating' },
@@ -213,22 +213,22 @@ export function GridControls({
             </div>
           </div>
 
-          {/* Lingua */}
+          {/* Language */}
           <div className="space-y-1">
-            <p className="text-film-subtle text-xs uppercase tracking-wider">Lingua</p>
+            <p className="text-film-subtle text-xs uppercase tracking-wider">Language</p>
             <select value={filters.language || ''} onChange={e => onFiltersChange({ ...filters, language: e.target.value || undefined })}
               className="w-full bg-film-card border border-film-border rounded-lg px-3 py-2 text-sm text-film-text appearance-none focus:outline-none focus:border-film-accent">
-              <option value="">Qualsiasi</option>
+              <option value="">Any</option>
               {COMMON_LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
             </select>
           </div>
 
-          {/* Paese */}
+          {/* Country */}
           <div className="space-y-1">
-            <p className="text-film-subtle text-xs uppercase tracking-wider">Paese</p>
+            <p className="text-film-subtle text-xs uppercase tracking-wider">Country</p>
             <select value={filters.originCountry || ''} onChange={e => onFiltersChange({ ...filters, originCountry: e.target.value || undefined })}
               className="w-full bg-film-card border border-film-border rounded-lg px-3 py-2 text-sm text-film-text appearance-none focus:outline-none focus:border-film-accent">
-              <option value="">Qualsiasi</option>
+              <option value="">Any</option>
               {COMMON_COUNTRIES.map(co => <option key={co.code} value={co.code}>{co.name}</option>)}
             </select>
           </div>
@@ -239,7 +239,7 @@ export function GridControls({
               onClick={reset}
               className="w-full py-2 text-film-red text-sm border border-film-red/30 rounded-xl hover:bg-film-red/10 transition-colors"
             >
-              Reset filtri
+              Reset filters
             </button>
           )}
         </div>

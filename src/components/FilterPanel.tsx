@@ -150,7 +150,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
                 onChange={e => onChange({ ...filters, decade: e.target.value || undefined, year: undefined })}
                 className="w-full bg-film-card border border-film-border rounded-lg px-3 py-2 text-sm text-film-text appearance-none cursor-pointer focus:outline-none focus:border-film-accent transition-colors"
               >
-                <option value="">Qualsiasi decade</option>
+                <option value="">Any decade</option>
                 {DECADES
                   .filter(d => filters.mediaType !== 'tv' || d.start >= 1970)
                   .map(d => (
@@ -180,7 +180,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
       </FilterSection>
 
       {/* Generi */}
-      <FilterSection icon={<Film size={14} />} label="Genere">
+      <FilterSection icon={<Film size={14} />} label="Genre">
         <div className="flex flex-wrap gap-2">
           {(filters.mediaType === 'tv' ? TMDB_TV_GENRES : TMDB_MOVIE_GENRES).map(genre => {
             const active = (filters.genreIds || []).includes(genre.id);
@@ -206,7 +206,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
       <FilterSection icon={<Star size={14} />} label="Min IMDb rating">
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs text-film-muted">
-            <span>Qualsiasi</span>
+            <span>Any</span>
             <span className={cn('font-mono font-bold text-base', filters.minImdbRating ? 'text-film-accent' : 'text-film-subtle')}>
               {filters.minImdbRating ? `≥ ${filters.minImdbRating.toFixed(1)}` : '—'}
             </span>
@@ -332,14 +332,14 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
       </FilterSection>
 
       {/* Lingua originale */}
-      <FilterSection icon={<Globe size={14} />} label="Lingua originale">
+      <FilterSection icon={<Globe size={14} />} label="Original language">
         <div className="relative">
           <select
             value={filters.language || ''}
             onChange={e => onChange({ ...filters, language: e.target.value || undefined })}
             className="w-full bg-film-card border border-film-border rounded-lg px-3 py-2 text-sm text-film-text appearance-none cursor-pointer focus:outline-none focus:border-film-accent transition-colors"
           >
-            <option value="">Qualsiasi lingua</option>
+            <option value="">Any language</option>
             {COMMON_LANGUAGES.map(l => (
               <option key={l.code} value={l.code}>{l.name}</option>
             ))}
@@ -349,14 +349,14 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
       </FilterSection>
 
       {/* Paese di produzione */}
-      <FilterSection icon={<Globe size={14} />} label="Paese">
+      <FilterSection icon={<Globe size={14} />} label="Country">
         <div className="relative">
           <select
             value={filters.originCountry || ''}
             onChange={e => onChange({ ...filters, originCountry: e.target.value || undefined })}
             className="w-full bg-film-card border border-film-border rounded-lg px-3 py-2 text-sm text-film-text appearance-none cursor-pointer focus:outline-none focus:border-film-accent transition-colors"
           >
-            <option value="">Qualsiasi paese</option>
+            <option value="">Any country</option>
             {COMMON_COUNTRIES.map(co => (
               <option key={co.code} value={co.code}>{co.name}</option>
             ))}
@@ -366,7 +366,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
       </FilterSection>
 
       {/* Oscar — solo per film */}
-      {filters.mediaType !== 'tv' ? <FilterSection icon={<Star size={14} />} label="Premi">
+      {filters.mediaType !== 'tv' ? <FilterSection icon={<Star size={14} />} label="Awards">
         <button
           onClick={() => onChange({ ...filters, withAwards: !filters.withAwards })}
           className={cn(

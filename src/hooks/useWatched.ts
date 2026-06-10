@@ -22,9 +22,12 @@ import {
  */
 function titleRuntimeMinutes(movie: TMDBMovieDetail): number | null {
   if (movie.media_type === 'tv') {
-    const perEp = movie.episode_run_time?.[0] ?? 0;
     const eps = movie.number_of_episodes ?? 0;
-    if (perEp > 0 && eps > 0) return perEp * eps;
+    const perEp = movie.episode_run_time?.[0] ?? 0;
+    // Molte serie su TMDB non espongono episode_run_time a livello di serie:
+    // in quel caso usiamo una stima prudente di 40 min/episodio così le ore
+    // non risultano 0 per show con decine di episodi.
+    if (eps > 0) return (perEp > 0 ? perEp : 40) * eps;
     return perEp > 0 ? perEp : null;
   }
   return movie.runtime ?? null;

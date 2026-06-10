@@ -266,7 +266,7 @@ export function ProfileView({
             onClick={() => setShowImport(true)}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-film-border bg-film-surface text-film-muted text-sm active:scale-[0.98] transition-all"
           >
-            ⬆️ Importa la libreria da Letterboxd
+            ⬆️ Import your library from Letterboxd
           </button>
 
           {/* Connessioni — following/followers inline */}
@@ -284,7 +284,7 @@ export function ProfileView({
                 className="flex-1 flex flex-col items-center py-3 active:bg-film-surface/60"
               >
                 <span className="text-film-text font-bold text-lg">{followerUids.length}</span>
-                <span className="text-film-subtle text-xs">Follower</span>
+                <span className="text-film-subtle text-xs">Followers</span>
               </button>
             </div>
           </div>
@@ -639,7 +639,7 @@ function ProviderSelector({ selected, onChange, liveLogos }: {
       >
         <p className="text-film-text text-sm font-medium">My platforms</p>
         <div className="flex items-center gap-2">
-          <p className="text-film-subtle text-xs">{selected.length > 0 ? `${selected.length} selezionate` : 'None'}</p>
+          <p className="text-film-subtle text-xs">{selected.length > 0 ? `${selected.length} selected` : 'None'}</p>
           <span className={cn('text-film-subtle text-xs transition-transform duration-200', open ? 'rotate-180' : '')}>▾</span>
         </div>
       </button>
