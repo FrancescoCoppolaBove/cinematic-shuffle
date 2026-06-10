@@ -14,8 +14,10 @@ import { ListsTab } from './ListsTab';
 import { DiaryView } from './DiaryView';
 import { CanonChecklists } from './CanonChecklists';
 import { ImportLetterboxd } from './ImportLetterboxd';
-import { CinephileProfileShare } from './CinephileProfileShare';
 import { Share2 } from 'lucide-react';
+import { useWatchedCredits } from '../hooks/useWatchedCredits';
+import { sharePortrait, buildPortraitData } from '../utils/sharePortrait';
+import { getPersonName } from '../services/tmdb';
 import { PersonDetailScreen } from './PersonDetailScreen';
 import { fetchItalianProviders } from '../services/tmdb';
 
@@ -81,7 +83,7 @@ export function ProfileView({
   const [showProfileReviewEditor, setShowProfileReviewEditor] = useState(false);
   const [openPerson, setOpenPerson] = useState<{ id: number; name: string } | null>(null);
   const [showImport, setShowImport] = useState(false);
-  const [showShare, setShowShare] = useState(false);
+  const { topDirectors, topActors } = useWatchedCredits(watchedMovies);
 
   useEffect(() => {
     // Ensure own public profile exists
@@ -198,10 +200,14 @@ export function ProfileView({
             </button>
           </div>
 
-          {/* Share Cinephile Profile — single CTA (Instagram-ready formats) */}
+          {/* Share Cinephile Profile — generates the image and opens the native share sheet */}
           {watchedMovies.length > 0 && (
             <button
-              onClick={() => setShowShare(true)}
+              onClick={() => sharePortrait(buildPortraitData(
+                watchedMovies,
+                topDirectors.map(d => getPersonName(d.name)),
+                topActors.map(a => getPersonName(a.name)),
+              ))}
               className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-film-accent/40 bg-film-accent/10 text-film-accent font-semibold text-sm active:scale-[0.98] transition-transform"
             >
               <Share2 size={16} />Share Cinephile Profile
@@ -451,13 +457,6 @@ export function ProfileView({
         />
       )}
 
-      {showShare && (
-        <CinephileProfileShare
-          user={user}
-          watchedMovies={watchedMovies}
-          onClose={() => setShowShare(false)}
-        />
-      )}
 
       {openPerson && (
         <PersonDetailScreen

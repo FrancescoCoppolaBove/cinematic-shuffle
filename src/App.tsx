@@ -35,14 +35,11 @@ function LoginScreen({ onSignIn, loading, error }: {
   return (
     <div className="min-h-screen bg-film-black flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-sm space-y-8">
-        <div className="text-center space-y-3">
+        <div className="text-center">
           <img
-            src="/brand/cineteca-logo.png" alt=""
-            className="w-24 h-24 mx-auto object-contain"
-            onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+            src="/brand/cineteca-wordmark.svg" alt="CINETECA — Your cinema. Your journey."
+            className="w-full max-w-[300px] mx-auto"
           />
-          <h1 className="font-display text-6xl text-film-text tracking-[0.15em]">CINETECA</h1>
-          <p className="text-film-accent text-xs tracking-[0.35em] uppercase">Your cinema. Your journey.</p>
         </div>
         <div className="bg-film-surface border border-film-border rounded-2xl p-6 space-y-5">
           <div className="space-y-2 text-center">
