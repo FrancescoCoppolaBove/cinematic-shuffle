@@ -40,15 +40,15 @@ interface Mood {
 }
 const MOODS: Mood[] = [
   { id: 'comfort',  emoji: '🍿', label: 'Comfort',        genreIds: [35, 10751], minRating: 6.5 },
-  { id: 'brivido',  emoji: '🔪', label: 'Brivido',        genreIds: [53, 80, 9648] },
-  { id: 'adrenalina', emoji: '💥', label: 'Adrenalina',   genreIds: [28, 12] },
-  { id: 'paura',    emoji: '😱', label: 'Paura',          genreIds: [27] },
-  { id: 'romantico', emoji: '💘', label: 'Romantico',     genreIds: [10749] },
-  { id: 'lento',    emoji: '🌙', label: 'Lento & intenso', genreIds: [18], minRating: 7 },
-  { id: 'mente',    emoji: '🧠', label: 'Cervellotico',   genreIds: [878, 9648] },
-  { id: 'corto',    emoji: '⏱️', label: 'Sotto 100 min',  maxRuntime: 100 },
-  { id: 'autore',   emoji: '🎨', label: "D'autore",       minRating: 7.7 },
-  { id: 'famiglia', emoji: '👨‍👩‍👧', label: 'In famiglia',  genreIds: [10751, 16] },
+  { id: 'brivido',  emoji: '🔪', label: 'Thrilling',      genreIds: [53, 80, 9648] },
+  { id: 'adrenalina', emoji: '💥', label: 'Adrenaline',   genreIds: [28, 12] },
+  { id: 'paura',    emoji: '😱', label: 'Scary',          genreIds: [27] },
+  { id: 'romantico', emoji: '💘', label: 'Romantic',      genreIds: [10749] },
+  { id: 'lento',    emoji: '🌙', label: 'Slow & intense', genreIds: [18], minRating: 7 },
+  { id: 'mente',    emoji: '🧠', label: 'Mind-bending',   genreIds: [878, 9648] },
+  { id: 'corto',    emoji: '⏱️', label: 'Under 100 min',  maxRuntime: 100 },
+  { id: 'autore',   emoji: '🎨', label: 'Auteur',         minRating: 7.7 },
+  { id: 'famiglia', emoji: '👨‍👩‍👧', label: 'Family',     genreIds: [10751, 16] },
 ];
 
 // Confronta i SOLI campi che una chip mood imposta. Se questi combaciano
@@ -184,7 +184,7 @@ export function ShuffleView({
                 {mt === 'movie' && <Film size={12} />}
                 {mt === 'tv' && <Tv size={12} />}
                 {mt === 'both' && <Shuffle size={12} />}
-                {mt === 'movie' ? 'Film' : mt === 'tv' ? 'Serie' : 'Tutti'}
+                {mt === 'movie' ? 'Films' : mt === 'tv' ? 'TV' : 'All'}
               </button>
             ))}
           </div>
@@ -218,7 +218,7 @@ export function ShuffleView({
           )}
         >
           <Shuffle size={20} className={loading ? 'animate-spin-slow' : ''} />
-          {loading ? 'CERCANDO...' : hasSearched ? 'ALTRO' : 'SHUFFLE'}
+          {loading ? 'SEARCHING...' : hasSearched ? 'ANOTHER' : 'SHUFFLE'}
         </button>
 
         {/* Row 3: mood chips — scoperta per "come ti senti" */}
@@ -253,7 +253,7 @@ export function ShuffleView({
         {/* Error */}
         {error && (
           <div className="mx-4 mt-2 bg-film-red/10 border border-film-red/30 rounded-2xl px-4 py-3 text-film-red text-sm">
-            <p className="font-medium">Nessun risultato</p>
+            <p className="font-medium">No results</p>
             <p className="text-film-red/70 text-xs mt-0.5">{error}</p>
           </div>
         )}
@@ -269,7 +269,7 @@ export function ShuffleView({
                 {filters.mediaType === 'tv' ? '📺' : '🎬'}
               </div>
             </div>
-            <p className="text-film-muted text-sm">Cercando nella libreria...</p>
+            <p className="text-film-muted text-sm">Searching the library...</p>
           </div>
         )}
 
@@ -279,9 +279,9 @@ export function ShuffleView({
             <div className="text-6xl opacity-20 select-none">
               {filters.mediaType === 'tv' ? '📺' : '🎬'}
             </div>
-            <p className="text-base">Premi Shuffle per scoprire</p>
+            <p className="text-base">Tap Shuffle to discover</p>
             <p className="text-sm text-film-subtle">
-              {filters.mediaType === 'tv' ? 'una serie TV' : filters.mediaType === 'both' ? 'qualcosa di nuovo' : 'un film'}
+              {filters.mediaType === 'tv' ? 'a TV show' : filters.mediaType === 'both' ? 'something new' : 'a film'}
             </p>
           </div>
         )}
@@ -489,7 +489,7 @@ function ShuffleMovieCard({
             )}
             {isTV && movie.number_of_seasons && (
               <><span className="text-film-border text-xs">·</span>
-              <span className="text-film-muted text-xs">{movie.number_of_seasons} stag.</span></>
+              <span className="text-film-muted text-xs">{movie.number_of_seasons} seasons</span></>
             )}
           </div>
           <div className="flex flex-wrap gap-1">
@@ -497,8 +497,8 @@ function ShuffleMovieCard({
               <span key={g.id} className="px-1.5 py-0.5 rounded-md bg-film-card border border-film-border text-film-muted text-xs">{g.name}</span>
             ))}
           </div>
-          {director && <p className="text-film-subtle text-xs">Regia <span className="text-film-muted font-medium">{director.name}</span></p>}
-          {creator && <p className="text-film-subtle text-xs">Creato da <span className="text-film-muted font-medium">{creator.name}</span></p>}
+          {director && <p className="text-film-subtle text-xs">Directed by <span className="text-film-muted font-medium">{director.name}</span></p>}
+          {creator && <p className="text-film-subtle text-xs">Created by <span className="text-film-muted font-medium">{creator.name}</span></p>}
         </div>
       </div>
 
@@ -512,7 +512,7 @@ function ShuffleMovieCard({
             onClick={() => setExpandOverview(!expandOverview)}
             className="text-film-accent text-xs mt-1 active:opacity-70"
           >
-            {expandOverview ? '↑ Mostra meno' : '↓ Leggi tutto'}
+            {expandOverview ? '↑ Show less' : '↓ Read more'}
           </button>
         </div>
       )}
@@ -522,17 +522,17 @@ function ShuffleMovieCard({
         <button onClick={onOpenRating}
           className={cn('flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl border transition-all active:scale-95 text-xs font-medium',
             isWatched ? 'border-green-600/50 bg-green-950/30 text-green-400' : 'border-film-border bg-film-surface text-film-muted')}>
-          <Eye size={20} /><span>{isWatched ? 'Visto ✓' : 'Già visto'}</span>
+          <Eye size={20} /><span>{isWatched ? 'Watched ✓' : 'Watched?'}</span>
         </button>
         <button onClick={onWatchlistToggle}
           className={cn('flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl border transition-all active:scale-95 text-xs font-medium',
             isOnWatchlist ? 'border-purple-500/40 bg-purple-900/20 text-purple-300' : 'border-film-border bg-film-surface text-film-muted')}>
           {isOnWatchlist ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
-          <span>{isOnWatchlist ? 'Salvato' : 'Watchlist'}</span>
+          <span>{isOnWatchlist ? 'Saved' : 'Watchlist'}</span>
         </button>
         <button onClick={onShuffle}
           className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl bg-film-accent text-film-black font-semibold active:scale-95 transition-all">
-          <Shuffle size={20} /><span className="text-xs font-bold">Altro</span>
+          <Shuffle size={20} /><span className="text-xs font-bold">Another</span>
         </button>
       </div>
 
@@ -577,7 +577,7 @@ function ShuffleMovieCard({
       {allProviders.length > 0 && (
         <div>
           <p className="text-film-subtle text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <MapPin size={11} />Dove guardarlo
+            <MapPin size={11} />Where to watch
           </p>
           <div className="flex flex-wrap gap-2">
             {allProviders.map(p => (
@@ -590,7 +590,7 @@ function ShuffleMovieCard({
           </div>
           {providers?.link && (
             <a href={providers.link} target="_blank" rel="noopener noreferrer"
-              className="inline-block mt-1.5 text-film-accent text-xs">Vedi tutte →</a>
+              className="inline-block mt-1.5 text-film-accent text-xs">See all →</a>
           )}
         </div>
       )}
@@ -601,7 +601,7 @@ function ShuffleMovieCard({
       {similar.length > 0 && (
         <div>
           <p className="text-film-subtle text-xs uppercase tracking-wider mb-2">
-            {isTV ? 'Serie simili' : 'Film simili'}
+            {isTV ? 'Similar shows' : 'Similar films'}
           </p>
           <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-4 px-4">
             {similar.map(item => (
@@ -626,7 +626,7 @@ function ShuffleMovieCard({
         <div className="flex items-center justify-between px-3 py-2 bg-film-surface rounded-xl border border-film-border">
           <div>
             <p className="text-film-muted text-xs font-medium">Rewatch</p>
-            <p className="text-film-subtle text-xs">{rewatchCount === 0 ? 'Prima visione' : `Rivisto ${rewatchCount}×`}</p>
+            <p className="text-film-subtle text-xs">{rewatchCount === 0 ? 'First watch' : `Rewatched ${rewatchCount}×`}</p>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={() => onIncrementRewatch(-1)} disabled={rewatchCount === 0}

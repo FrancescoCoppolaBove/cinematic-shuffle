@@ -369,23 +369,23 @@ const OSCAR_NOMINEES_LOST: CanonFilm[] = [
 export const CANON_LISTS: CanonList[] = [
   {
     id: 'oscar-best-picture',
-    name: 'Oscar · Miglior Film',
+    name: 'Oscar · Best Picture',
     emoji: '🏆',
-    subtitle: "L'albo d'oro del premio più famoso",
+    subtitle: 'The winners of cinema’s most famous award',
     films: OSCAR_BEST_PICTURE,
   },
   {
     id: 'palme-dor',
     name: "Palme d'Or · Cannes",
     emoji: '🌴',
-    subtitle: 'I vincitori del festival di Cannes',
+    subtitle: 'Cannes Film Festival winners',
     films: PALME_DOR,
   },
   {
     id: 'oscar-nominees-lost',
-    name: 'Oscar · Grandi sconfitti',
+    name: 'Oscar · Great Near Misses',
     emoji: '🥈',
-    subtitle: 'Selezione di candidati a Miglior Film mai premiati (2009–oggi + classici)',
+    subtitle: 'Best Picture nominees that never won (2009–today + classics)',
     films: OSCAR_NOMINEES_LOST,
   },
 ];

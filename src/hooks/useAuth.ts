@@ -48,7 +48,7 @@ export function useAuth() {
       await signInWithPopup(auth, googleProvider);
       // onAuthStateChanged aggiornerà lo stato automaticamente
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Errore di accesso';
+      const message = err instanceof Error ? err.message : 'Sign-in error';
       // Ignora l'errore se l'utente ha chiuso il popup
       if ((err as { code?: string }).code === 'auth/popup-closed-by-user') {
         setState(s => ({ ...s, loading: false, error: null }));

@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons/*.png'],
+      includeAssets: ['brand/*.png', 'icons/*.png'],
       injectRegister: 'auto',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
@@ -52,16 +52,16 @@ export default defineConfig({
         ],
       },
       manifest: {
-        name: 'Cinematic Shuffle',
-        short_name: 'Cinematic',
-        description: 'Scopri il tuo prossimo film o serie TV da vedere',
+        name: 'CINETECA',
+        short_name: 'CINETECA',
+        description: 'Your cinema. Your journey.',
         theme_color: '#0A0A0F',
         background_color: '#0A0A0F',
         display: 'standalone',
         orientation: 'portrait-primary',
         start_url: '/',
         scope: '/',
-        lang: 'it',
+        lang: 'en',
         categories: ['entertainment', 'lifestyle'],
         icons: [
           { src: '/icons/icon-48.png',  sizes: '48x48',   type: 'image/png' },

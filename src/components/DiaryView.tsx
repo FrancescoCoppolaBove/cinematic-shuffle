@@ -40,7 +40,7 @@ export function DiaryView({ watchedMovies, onOpenMovie, onUpdateWatchedDate }: P
   }, [watchedMovies]);
 
   if (groups.length === 0) {
-    return <p className="text-film-muted text-sm text-center py-10">Nessun film nel diario. Segna un film come visto per iniziare.</p>;
+    return <p className="text-film-muted text-sm text-center py-10">No films in your diary yet. Mark a film as watched to get started.</p>;
   }
 
   const today = new Date().toISOString().slice(0, 10);
@@ -48,7 +48,7 @@ export function DiaryView({ watchedMovies, onOpenMovie, onUpdateWatchedDate }: P
   return (
     <div className="space-y-5">
       {groups.map(([key, items]) => {
-        const monthLabel = new Date(`${key}-01T00:00:00`).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+        const monthLabel = new Date(`${key}-01T00:00:00`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         return (
           <div key={key}>
             <div className="flex items-center gap-2 mb-2 px-0.5">
@@ -79,7 +79,7 @@ export function DiaryView({ watchedMovies, onOpenMovie, onUpdateWatchedDate }: P
                   </button>
                   {/* Selettore data nativo */}
                   <label className={cn('shrink-0 flex flex-col items-end gap-0.5 cursor-pointer')}>
-                    <span className="text-film-subtle text-[10px] uppercase tracking-wider">visto il</span>
+                    <span className="text-film-subtle text-[10px] uppercase tracking-wider">Watched on</span>
                     <input
                       type="date"
                       value={date}

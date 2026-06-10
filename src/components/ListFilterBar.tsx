@@ -147,7 +147,7 @@ export function ListFilterBar({
           )}
         >
           <SlidersHorizontal size={13} />
-          {totalActive > 0 ? `Filtri (${totalActive})` : 'Filtri'}
+          {totalActive > 0 ? `Filters (${totalActive})` : 'Filters'}
         </button>
 
         {/* View mode */}
@@ -164,7 +164,7 @@ export function ListFilterBar({
       {/* Count */}
       {(totalCount !== undefined && filteredCount !== undefined && filteredCount < totalCount) && (
         <div className="px-4 pb-1.5 text-film-subtle text-xs">
-          {filteredCount} di {totalCount} risultati
+          {filteredCount} of {totalCount} results
         </div>
       )}
 

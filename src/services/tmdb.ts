@@ -924,18 +924,18 @@ export async function getShortQualityPick(
 
 // Keyword TMDB stagionali per mese
 const SEASONAL_KEYWORDS: Record<number, { keywordId: number; label: string; emoji: string }> = {
-  1:  { keywordId: 9672,  label: "Perfetto per l'inverno",   emoji: '❄️' },
-  2:  { keywordId: 9672,  label: 'San Valentino in arrivo',   emoji: '❤️' },
-  3:  { keywordId: 9951,  label: 'Aria di primavera',         emoji: '🌸' },
-  4:  { keywordId: 9951,  label: 'Atmosfera primaverile',     emoji: '🌷' },
-  5:  { keywordId: 10349, label: 'Spirito avventuroso',       emoji: '🌿' },
-  6:  { keywordId: 10349, label: 'Mood estivo',               emoji: '☀️' },
-  7:  { keywordId: 10349, label: 'Cinema estivo',             emoji: '🏖️' },
-  8:  { keywordId: 10349, label: 'Fine estate',               emoji: '🌅' },
-  9:  { keywordId: 9840,  label: 'Autunno alle porte',        emoji: '🍂' },
-  10: { keywordId: 210074, label: 'Atmosfera Halloween',      emoji: '🎃' },
-  11: { keywordId: 9840,  label: 'Serate autunnali',          emoji: '🍁' },
-  12: { keywordId: 207350, label: 'Spirito natalizio',        emoji: '🎄' },
+  1:  { keywordId: 9672,  label: 'Made for winter',        emoji: '❄️' },
+  2:  { keywordId: 9672,  label: 'Valentine mood',         emoji: '❤️' },
+  3:  { keywordId: 9951,  label: 'Spring in the air',      emoji: '🌸' },
+  4:  { keywordId: 9951,  label: 'Spring atmosphere',      emoji: '🌷' },
+  5:  { keywordId: 10349, label: 'Adventure spirit',       emoji: '🌿' },
+  6:  { keywordId: 10349, label: 'Summer mood',            emoji: '☀️' },
+  7:  { keywordId: 10349, label: 'Summer cinema',          emoji: '🏖️' },
+  8:  { keywordId: 10349, label: 'Late-summer feeling',    emoji: '🌅' },
+  9:  { keywordId: 9840,  label: 'Autumn is near',         emoji: '🍂' },
+  10: { keywordId: 210074, label: 'Halloween atmosphere',  emoji: '🎃' },
+  11: { keywordId: 9840,  label: 'Autumn evenings',        emoji: '🍁' },
+  12: { keywordId: 207350, label: 'Holiday spirit',        emoji: '🎄' },
 };
 
 export function getSeasonalKeyword(): { keywordId: number; label: string; emoji: string } | null {

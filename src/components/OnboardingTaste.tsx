@@ -32,7 +32,6 @@ export function OnboardingTaste({ onConfirm, onSkip }: Props) {
           seen.add(m.id);
           return true;
         });
-        // Mescola leggermente per varietà ma tieni in alto gli acclamati
         setPool(uniq.slice(0, 48));
       })
       .catch(() => {})
@@ -67,10 +66,10 @@ export function OnboardingTaste({ onConfirm, onSkip }: Props) {
       <div className="shrink-0 px-5 pb-3" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 16px)' }}>
         <div className="flex items-center gap-2 mb-1">
           <Sparkles size={18} className="text-film-accent" />
-          <h1 className="font-display text-2xl text-film-text tracking-wide">Quali film ami?</h1>
+          <h1 className="font-display text-2xl text-film-text tracking-wide">Which films do you love?</h1>
         </div>
         <p className="text-film-muted text-sm">
-          Scegline almeno {MIN_PICKS}: useremo i tuoi gusti per consigliarti i film giusti fin da subito.
+          Pick at least {MIN_PICKS}: we will use your taste to recommend better films right away.
         </p>
       </div>
 
@@ -117,13 +116,13 @@ export function OnboardingTaste({ onConfirm, onSkip }: Props) {
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}>
         <button onClick={onSkip} disabled={saving}
           className="px-4 py-3 text-film-subtle text-sm active:opacity-60 disabled:opacity-40">
-          Salta
+          Skip
         </button>
         <button onClick={confirm} disabled={selected.size < MIN_PICKS || saving}
           className="flex-1 py-3.5 rounded-2xl bg-film-accent text-film-black font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40 flex items-center justify-center gap-2">
           {saving
-            ? <><div className="w-4 h-4 border-2 border-film-black/40 border-t-transparent rounded-full animate-spin" />Preparo i consigli…</>
-            : selected.size >= MIN_PICKS ? `Conferma (${selected.size})` : `Scegline almeno ${MIN_PICKS}`}
+            ? <><div className="w-4 h-4 border-2 border-film-black/40 border-t-transparent rounded-full animate-spin" />Preparing picks...</>
+            : selected.size >= MIN_PICKS ? `Confirm (${selected.size})` : `Pick at least ${MIN_PICKS}`}
         </button>
       </div>
     </div>

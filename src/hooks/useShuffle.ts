@@ -128,7 +128,7 @@ export function useShuffle() {
       const probe = await tmdbDiscover(mediaType, 1, 'popularity.desc', userFilters);
       if (probe.totalPages === 0) {
         setState({ movie: null, loading: false, hasSearched: true,
-          error: 'Nessun film trovato. I filtri sono troppo restrittivi.' });
+        error: 'No titles found. Your filters are too restrictive.' });
         return;
       }
       const totalPages = probe.totalPages;
@@ -174,11 +174,11 @@ export function useShuffle() {
 
       // 10 tentativi esauriti
       setState({ movie: null, loading: false, hasSearched: true,
-        error: 'Nessun risultato. Prova a rimuovere qualche filtro.' });
+        error: 'No results. Try removing a few filters.' });
 
     } catch {
       setState({ movie: null, loading: false, hasSearched: true,
-        error: 'Errore di rete. Riprova.' });
+        error: 'Network error. Try again.' });
     }
   }, []);
 

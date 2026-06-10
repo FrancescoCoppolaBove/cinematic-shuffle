@@ -63,7 +63,7 @@ export function AddToListModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-film-border shrink-0">
           <div className="min-w-0">
-            <h3 className="text-film-text font-semibold">Aggiungi a lista</h3>
+            <h3 className="text-film-text font-semibold">Add to list</h3>
             <p className="text-film-subtle text-xs truncate">{getTitle(movie)}</p>
           </div>
           <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-full active:bg-film-surface">
@@ -81,7 +81,7 @@ export function AddToListModal({
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleCreate(); }}
-                placeholder="Nome della lista…"
+                placeholder="List name..."
                 maxLength={60}
                 className="flex-1 bg-film-card border border-film-border rounded-xl px-3 py-2.5 text-film-text placeholder:text-film-subtle focus:outline-none focus:border-film-accent"
               />
@@ -90,7 +90,7 @@ export function AddToListModal({
                 disabled={!newName.trim() || busy}
                 className="shrink-0 px-4 rounded-xl bg-film-accent text-film-black font-semibold text-sm active:scale-95 disabled:opacity-50"
               >
-                Crea
+                Create
               </button>
             </div>
           ) : (
@@ -99,7 +99,7 @@ export function AddToListModal({
               className="w-full flex items-center gap-3 p-3 rounded-xl border border-dashed border-film-border text-film-accent active:bg-film-surface"
             >
               <Plus size={18} />
-              <span className="text-sm font-medium">Nuova lista</span>
+              <span className="text-sm font-medium">New list</span>
             </button>
           )}
 
@@ -107,7 +107,7 @@ export function AddToListModal({
           {lists.length === 0 && !creating && (
             <div className="flex flex-col items-center text-center py-8 text-film-muted">
               <ListPlus size={28} className="mb-2 opacity-50" />
-              <p className="text-sm">Nessuna lista ancora.<br />Creane una per organizzare i tuoi film.</p>
+              <p className="text-sm">No lists yet.<br />Create one to organize your films.</p>
             </div>
           )}
 
@@ -128,7 +128,7 @@ export function AddToListModal({
                 </div>
                 <div className="flex-1 text-left min-w-0">
                   <p className="text-film-text text-sm font-medium truncate">{list.name}</p>
-                  <p className="text-film-subtle text-xs">{list.items.length} titoli</p>
+                  <p className="text-film-subtle text-xs">{list.items.length} titles</p>
                 </div>
               </button>
             );

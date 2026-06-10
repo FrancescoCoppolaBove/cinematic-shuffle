@@ -85,7 +85,7 @@ onOpenMovieGlobal,
       <div className="space-y-4">
         <button onClick={() => setSelectedMovie(null)}
           className="flex items-center gap-2 text-film-muted hover:text-film-text text-sm transition-colors active:opacity-70">
-          ← Torna alla watchlist
+          ← Back to watchlist
         </button>
         <MovieCard
           movie={selectedMovie}
@@ -119,9 +119,9 @@ onOpenMovieGlobal,
         <div className="text-center py-20 text-film-muted space-y-3">
           <Bookmark size={44} className="mx-auto opacity-20" />
           <div>
-            <p className="text-sm">La tua watchlist è vuota</p>
+            <p className="text-sm">Your watchlist is empty</p>
             <p className="text-xs mt-1 text-film-subtle">
-              Aggiungi film e serie con il pulsante "Watchlist"
+              Add films and shows with the "Watchlist" button.
             </p>
           </div>
         </div>
@@ -167,7 +167,7 @@ onOpenMovieGlobal,
           )}
 
           {filtered.length === 0 && (
-            <p className="text-center text-film-muted text-sm py-8">Nessun risultato</p>
+            <p className="text-center text-film-muted text-sm py-8">No results</p>
           )}
         </>
       )}
@@ -201,7 +201,7 @@ function WatchlistCard({
         onClick={onSelect}
         disabled={isLoading}
         className="absolute inset-0 w-full h-full"
-        aria-label={`Apri ${title}`}
+        aria-label={`Open ${title}`}
       >
         {poster
           ? <img
@@ -227,7 +227,7 @@ function WatchlistCard({
       <button
         onClick={e => { e.stopPropagation(); onRemove(); }}
         className="absolute top-1.5 right-1.5 bg-film-black/75 backdrop-blur-sm text-film-subtle active:text-film-red p-1.5 rounded-lg z-10"
-        aria-label="Rimuovi dalla watchlist"
+        aria-label="Remove from watchlist"
       >
         <Trash2 size={12} />
       </button>

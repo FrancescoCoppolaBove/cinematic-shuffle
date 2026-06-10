@@ -104,7 +104,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Clapperboard size={16} className="text-film-accent" />
-          <span className="font-body font-medium text-film-text text-sm tracking-wide uppercase">Filtri</span>
+          <span className="font-body font-medium text-film-text text-sm tracking-wide uppercase">Filters</span>
           {activeFiltersCount > 0 && (
             <span className="bg-film-accent text-film-black text-xs font-bold px-2 py-0.5 rounded-full">
               {activeFiltersCount}
@@ -118,8 +118,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
         )}
       </div>
 
-      {/* Già visto */}
-      <FilterSection icon={<Film size={14} />} label="Già visto">
+      <FilterSection icon={<Film size={14} />} label="Watched status">
         <div className="flex gap-2">
           {(['all', 'unwatched', 'watched'] as const).map(opt => (
             <button
@@ -132,14 +131,13 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
                   : 'bg-film-card text-film-muted hover:text-film-text border border-film-border'
               )}
             >
-              {opt === 'all' ? 'Tutti' : opt === 'unwatched' ? 'Non visti' : 'Già visti'}
+              {opt === 'all' ? 'All' : opt === 'unwatched' ? 'Unwatched' : 'Watched'}
             </button>
           ))}
         </div>
       </FilterSection>
 
-      {/* Anno / Decade */}
-      <FilterSection icon={<Calendar size={14} />} label="Periodo">
+      <FilterSection icon={<Calendar size={14} />} label="Release period">
         <div className="space-y-3">
           {/* Decade */}
           <div className="relative">
@@ -150,7 +148,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
                 onChange={e => onChange({ ...filters, decade: e.target.value || undefined, year: undefined })}
                 className="w-full bg-film-card border border-film-border rounded-lg px-3 py-2 text-sm text-film-text appearance-none cursor-pointer focus:outline-none focus:border-film-accent transition-colors"
               >
-                <option value="">Qualsiasi decade</option>
+                <option value="">Any decade</option>
                 {DECADES
                   .filter(d => filters.mediaType !== 'tv' || d.start >= 1970)
                   .map(d => (
@@ -160,14 +158,13 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
               <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-film-muted pointer-events-none" />
             </div>
           </div>
-          {/* Anno specifico */}
           <div>
-            <label className="text-film-subtle text-xs mb-1 block">Anno specifico</label>
+            <label className="text-film-subtle text-xs mb-1 block">Specific year</label>
             <input
               type="number"
               min={1900}
               max={new Date().getFullYear()}
-              placeholder="es. 1994"
+              placeholder="e.g. 1994"
               value={filters.year || ''}
               onChange={e => {
                 const val = e.target.value ? parseInt(e.target.value) : undefined;
@@ -179,8 +176,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
         </div>
       </FilterSection>
 
-      {/* Generi */}
-      <FilterSection icon={<Film size={14} />} label="Genere">
+      <FilterSection icon={<Film size={14} />} label="Genre">
         <div className="flex flex-wrap gap-2">
           {(filters.mediaType === 'tv' ? TMDB_TV_GENRES : TMDB_MOVIE_GENRES).map(genre => {
             const active = (filters.genreIds || []).includes(genre.id);
@@ -202,11 +198,10 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
         </div>
       </FilterSection>
 
-      {/* Voto IMDB */}
-      <FilterSection icon={<Star size={14} />} label="Voto minimo IMDB">
+      <FilterSection icon={<Star size={14} />} label="Minimum IMDb rating">
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs text-film-muted">
-            <span>Qualsiasi</span>
+            <span>Any</span>
             <span className={cn('font-mono font-bold text-base', filters.minImdbRating ? 'text-film-accent' : 'text-film-subtle')}>
               {filters.minImdbRating ? `≥ ${filters.minImdbRating.toFixed(1)}` : '—'}
             </span>
@@ -232,14 +227,13 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
         </div>
       </FilterSection>
 
-      {/* Attori — solo per film */}
-      {filters.mediaType !== 'tv' ? <FilterSection icon={<User size={14} />} label="Attori">
+      {filters.mediaType !== 'tv' ? <FilterSection icon={<User size={14} />} label="Actors">
         <div ref={actorRef} className="relative">
           <div className="flex items-center gap-2 bg-film-card border border-film-border rounded-lg px-3 py-2 focus-within:border-film-accent transition-colors">
             <Search size={13} className="text-film-muted shrink-0" />
             <input
               type="text"
-              placeholder="Cerca attore..."
+              placeholder="Search actor..."
               value={actorQuery}
               onChange={e => handleActorSearch(e.target.value)}
               className="bg-transparent text-sm text-film-text placeholder:text-film-subtle focus:outline-none w-full"
@@ -282,11 +276,10 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
         )}
       </FilterSection> : null}
 
-      {/* Regista — solo per film */}
-      {filters.mediaType !== 'tv' ? <FilterSection icon={<User size={14} />} label="Regista">
+      {filters.mediaType !== 'tv' ? <FilterSection icon={<User size={14} />} label="Director">
         <input
           type="text"
-          placeholder="es. Christopher Nolan"
+          placeholder="e.g. Christopher Nolan"
           value={directorQuery}
           onChange={e => {
             setDirectorQuery(e.target.value);
@@ -296,8 +289,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
         />
       </FilterSection> : null}
 
-      {/* Piattaforme */}
-      <FilterSection icon={<Film size={14} />} label="Piattaforma">
+      <FilterSection icon={<Film size={14} />} label="Streaming service">
         <div className="flex flex-wrap gap-2">
           {getPopularProviders().map(p => {
             const active = (filters.withProviders ?? []).includes(p.provider_id);
@@ -331,15 +323,14 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
         </div>
       </FilterSection>
 
-      {/* Lingua originale */}
-      <FilterSection icon={<Globe size={14} />} label="Lingua originale">
+      <FilterSection icon={<Globe size={14} />} label="Original language">
         <div className="relative">
           <select
             value={filters.language || ''}
             onChange={e => onChange({ ...filters, language: e.target.value || undefined })}
             className="w-full bg-film-card border border-film-border rounded-lg px-3 py-2 text-sm text-film-text appearance-none cursor-pointer focus:outline-none focus:border-film-accent transition-colors"
           >
-            <option value="">Qualsiasi lingua</option>
+            <option value="">Any language</option>
             {COMMON_LANGUAGES.map(l => (
               <option key={l.code} value={l.code}>{l.name}</option>
             ))}
@@ -348,15 +339,14 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
         </div>
       </FilterSection>
 
-      {/* Paese di produzione */}
-      <FilterSection icon={<Globe size={14} />} label="Paese">
+      <FilterSection icon={<Globe size={14} />} label="Country">
         <div className="relative">
           <select
             value={filters.originCountry || ''}
             onChange={e => onChange({ ...filters, originCountry: e.target.value || undefined })}
             className="w-full bg-film-card border border-film-border rounded-lg px-3 py-2 text-sm text-film-text appearance-none cursor-pointer focus:outline-none focus:border-film-accent transition-colors"
           >
-            <option value="">Qualsiasi paese</option>
+            <option value="">Any country</option>
             {COMMON_COUNTRIES.map(co => (
               <option key={co.code} value={co.code}>{co.name}</option>
             ))}
@@ -365,8 +355,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
         </div>
       </FilterSection>
 
-      {/* Oscar — solo per film */}
-      {filters.mediaType !== 'tv' ? <FilterSection icon={<Star size={14} />} label="Premi">
+      {filters.mediaType !== 'tv' ? <FilterSection icon={<Star size={14} />} label="Awards">
         <button
           onClick={() => onChange({ ...filters, withAwards: !filters.withAwards })}
           className={cn(
@@ -376,7 +365,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
               : 'bg-film-card text-film-muted border-film-border'
           )}
         >
-          🏆 Candidature / vittorie Oscar
+          🏆 Oscar nominations / wins
         </button>
       </FilterSection> : null}
 

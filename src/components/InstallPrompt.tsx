@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Share, Plus, Download } from 'lucide-react';
+import { APP_NAME, BRAND_LOGO_SRC } from '../constants/brand';
 
 // BeforeInstallPromptEvent is not in standard TS types
 interface BeforeInstallPromptEvent extends Event {
@@ -86,12 +87,12 @@ export function InstallPrompt() {
         <div className="bg-film-surface border border-film-accent/30 rounded-2xl p-4 shadow-2xl flex items-center gap-4">
           {/* Icon */}
           <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-film-border">
-            <img src="/icons/icon-192.png" alt="Cinematic" className="w-full h-full object-cover" />
+            <img src={BRAND_LOGO_SRC} alt={APP_NAME} className="w-full h-full object-cover" />
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="text-film-text text-sm font-semibold">Installa Cinematic Shuffle</p>
-            <p className="text-film-muted text-xs mt-0.5">Aggiungila alla schermata home per un'esperienza app</p>
+            <p className="text-film-text text-sm font-semibold">Install {APP_NAME}</p>
+            <p className="text-film-muted text-xs mt-0.5">Add it to your home screen for an app-like experience.</p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
@@ -104,7 +105,7 @@ export function InstallPrompt() {
               className="flex items-center gap-1.5 bg-film-accent text-film-black text-xs font-bold px-3 py-2 rounded-xl hover:bg-film-accent-dim transition-all active:scale-95 disabled:opacity-60"
             >
               <Download size={13} />
-              {installing ? 'Installa...' : 'Installa'}
+              {installing ? 'Installing...' : 'Install'}
             </button>
           </div>
         </div>
@@ -120,11 +121,11 @@ export function InstallPrompt() {
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl overflow-hidden border border-film-border shrink-0">
-                <img src="/icons/icon-180.png" alt="Cinematic" className="w-full h-full object-cover" />
+                <img src={BRAND_LOGO_SRC} alt={APP_NAME} className="w-full h-full object-cover" />
               </div>
               <div>
-                <p className="text-film-text text-sm font-semibold">Installa l'app su iPhone</p>
-                <p className="text-film-muted text-xs">Accesso rapido dalla schermata home</p>
+                <p className="text-film-text text-sm font-semibold">Install the app on iPhone</p>
+                <p className="text-film-muted text-xs">Quick access from your home screen.</p>
               </div>
             </div>
             <button onClick={dismiss} className="p-1 text-film-subtle hover:text-film-muted transition-colors">
@@ -139,10 +140,10 @@ export function InstallPrompt() {
                 <span className="text-film-accent font-bold text-xs">1</span>
               </div>
               <div className="flex items-center gap-2 flex-1">
-                <p className="text-film-text text-xs">Tocca</p>
+                <p className="text-film-text text-xs">Tap</p>
                 <div className="flex items-center gap-1 bg-film-surface border border-film-border rounded-lg px-2 py-1">
                   <Share size={11} className="text-blue-400" />
-                  <span className="text-blue-400 text-xs">Condividi</span>
+                  <span className="text-blue-400 text-xs">Share</span>
                 </div>
                 <p className="text-film-text text-xs">in Safari</p>
               </div>
@@ -153,10 +154,10 @@ export function InstallPrompt() {
                 <span className="text-film-accent font-bold text-xs">2</span>
               </div>
               <div className="flex items-center gap-2 flex-1">
-                <p className="text-film-text text-xs">Seleziona</p>
+                <p className="text-film-text text-xs">Choose</p>
                 <div className="flex items-center gap-1 bg-film-surface border border-film-border rounded-lg px-2 py-1">
                   <Plus size={11} className="text-film-text" />
-                  <span className="text-film-text text-xs">Aggiungi a Home</span>
+                  <span className="text-film-text text-xs">Add to Home Screen</span>
                 </div>
               </div>
             </div>
@@ -164,7 +165,7 @@ export function InstallPrompt() {
 
           {/* iOS note -->*/}
           <p className="text-film-subtle text-xs mt-3 text-center">
-            Funziona solo con Safari su iPhone e iPad
+            Works with Safari on iPhone and iPad.
           </p>
         </div>
       </div>

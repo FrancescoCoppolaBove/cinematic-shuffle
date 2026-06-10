@@ -141,7 +141,7 @@ export async function fetchLists(uid: string): Promise<MovieList[]> {
       const data = d.data();
       return {
         id: d.id,
-        name: (data.name as string) ?? 'Lista',
+        name: (data.name as string) ?? 'List',
         note: (data.note as string | undefined) ?? undefined,
         items: ((data.items as ListMovie[]) ?? []).slice().sort(
           (a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()
@@ -157,16 +157,16 @@ export async function createList(uid: string, name: string): Promise<MovieList> 
   const ref = doc(listsCol(uid));
   const now = new Date().toISOString();
   await setDoc(ref, {
-    name: name.trim() || 'Nuova lista',
+    name: name.trim() || 'New list',
     items: [],
     createdAt: serverTimestamp() as FieldValue,
     updatedAt: serverTimestamp() as FieldValue,
   });
-  return { id: ref.id, name: name.trim() || 'Nuova lista', items: [], createdAt: now, updatedAt: now };
+  return { id: ref.id, name: name.trim() || 'New list', items: [], createdAt: now, updatedAt: now };
 }
 
 export async function renameList(uid: string, listId: string, name: string): Promise<void> {
-  await setDoc(listRef(uid, listId), { name: name.trim() || 'Lista', updatedAt: serverTimestamp() as FieldValue }, { merge: true });
+  await setDoc(listRef(uid, listId), { name: name.trim() || 'List', updatedAt: serverTimestamp() as FieldValue }, { merge: true });
 }
 
 export async function deleteList(uid: string, listId: string): Promise<void> {

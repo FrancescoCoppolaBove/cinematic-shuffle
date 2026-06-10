@@ -29,7 +29,7 @@ interface PersonDetailScreenProps {
 }
 
 export function PersonDetailScreen({
-  personId, personName, backLabel: _backLabel = 'Indietro',
+  personId, personName, backLabel: _backLabel = 'Back',
   watchedIds, watchlistIds = new Set(), likedIds = new Set(),
   getPersonalRating, onMarkWatched, onUnmarkWatched, onUpdateRating, onToggleLiked,
   onIncrementRewatch, onAddToWatchlist, onRemoveFromWatchlist,
@@ -73,7 +73,7 @@ export function PersonDetailScreen({
   const primaryCredits = isDirector ? directingCredits : (credits?.cast ?? []);
   const primaryWatched = primaryCredits.filter(m => watchedIds.has(m.id)).length;
   const primaryPct = primaryCredits.length ? Math.round((primaryWatched / primaryCredits.length) * 100) : 0;
-  const primaryLabel = isDirector ? 'Filmografia da regista' : 'Filmografia da attore';
+  const primaryLabel = isDirector ? 'Director filmography' : 'Acting filmography';
   const passesFilters = (m: { id: number; media_type: 'movie' | 'tv' }) =>
     (!onlyUnseen || !watchedIds.has(m.id)) &&
     (mediaFilter === 'all' || m.media_type === mediaFilter);
@@ -125,7 +125,7 @@ export function PersonDetailScreen({
               <p className="text-film-accent text-xs">{person.known_for_department}</p>
               {person.birthday && (
                 <p className="text-film-muted text-xs">
-                  🗓 {new Date(person.birthday).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  Born {new Date(person.birthday).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </p>
               )}
               {person.place_of_birth && (
@@ -143,13 +143,13 @@ export function PersonDetailScreen({
               {person.biography.length > 200 && (
                 <button onClick={() => setExpandBio(!expandBio)}
                   className="text-film-accent text-xs mt-1 active:opacity-70">
-                  {expandBio ? '↑ Mostra meno' : '↓ Leggi tutto'}
+                  {expandBio ? '↑ Show less' : '↓ Read more'}
                 </button>
               )}
             </div>
           )}
 
-          {/* Banner completismo filmografia */}
+          {/* Filmography completion banner */}
           {primaryCredits.length > 0 && (
             <div className="bg-gradient-to-r from-film-accent/15 to-transparent border border-film-accent/30 rounded-2xl p-4 flex items-center gap-4">
               <p className="font-display text-3xl text-film-accent leading-none shrink-0">
@@ -160,33 +160,33 @@ export function PersonDetailScreen({
                 <div className="h-1.5 rounded-full bg-film-card overflow-hidden mt-2">
                   <div className="h-full bg-film-accent rounded-full" style={{ width: `${primaryPct}%` }} />
                 </div>
-                <p className="text-film-subtle text-xs mt-1">{primaryPct}% completata</p>
+                <p className="text-film-subtle text-xs mt-1">{primaryPct}% complete</p>
               </div>
             </div>
           )}
 
-          {/* Tab bar + filtro */}
+          {/* Tab bar + filters */}
           <div className="space-y-2">
             <div className="flex gap-2">
               <TabBtn
                 active={tab === 'cast'}
                 onClick={() => setTab('cast')}
-                label="Come attore"
+                label="As actor"
                 badge={castCount}
                 watchedBadge={watchedCastCount}
               />
               <TabBtn
                 active={tab === 'crew'}
                 onClick={() => setTab('crew')}
-                label="Ruoli tecnici"
+                label="Crew roles"
                 badge={Object.values(crewByDepartment).flat().filter((m, i, a) => a.findIndex(x => x.id === m.id) === i).length}
                 watchedBadge={watchedCrewCount}
               />
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              {/* Segmentato tipo */}
+              {/* Type segmented control */}
               <div className="flex gap-1 bg-film-surface border border-film-border rounded-full p-0.5">
-                {([['all', 'Tutti'], ['movie', 'Film'], ['tv', 'Serie']] as const).map(([val, label]) => (
+                {([['all', 'All'], ['movie', 'Films'], ['tv', 'TV']] as const).map(([val, label]) => (
                   <button
                     key={val}
                     onClick={() => setMediaFilter(val)}
@@ -206,7 +206,7 @@ export function PersonDetailScreen({
                   onlyUnseen ? 'bg-film-accent text-film-black border-film-accent' : 'bg-film-surface text-film-muted border-film-border'
                 )}
               >
-                {onlyUnseen ? '✓ ' : ''}Solo da recuperare
+                {onlyUnseen ? '✓ ' : ''}Only unwatched
               </button>
             </div>
           </div>
@@ -216,14 +216,14 @@ export function PersonDetailScreen({
             <div>
               {castCount > 0 && (
                 <div className="flex items-center justify-between py-2 px-1 mb-3">
-                  <span className="text-film-subtle text-xs uppercase tracking-wider">Film come attore</span>
+                  <span className="text-film-subtle text-xs uppercase tracking-wider">Acting credits</span>
                   <span className={cn('text-xs font-medium', watchedCastCount > 0 ? 'text-green-400' : 'text-film-subtle')}>
-                    {watchedCastCount > 0 ? `${watchedCastCount} visti su ${castCount}` : `${castCount} totali`}
+                    {watchedCastCount > 0 ? `${watchedCastCount} watched of ${castCount}` : `${castCount} total`}
                   </span>
                 </div>
               )}
               {credits.cast.length === 0 ? (
-                <p className="text-film-muted text-sm py-4 text-center">Nessun credito come attore</p>
+                <p className="text-film-muted text-sm py-4 text-center">No acting credits</p>
               ) : (
                 <div className="grid grid-cols-3 gap-2">
                   {credits.cast.filter(passesFilters).map(m => (
@@ -244,7 +244,7 @@ export function PersonDetailScreen({
           {tab === 'crew' && (
             <div className="space-y-5">
               {Object.keys(crewByDepartment).length === 0 ? (
-                <p className="text-film-muted text-sm py-4 text-center">Nessun credito tecnico</p>
+                <p className="text-film-muted text-sm py-4 text-center">No crew credits</p>
               ) : (
                 Object.entries(crewByDepartment)
                   .sort(([a], [b]) => {
@@ -258,7 +258,7 @@ export function PersonDetailScreen({
                       <div className="flex items-center gap-2 mb-3">
                         <h3 className="text-film-subtle text-xs uppercase tracking-widest">{dept}</h3>
                         <span className="text-film-subtle text-xs">· {movies.length}</span>
-                        {watched > 0 && <span className="text-green-400 text-xs">· {watched} visti</span>}
+                        {watched > 0 && <span className="text-green-400 text-xs">· {watched} watched</span>}
                       </div>
                       <div className="grid grid-cols-3 gap-2">
                         {movies.filter(passesFilters).map(m => (
@@ -280,7 +280,7 @@ export function PersonDetailScreen({
         </div>
       ) : (
         <div className="text-center py-16 text-film-muted">
-          <p>Impossibile caricare i dettagli</p>
+          <p>Could not load details</p>
         </div>
       )}
       </div>

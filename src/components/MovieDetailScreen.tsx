@@ -69,7 +69,7 @@ interface MovieDetailScreenProps {
 
 export function MovieDetailScreen({
   movie, isWatched, isOnWatchlist, personalRating,
-  showShuffleBtn = false, backLabel = 'Indietro',
+  showShuffleBtn = false, backLabel = 'Back',
   playlist, playlistIndex = 0, onSwipeToIndex,
   onBack, onMarkWatched: _onMarkWatched, onUnmarkWatched: _onUnmarkWatched, onUpdateRating: _onUpdateRating,
   onAddToWatchlist, onRemoveFromWatchlist,
@@ -435,7 +435,7 @@ export function MovieDetailScreen({
                   : 'bg-film-black/70 border-white/10 text-white/70'
               )}>
                 {isTV ? <Tv size={11} /> : <Film size={11} />}
-                {isTV ? 'Serie TV' : 'Film'}
+                {isTV ? 'TV show' : 'Film'}
               </span>
             </div>
           </div>
@@ -487,7 +487,7 @@ export function MovieDetailScreen({
                   {isTV && movie.number_of_seasons && (
                     <>
                       <span className="text-film-border text-xs">·</span>
-                      <span className="text-film-muted text-xs">{movie.number_of_seasons} stagioni</span>
+                      <span className="text-film-muted text-xs">{movie.number_of_seasons} seasons</span>
                     </>
                   )}
                 </div>
@@ -505,20 +505,20 @@ export function MovieDetailScreen({
 
             {director && (
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-film-subtle text-xs uppercase tracking-wider">Regia</span>
+                <span className="text-film-subtle text-xs uppercase tracking-wider">Directed by</span>
                 <span className="text-film-text text-sm font-medium">{director.name}</span>
               </div>
             )}
             {creator && (
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-film-subtle text-xs uppercase tracking-wider">Creato da</span>
+                <span className="text-film-subtle text-xs uppercase tracking-wider">Created by</span>
                 <span className="text-film-text text-sm font-medium">{creator.name}</span>
               </div>
             )}
 
             {isWatched && (
               <div className="flex items-center gap-3 px-4 py-3 bg-film-surface rounded-2xl border border-film-border mb-4">
-                <span className="text-film-subtle text-xs uppercase tracking-wider shrink-0">Il tuo voto</span>
+                <span className="text-film-subtle text-xs uppercase tracking-wider shrink-0">Your rating</span>
                 <StarRating value={personalRating ?? null} onChange={() => {}} readonly size="sm" />
               </div>
             )}
@@ -530,7 +530,7 @@ export function MovieDetailScreen({
                 <div>
                   <p className="text-film-text text-sm font-medium">Rewatch</p>
                   <p className="text-film-subtle text-xs mt-0.5">
-                    {rewatchCount === 0 ? 'Prima visione' : `Rivisto ${rewatchCount} ${rewatchCount === 1 ? 'volta' : 'volte'}`}
+                    {rewatchCount === 0 ? 'First watch' : `Rewatched ${rewatchCount} ${rewatchCount === 1 ? 'time' : 'times'}`}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -554,7 +554,7 @@ export function MovieDetailScreen({
                 <button onClick={onShuffle} disabled={loading}
                   className="flex items-center gap-2 bg-film-accent text-film-black font-semibold px-4 py-2.5 rounded-2xl text-sm active:scale-95 transition-all disabled:opacity-50">
                   <Shuffle size={15} className={loading ? 'animate-spin-slow' : ''} />
-                  {loading ? 'Cercando...' : 'Altro'}
+                  {loading ? 'Searching...' : 'Another'}
                 </button>
               )}
               {trailerUrl && (
@@ -577,7 +577,7 @@ export function MovieDetailScreen({
                     )}
                   >
                     <Eye size={14} />
-                    {tvSeriesStatus === 'completed' ? 'Completata ✓' : 'Già vista'}
+                    {tvSeriesStatus === 'completed' ? 'Completed ✓' : 'Watched?'}
                   </button>
                   {/* "Sto seguendo" */}
                   <button
@@ -596,7 +596,7 @@ export function MovieDetailScreen({
                     )}
                   >
                     <Tv size={14} />
-                    {tvSeriesStatus === 'following' ? 'In corso 📺' : 'Sto seguendo'}
+                    {tvSeriesStatus === 'following' ? 'Following' : 'Follow show'}
                   </button>
                 </>
               ) : (
@@ -611,7 +611,7 @@ export function MovieDetailScreen({
                   )}
                 >
                   <Eye size={14} />
-                  {isWatched ? 'Visto ✓' : 'Già visto'}
+                  {isWatched ? 'Watched ✓' : 'Watched?'}
                 </button>
               )}
 
@@ -627,7 +627,7 @@ export function MovieDetailScreen({
                   )}
                 >
                   <Heart size={14} fill={isLiked ? 'currentColor' : 'none'} />
-                  {isLiked ? 'Piaciuto ♥' : 'Mi è piaciuto?'}
+                  {isLiked ? 'Liked' : 'Liked?'}
                 </button>
               )}
 
@@ -649,13 +649,13 @@ export function MovieDetailScreen({
               {onAddToList && (
                 <button onClick={onAddToList}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border border-film-border bg-film-surface text-film-muted active:scale-95 transition-all">
-                  <ListPlus size={14} />Lista
+                  <ListPlus size={14} />List
                 </button>
               )}
             </div>
 
             {movie.overview && (
-              <Section label="Trama">
+              <Section label="Overview">
                 <p className="text-film-text/80 text-sm leading-relaxed">{movie.overview}</p>
               </Section>
             )}
@@ -688,17 +688,17 @@ export function MovieDetailScreen({
 
             {/* TV Seasons info — only for TV shows */}
             {isTV && (movie.seasons?.length ?? 0) > 0 && (
-              <Section label="Stagioni">
+              <Section label="Seasons">
                 {/* Status badge — solo se in produzione */}
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
                   {movie.in_production && (
                     <span className="px-2.5 py-1 rounded-xl text-xs font-medium bg-green-900/40 text-green-400 border border-green-700/50">
-                      🟢 In produzione
+                      In production
                     </span>
                   )}
                   {movie.next_episode_to_air && (
                     <span className="px-2.5 py-1 rounded-xl text-xs font-medium bg-film-accent/10 text-film-accent border border-film-accent/30">
-                      🎬 Stagione {movie.next_episode_to_air.season_number} · {new Date(movie.next_episode_to_air.air_date).getFullYear()}
+                      Season {movie.next_episode_to_air.season_number} · {new Date(movie.next_episode_to_air.air_date).getFullYear()}
                     </span>
                   )}
                 </div>
@@ -713,12 +713,12 @@ export function MovieDetailScreen({
                       const hasNoEpisodes = (s.episode_count ?? 0) === 0;
                       // Stagione senza episodi: determina stato
                       const noEpLabel = !s.air_date
-                        ? 'In lavorazione'
+                        ? 'In development'
                         : year && year > new Date().getFullYear()
-                          ? `Annunciata · ${year}`
+                          ? `Announced · ${year}`
                           : year
-                            ? `In arrivo · ${year}`
-                            : 'Annunciata';
+                            ? `Coming soon · ${year}`
+                            : 'Announced';
 
                       const inner = (
                         <>
@@ -737,13 +737,13 @@ export function MovieDetailScreen({
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className={`text-sm font-medium ${hasNoEpisodes ? 'text-film-muted' : 'text-film-text'}`}>{s.name}</p>
                               {isCurrentSeason && (
-                                <span className="text-film-accent text-xs font-medium">● In corso</span>
+                                <span className="text-film-accent text-xs font-medium">● Current</span>
                               )}
                             </div>
                             <p className="text-film-subtle text-xs mt-0.5">
                               {hasNoEpisodes
                                 ? noEpLabel
-                                : `${s.episode_count} episodi${year ? ` · ${year}` : ''}`}
+                                : `${s.episode_count} episodes${year ? ` · ${year}` : ''}`}
                             </p>
                           </div>
                           {!hasNoEpisodes && (
@@ -771,7 +771,7 @@ export function MovieDetailScreen({
             )}
 
             {similar.length > 0 && (
-              <Section label={isTV ? 'Serie simili' : 'Film simili'}>
+              <Section label={isTV ? 'Similar shows' : 'Similar films'}>
                 <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
                   {similar.map(item => (
                     <RelatedCard key={item.id} item={item} isCurrent={false}
@@ -783,7 +783,7 @@ export function MovieDetailScreen({
                   onClick={() => setOpenSimilar(true)}
                   className="mt-2 text-film-accent text-xs font-medium active:opacity-60 transition-opacity"
                 >
-                  Vedi tutti i film simili →
+                  See all similar titles →
                 </button>
               </Section>
             )}
@@ -792,7 +792,7 @@ export function MovieDetailScreen({
           {/* ── Tabs: Cast / Crew / Generi ── */}
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-3">
-              <h3 className="text-xs uppercase tracking-widest text-film-subtle font-medium">Cast & Approfondimenti</h3>
+              <h3 className="text-xs uppercase tracking-widest text-film-subtle font-medium">Cast & insights</h3>
             </div>
             <MovieDetailTabs
               movie={movie}
@@ -804,7 +804,7 @@ export function MovieDetailScreen({
 
           <div className="mb-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs uppercase tracking-widest text-film-subtle font-medium">Recensioni</h3>
+              <h3 className="text-xs uppercase tracking-widest text-film-subtle font-medium">Reviews</h3>
             </div>
             {reviews.length > 0 ? (
               <PopularReviews
@@ -822,7 +822,7 @@ export function MovieDetailScreen({
                 onClick={() => setShowReviewEditor(true)}
                 className="w-full py-4 text-xs text-center text-film-accent active:opacity-60 border border-dashed border-film-border/50 rounded-xl"
               >
-                + Scrivi la prima recensione
+                + Write the first review
               </button>
             ) : null}
           </div>
@@ -1021,12 +1021,12 @@ function ProvidersSection({ providers, tmdbLink }: {
   const hasMore = providers.length > 5;
 
   return (
-    <Section label="Dove guardarlo" icon={<MapPin size={13} className="text-film-accent" />}>
+    <Section label="Where to watch" icon={<MapPin size={13} className="text-film-accent" />}>
       <div className="flex flex-wrap gap-2">
         {visible.map(p => (
           <a
             key={p.provider_id}
-            href={tmdbLink ?? `https://www.justwatch.com/it/cerca?q=${encodeURIComponent(p.provider_name)}`}
+            href={tmdbLink ?? `https://www.justwatch.com/us/search?q=${encodeURIComponent(p.provider_name)}`}
             target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-2 bg-film-surface border border-film-border rounded-xl px-2.5 py-1.5 active:opacity-70 transition-opacity"
           >
@@ -1042,7 +1042,7 @@ function ProvidersSection({ providers, tmdbLink }: {
           onClick={() => setExpanded(e => !e)}
           className="text-film-accent text-xs mt-1 active:opacity-60"
         >
-          {expanded ? 'Mostra meno ↑' : `Mostra altri ${providers.length - 5} →`}
+          {expanded ? 'Show less ↑' : `Show ${providers.length - 5} more →`}
         </button>
       )}
     </Section>
@@ -1102,7 +1102,7 @@ function EpisodeOverview({ text }: { text: string }) {
           onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
           className="text-film-accent text-xs mt-0.5 active:opacity-60"
         >
-          {expanded ? 'Mostra meno ↑' : 'Mostra tutto ↓'}
+          {expanded ? 'Show less ↑' : 'Show all ↓'}
         </button>
       )}
     </div>
@@ -1188,7 +1188,7 @@ function SeasonDetailOverlay({
             <p className="text-film-text font-semibold truncate">{seasonName}</p>
             {data && (
               <p className="text-film-subtle text-xs">
-                {watchedCount}/{data.episodes.length} episodi visti
+                {watchedCount}/{data.episodes.length} episodes watched
               </p>
             )}
           </div>
@@ -1204,7 +1204,7 @@ function SeasonDetailOverlay({
               )}
             >
               <Check size={12} />
-              {allWatched ? 'Vista' : 'Segna tutta'}
+              {allWatched ? 'Watched' : 'Mark all'}
             </button>
           )}
         </div>
@@ -1230,7 +1230,7 @@ function SeasonDetailOverlay({
                     onClick={() => setOverviewExpanded(v => !v)}
                     className="text-film-accent text-xs mt-1 active:opacity-60"
                   >
-                    {overviewExpanded ? 'Mostra meno ↑' : 'Mostra tutto ↓'}
+                    {overviewExpanded ? 'Show less ↑' : 'Show all ↓'}
                   </button>
                 )}
               </div>
@@ -1292,7 +1292,7 @@ function SeasonDetailOverlay({
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         {ep.air_date && (
                           <span className="text-film-subtle text-xs">
-                            {new Date(ep.air_date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            {new Date(ep.air_date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </span>
                         )}
                         {ep.runtime && (

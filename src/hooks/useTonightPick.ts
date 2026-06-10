@@ -42,7 +42,7 @@ export interface TonightPick {
   reason: string;
   reasonEmoji: string;
   fromWatchlist: boolean;
-  providerName?: string;   // per slot streaming
+  providerName?: string;
   providerLogo?: string;
 }
 
@@ -143,22 +143,22 @@ function buildWatchlistReason(item: WatchlistItem, slot: TonightPick['slot'], ct
   const gids = item.genre_ids ?? [];
   const HORROR = [27, 53, 9648], COMEDY = [35, 10751, 16], ACTION = [28, 12], DRAMA = [18, 36];
 
-  if (slot === 'acclaimed') return { reason: `Il più acclamato della tua lista · ${item.vote_average.toFixed(1)}/10`, reasonEmoji: '⭐' };
+  if (slot === 'acclaimed') return { reason: `The highest-rated title on your list · ${item.vote_average.toFixed(1)}/10`, reasonEmoji: '⭐' };
   if (slot === 'waiting') return days >= 30
-    ? { reason: `In watchlist da ${days} giorni — è ora`, reasonEmoji: '⏳' }
-    : { reason: `Salvato ${days > 7 ? `${Math.floor(days / 7)} sett.` : `${days} gg`} fa`, reasonEmoji: '📌' };
+    ? { reason: `On your watchlist for ${days} days — it is time`, reasonEmoji: '⏳' }
+    : { reason: `Saved ${days > 7 ? `${Math.floor(days / 7)} weeks` : `${days} days`} ago`, reasonEmoji: '📌' };
 
   const candidates: { reason: string; emoji: string }[] = [];
-  if (ctx.isWeekend && rt && rt > 120) candidates.push({ reason: `Weekend ideale per ${rt} min`, emoji: '🎬' });
-  if (!ctx.isWeekend && rt && rt <= 100) candidates.push({ reason: `${rt} min, perfetto per questa sera`, emoji: '🌙' });
-  if (ctx.isLateNight && gids.some(g => HORROR.includes(g))) candidates.push({ reason: 'Perfetto per la notte — se ti fidi', emoji: '👻' });
-  if (ctx.isAfternoon && gids.some(g => COMEDY.includes(g))) candidates.push({ reason: 'Leggero per il pomeriggio', emoji: '☀️' });
-  if (gids.some(g => ACTION.includes(g)) && ctx.isEvening) candidates.push({ reason: 'Adrenalina per la serata', emoji: '⚡' });
-  if (gids.some(g => DRAMA.includes(g)) && taste.hasData && taste.avgPersonalRating >= 4) candidates.push({ reason: 'In linea con i film che hai amato', emoji: '❤️' });
-  if (item.vote_average >= 8) candidates.push({ reason: `Eccellente: ${item.vote_average.toFixed(1)}/10`, emoji: '🏆' });
-  if (taste.hasData && gids.filter(g => taste.genreWeights[g] > 0.7).length > 0) candidates.push({ reason: 'Genere che apprezzi particolarmente', emoji: '🎯' });
-  if (days > 14) candidates.push({ reason: `In lista da ${days} giorni`, emoji: '📅' });
-  const c = candidates[0] ?? { reason: 'Scelto per te questa sera', emoji: '✨' };
+  if (ctx.isWeekend && rt && rt > 120) candidates.push({ reason: `A weekend-friendly ${rt} min runtime`, emoji: '🎬' });
+  if (!ctx.isWeekend && rt && rt <= 100) candidates.push({ reason: `${rt} min, just right for tonight`, emoji: '🌙' });
+  if (ctx.isLateNight && gids.some(g => HORROR.includes(g))) candidates.push({ reason: 'Built for late night — if you dare', emoji: '👻' });
+  if (ctx.isAfternoon && gids.some(g => COMEDY.includes(g))) candidates.push({ reason: 'Light enough for the afternoon', emoji: '☀️' });
+  if (gids.some(g => ACTION.includes(g)) && ctx.isEvening) candidates.push({ reason: 'A dose of adrenaline for the evening', emoji: '⚡' });
+  if (gids.some(g => DRAMA.includes(g)) && taste.hasData && taste.avgPersonalRating >= 4) candidates.push({ reason: 'Aligned with titles you loved', emoji: '❤️' });
+  if (item.vote_average >= 8) candidates.push({ reason: `Excellent: ${item.vote_average.toFixed(1)}/10`, emoji: '🏆' });
+  if (taste.hasData && gids.filter(g => taste.genreWeights[g] > 0.7).length > 0) candidates.push({ reason: 'A genre you consistently enjoy', emoji: '🎯' });
+  if (days > 14) candidates.push({ reason: `On your list for ${days} days`, emoji: '📅' });
+  const c = candidates[0] ?? { reason: 'Picked for you tonight', emoji: '✨' };
   return { reason: c.reason, reasonEmoji: c.emoji };
 }
 
@@ -276,7 +276,7 @@ export function useTonightPick(
           item: streaming.item,
           score: streaming.item.vote_average,
           slot: 'streaming',
-          reason: `Disponibile su ${pInfo?.name ?? 'una tua piattaforma'} — nessun costo extra`,
+          reason: `Available on ${pInfo?.name ?? 'one of your services'} — no extra cost`,
           reasonEmoji: '📺',
           fromWatchlist: true,
           providerName: pInfo?.name,
@@ -315,10 +315,10 @@ export function useTonightPick(
     if (rewatch) {
       const rt = rewatch.runtime;
       const reasonText = rewatch.personal_rating === 5
-        ? 'Lo hai adorato — perché non rivederlo?'
+        ? 'You loved it — worth revisiting'
         : rt && rt <= ctx.suggestedMaxRuntime
-          ? `${rt} min e lo hai amato — perfetto da rivedere`
-          : 'Vale la pena rivederlo';
+          ? `${rt} min and already loved — perfect for a rewatch`
+          : 'Worth revisiting';
       result.push({
         item: {
           id: rewatch.id, title: rewatch.title, original_title: rewatch.original_title,
@@ -338,14 +338,14 @@ export function useTonightPick(
     // SLOT 6: Il più chiacchierato
     const trending = trendingItems.filter(m => !usedIds.has(m.id) && !watchedIds.has(m.id))[0];
     if (trending) {
-      result.push({ item: toWatchlistLike(trending), score: 0, slot: 'trending', reason: 'Sta facendo parlare di sé questa settimana', reasonEmoji: '🔥', fromWatchlist: false });
+      result.push({ item: toWatchlistLike(trending), score: 0, slot: 'trending', reason: 'People are talking about it this week', reasonEmoji: '🔥', fromWatchlist: false });
       usedIds.add(trending.id);
     }
 
     // SLOT 7: Breve e perfetto
     const short = shortItems.filter(m => !usedIds.has(m.id) && !watchedIds.has(m.id))[0];
     if (short) {
-      result.push({ item: toWatchlistLike(short), score: short.vote_average, slot: 'short', reason: 'Alta qualità in meno di 95 minuti', reasonEmoji: '⏱️', fromWatchlist: false });
+      result.push({ item: toWatchlistLike(short), score: short.vote_average, slot: 'short', reason: 'High quality in under 95 minutes', reasonEmoji: '⏱️', fromWatchlist: false });
       usedIds.add(short.id);
     }
 
@@ -353,21 +353,21 @@ export function useTonightPick(
     const seasonal = seasonalItems.filter(m => !usedIds.has(m.id) && !watchedIds.has(m.id))[0];
     if (seasonal) {
       const sk = getSeasonalKeyword();
-      result.push({ item: toWatchlistLike(seasonal), score: seasonal.vote_average, slot: 'seasonal', reason: sk?.label ?? 'Perfetto per questo periodo', reasonEmoji: sk?.emoji ?? '🗓️', fromWatchlist: false });
+      result.push({ item: toWatchlistLike(seasonal), score: seasonal.vote_average, slot: 'seasonal', reason: sk?.label ?? 'Right for the season', reasonEmoji: sk?.emoji ?? '🗓️', fromWatchlist: false });
       usedIds.add(seasonal.id);
     }
 
     // SLOT 9: Consiglio cinefilo
     const cinephile = cinephileItems.filter(m => !usedIds.has(m.id) && !watchedIds.has(m.id))[0];
     if (cinephile) {
-      result.push({ item: toWatchlistLike(cinephile), score: cinephile.vote_average, slot: 'cinephile', reason: `${cinephile.vote_average.toFixed(1)}/10 · Un gioiello poco conosciuto`, reasonEmoji: '🎞️', fromWatchlist: false });
+      result.push({ item: toWatchlistLike(cinephile), score: cinephile.vote_average, slot: 'cinephile', reason: `${cinephile.vote_average.toFixed(1)}/10 · A lesser-known gem`, reasonEmoji: '🎞️', fromWatchlist: false });
       usedIds.add(cinephile.id);
     }
 
     // SLOT 10: Il mio consiglio
     const personal = personalItems.filter(m => !usedIds.has(m.id) && !watchedIds.has(m.id))[0];
     if (personal) {
-      result.push({ item: toWatchlistLike(personal), score: personal.vote_average, slot: 'personal', reason: taste.hasData ? 'Scelto per te in base ai tuoi gusti' : `${personal.vote_average.toFixed(1)}/10 · Vale la pena`, reasonEmoji: '💡', fromWatchlist: false });
+      result.push({ item: toWatchlistLike(personal), score: personal.vote_average, slot: 'personal', reason: taste.hasData ? 'Chosen around your taste' : `${personal.vote_average.toFixed(1)}/10 · Worth a look`, reasonEmoji: '💡', fromWatchlist: false });
     }
 
     return result;

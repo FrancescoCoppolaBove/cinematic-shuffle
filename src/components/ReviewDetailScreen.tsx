@@ -89,7 +89,7 @@ export function ReviewDetailScreen({
             <ChevronLeft size={18} className="text-film-text" />
           </div>
         </button>
-        <span className="text-film-text font-semibold flex-1">Recensione</span>
+        <span className="text-film-text font-semibold flex-1">Review</span>
         {isAuthor && (
           <div className="flex items-center gap-2">
             {onEdit && (
@@ -124,8 +124,8 @@ export function ReviewDetailScreen({
                 <p className="text-film-text font-bold">{review.userName}</p>
               </button>
               <p className="text-film-subtle text-xs mt-0.5">
-                {new Date(review.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}
-                {review.watchedOn && ` · Visto il ${new Date(review.watchedOn).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}`}
+                {new Date(review.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
+                {review.watchedOn && ` · Watched on ${new Date(review.watchedOn).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}`}
               </p>
             </div>
           </div>
@@ -153,7 +153,7 @@ export function ReviewDetailScreen({
               </div>
             )}
             {review.liked && <Heart size={16} className="text-red-400 fill-red-400" />}
-            {review.firstView && <span className="text-xs bg-film-surface border border-film-border px-2 py-0.5 rounded-full text-film-subtle">Prima visione 🎬</span>}
+            {review.firstView && <span className="text-xs bg-film-surface border border-film-border px-2 py-0.5 rounded-full text-film-subtle">First watch</span>}
             {review.hasSpoilers && <span className="text-xs bg-yellow-900/30 border border-yellow-500/20 px-2 py-0.5 rounded-full text-yellow-400 flex items-center gap-1"><AlertTriangle size={10} />Spoiler</span>}
           </div>
         </div>
@@ -164,7 +164,7 @@ export function ReviewDetailScreen({
             {review.hasSpoilers && !spoilerRevealed ? (
               <button onClick={() => setSpoilerRevealed(true)} className="w-full p-3 rounded-xl bg-yellow-900/20 border border-yellow-500/20 active:opacity-60">
                 <p className="text-yellow-400 text-sm flex items-center gap-2">
-                  <AlertTriangle size={14} /> Questa recensione contiene spoiler. Tocca per leggere.
+                  <AlertTriangle size={14} /> This review contains spoilers. Tap to read.
                 </p>
               </button>
             ) : (
@@ -184,7 +184,7 @@ export function ReviewDetailScreen({
             <span className="text-sm font-medium">{localDislikes}</span>
           </button>
           <span className="text-film-subtle text-xs ml-auto">
-            {review.repliesAllowed === 'none' ? 'Risposte disabilitate' : `${replies.length} risposte`}
+            {review.repliesAllowed === 'none' ? 'Replies disabled' : `${replies.length} replies`}
           </span>
         </div>
 
@@ -208,7 +208,7 @@ export function ReviewDetailScreen({
                       <span className="text-film-text text-xs font-semibold">{r.userName}</span>
                     </button>
                     <span className="text-film-subtle text-xs">
-                      {new Date(r.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
+                      {new Date(r.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
                     </span>
                   </div>
                   <p className="text-film-text/80 text-sm leading-relaxed">{r.text}</p>
@@ -233,7 +233,7 @@ export function ReviewDetailScreen({
           <textarea
             value={replyText}
             onChange={e => setReplyText(e.target.value)}
-            placeholder="Scrivi una risposta..."
+            placeholder="Write a reply..."
             className="flex-1 bg-film-surface border border-film-border rounded-xl px-3 py-2 text-film-text text-sm resize-none focus:outline-none focus:border-film-accent/50 max-h-24"
             rows={2}
             style={{ fontSize: '16px' }}
@@ -251,14 +251,14 @@ export function ReviewDetailScreen({
       {confirmDelete && (
         <div className="absolute inset-0 bg-film-black/80 flex items-end z-10">
           <div className="w-full bg-film-black border-t border-film-border rounded-t-2xl p-6 space-y-4">
-            <p className="text-film-text font-semibold text-center">Eliminare questa recensione?</p>
-            <p className="text-film-subtle text-sm text-center">L'azione non può essere annullata.</p>
+            <p className="text-film-text font-semibold text-center">Delete this review?</p>
+            <p className="text-film-subtle text-sm text-center">This action cannot be undone.</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setConfirmDelete(false)}
                 className="flex-1 py-3 rounded-xl border border-film-border text-film-text text-sm active:opacity-60"
               >
-                Annulla
+                Cancel
               </button>
               <button
                 disabled={deleting}
@@ -273,7 +273,7 @@ export function ReviewDetailScreen({
                 }}
                 className="flex-1 py-3 rounded-xl bg-red-600 text-white text-sm font-semibold active:opacity-60 disabled:opacity-50"
               >
-                {deleting ? '...' : 'Elimina'}
+                {deleting ? '...' : 'Delete'}
               </button>
             </div>
           </div>

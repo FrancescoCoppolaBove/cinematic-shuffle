@@ -51,7 +51,7 @@ export function ImportLetterboxd({ onImport, onClose }: Props) {
     try {
       const text = await file.text();
       const rows = parseCSV(text);
-      if (rows.length < 2) { setError('File vuoto o non valido.'); return; }
+      if (rows.length < 2) { setError('Empty or invalid file.'); return; }
 
       const header = rows[0].map(h => h.trim().toLowerCase());
       const iName = header.indexOf('name');
@@ -59,7 +59,7 @@ export function ImportLetterboxd({ onImport, onClose }: Props) {
       const iRating = header.indexOf('rating');
       const iDate = header.indexOf('watched date') !== -1 ? header.indexOf('watched date') : header.indexOf('date');
       if (iName === -1 || iYear === -1) {
-        setError("Colonne 'Name' e 'Year' non trovate. Usa l'export CSV di Letterboxd.");
+        setError("Columns 'Name' and 'Year' were not found. Use the Letterboxd CSV export.");
         return;
       }
 
@@ -76,7 +76,7 @@ export function ImportLetterboxd({ onImport, onClose }: Props) {
         map.set(`${name}|${year}`, { name, year, rating: Number.isNaN(rating) ? null : rating, date });
       }
       const list = [...map.values()];
-      if (list.length === 0) { setError('Nessun film valido nel file.'); return; }
+      if (list.length === 0) { setError('No valid films found in the file.'); return; }
 
       setPhase('working');
       setProgress(0);
@@ -100,7 +100,7 @@ export function ImportLetterboxd({ onImport, onClose }: Props) {
       setResult({ imported: items.length, notFound });
       setPhase('done');
     } catch {
-      setError('Errore nella lettura del file.');
+      setError('Could not read the file.');
       setPhase('idle');
     }
   }
@@ -112,9 +112,9 @@ export function ImportLetterboxd({ onImport, onClose }: Props) {
         className="bg-film-black border-t border-film-border rounded-t-3xl max-h-[80vh] flex flex-col"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         onClick={e => e.stopPropagation()}
-      >
+        >
         <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-film-border">
-          <h3 className="text-film-text font-semibold">Importa da Letterboxd</h3>
+          <h3 className="text-film-text font-semibold">Import from Letterboxd</h3>
           {phase !== 'working' && (
             <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-full active:bg-film-surface">
               <X size={18} className="text-film-subtle" />
@@ -126,13 +126,13 @@ export function ImportLetterboxd({ onImport, onClose }: Props) {
           {phase === 'idle' && (
             <>
               <div className="text-film-muted text-sm space-y-2 leading-relaxed">
-                <p>Su Letterboxd: <span className="text-film-text">Settings → Import &amp; Export → Export your data</span>.</p>
-                <p>Carica qui il file <span className="text-film-text font-mono text-xs">ratings.csv</span> (o <span className="font-mono text-xs">watched.csv</span>) dallo zip scaricato.</p>
+                <p>On Letterboxd: <span className="text-film-text">Settings → Import &amp; Export → Export your data</span>.</p>
+                <p>Upload the <span className="text-film-text font-mono text-xs">ratings.csv</span> file (or <span className="font-mono text-xs">watched.csv</span>) from the downloaded zip.</p>
               </div>
               <label className="flex flex-col items-center gap-2 p-6 rounded-2xl border border-dashed border-film-border bg-film-surface active:opacity-70 cursor-pointer">
                 <Upload size={26} className="text-film-accent" />
-                <span className="text-film-text text-sm font-medium">Scegli file CSV</span>
-                <span className="text-film-subtle text-xs">i voti (0,5–5) vengono importati come tuoi</span>
+                <span className="text-film-text text-sm font-medium">Choose CSV file</span>
+                <span className="text-film-subtle text-xs">Ratings (0.5–5) will be imported as yours.</span>
                 <input type="file" accept=".csv,text/csv" className="hidden" onChange={handleFile} />
               </label>
               {error && <p className="text-film-red text-xs">{error}</p>}
@@ -142,11 +142,11 @@ export function ImportLetterboxd({ onImport, onClose }: Props) {
           {phase === 'working' && (
             <div className="flex flex-col items-center gap-4 py-8">
               <div className="w-12 h-12 border-2 border-film-accent border-t-transparent rounded-full animate-spin" />
-              <p className="text-film-text text-sm">Importazione in corso… {Math.round(progress * 100)}%</p>
+              <p className="text-film-text text-sm">Importing... {Math.round(progress * 100)}%</p>
               <div className="w-full h-1.5 rounded-full bg-film-surface overflow-hidden">
                 <div className="h-full bg-film-accent rounded-full transition-all" style={{ width: `${progress * 100}%` }} />
               </div>
-              <p className="text-film-subtle text-xs text-center">Non chiudere l'app durante l'importazione</p>
+              <p className="text-film-subtle text-xs text-center">Keep the app open while the import runs.</p>
             </div>
           )}
 
@@ -154,12 +154,12 @@ export function ImportLetterboxd({ onImport, onClose }: Props) {
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-green-400">
                 <CheckCircle size={20} />
-                <p className="text-film-text font-medium">{result.imported} film importati 🎉</p>
+                <p className="text-film-text font-medium">{result.imported} films imported</p>
               </div>
               {result.notFound.length > 0 && (
                 <div className="bg-film-surface border border-film-border rounded-xl p-3">
                   <p className="text-film-subtle text-xs mb-1 flex items-center gap-1.5">
-                    <FileText size={12} />{result.notFound.length} non trovati su TMDB
+                    <FileText size={12} />{result.notFound.length} not found on TMDB
                   </p>
                   <p className="text-film-subtle text-[11px] leading-relaxed line-clamp-4">
                     {result.notFound.slice(0, 30).join(' · ')}
@@ -167,7 +167,7 @@ export function ImportLetterboxd({ onImport, onClose }: Props) {
                 </div>
               )}
               <button onClick={onClose} className="w-full py-3 rounded-2xl bg-film-accent text-film-black font-semibold active:scale-[0.98]">
-                Fatto
+                Done
               </button>
             </div>
           )}

@@ -25,7 +25,7 @@ const LANG_NAME = new Map<string, string>(
 function decadeLabel(decade: string): string {
   const start = parseInt(decade);
   if (Number.isNaN(start)) return decade;
-  return start >= 2000 ? `Anni ${start}` : `Anni '${String(start).slice(2)}`;
+  return `${start}s`;
 }
 
 export function TasteInsights({ watchedMovies, onOpenPerson, userName }: {
@@ -101,10 +101,10 @@ export function TasteInsights({ watchedMovies, onOpenPerson, userName }: {
     <div className="space-y-3">
       <div className="flex items-center gap-2 px-0.5">
         <TrendingUp size={15} className="text-film-accent" />
-        <h2 className="flex-1 text-film-text text-sm font-semibold tracking-wide">Il tuo ritratto cinefilo</h2>
+        <h2 className="flex-1 text-film-text text-sm font-semibold tracking-wide">Your Cinephile Portrait</h2>
         <button
           onClick={() => sharePortrait({
-            name: userName ?? 'Il mio profilo',
+            name: userName ?? 'My profile',
             cinephileName: stats.cine.name,
             cinephileSubtitle: stats.cine.subtitle,
             watchedCount: watchedMovies.length,
@@ -117,7 +117,7 @@ export function TasteInsights({ watchedMovies, onOpenPerson, userName }: {
           })}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-film-accent/15 border border-film-accent/30 text-film-accent text-xs font-medium active:scale-95 transition-transform"
         >
-          <Share2 size={13} />Condividi
+          <Share2 size={13} />Share
         </button>
       </div>
 
@@ -136,7 +136,7 @@ export function TasteInsights({ watchedMovies, onOpenPerson, userName }: {
       <div className="bg-film-surface border border-film-border rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <Clapperboard size={14} className="text-film-accent" />
-          <span className="text-film-subtle text-xs uppercase tracking-widest">Generi preferiti</span>
+          <span className="text-film-subtle text-xs uppercase tracking-widest">Favorite genres</span>
         </div>
         <div className="space-y-2.5">
           {stats.topGenres.map((g, i) => (
@@ -162,13 +162,13 @@ export function TasteInsights({ watchedMovies, onOpenPerson, userName }: {
       <div className="grid grid-cols-3 gap-2">
         <InsightTile icon={<CalendarRange size={14} />} label="Decade" value={stats.topDecade ? decadeLabel(stats.topDecade) : '—'} />
         <InsightTile icon={<Globe size={14} />} label="Cinema" value={stats.topLang ?? '—'} />
-        <InsightTile icon={<Clock size={14} />} label="Ore viste" value={stats.totalHours > 0 ? `${stats.totalHours}h` : '—'} />
+        <InsightTile icon={<Clock size={14} />} label="Hours watched" value={stats.totalHours > 0 ? `${stats.totalHours}h` : '—'} />
       </div>
 
       {/* Registi più visti (top 5) */}
       <PeopleRanking
         icon={<Megaphone size={14} />}
-        title="Registi più visti"
+        title="Most-watched directors"
         people={topDirectors.slice(0, 5)}
         loading={creditsLoading && topDirectors.length === 0}
         onOpenPerson={onOpenPerson}
@@ -178,10 +178,10 @@ export function TasteInsights({ watchedMovies, onOpenPerson, userName }: {
       <div className="bg-film-surface border border-film-border rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <Users size={14} className="text-film-accent" />
-          <span className="text-film-subtle text-xs uppercase tracking-widest">Attori più visti</span>
+          <span className="text-film-subtle text-xs uppercase tracking-widest">Most-watched actors</span>
         </div>
         {topActors.length === 0 ? (
-          <p className="text-film-subtle text-xs">{creditsLoading ? 'Calcolo in corso…' : 'Dati non disponibili'}</p>
+          <p className="text-film-subtle text-xs">{creditsLoading ? 'Calculating...' : 'No data available'}</p>
         ) : (
           <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-1 px-1">
             {topActors.slice(0, 10).map((p, i) => (
@@ -196,7 +196,7 @@ export function TasteInsights({ watchedMovies, onOpenPerson, userName }: {
         <div className="bg-gradient-to-r from-film-accent/15 to-transparent border border-film-accent/25 rounded-2xl px-4 py-3 flex items-center gap-3">
           <span className="font-display text-2xl text-film-accent font-bold">{stats.thisYearCount}</span>
           <span className="text-film-text text-sm leading-tight">
-            titoli segnati nel <span className="font-semibold">{stats.thisYear}</span>
+            titles logged in <span className="font-semibold">{stats.thisYear}</span>
           </span>
         </div>
       )}
@@ -215,7 +215,7 @@ function PeopleRanking({ icon, title, people, loading, onOpenPerson }: {
         <span className="text-film-subtle text-xs uppercase tracking-widest">{title}</span>
       </div>
       {people.length === 0 ? (
-        <p className="text-film-subtle text-xs">{loading ? 'Calcolo in corso…' : 'Dati non disponibili'}</p>
+        <p className="text-film-subtle text-xs">{loading ? 'Calculating...' : 'No data available'}</p>
       ) : (
         <div className="space-y-2.5">
           {people.map((p, i) => {
@@ -234,7 +234,7 @@ function PeopleRanking({ icon, title, people, loading, onOpenPerson }: {
                     : <div className="w-full h-full flex items-center justify-center text-film-subtle text-xs">{p.name[0]}</div>}
                 </div>
                 <span className="flex-1 text-film-text text-sm truncate">{getPersonName(p.name)}</span>
-                <span className="text-film-subtle text-xs shrink-0">{p.count} film</span>
+                <span className="text-film-subtle text-xs shrink-0">{p.count} films</span>
               </button>
             );
           })}
@@ -264,7 +264,7 @@ function ActorAvatar({ person, rank, onOpenPerson }: {
         </span>
       </div>
       <span className="text-film-text text-[11px] text-center leading-tight line-clamp-2">{getPersonName(person.name)}</span>
-      <span className="text-film-subtle text-[10px]">{person.count} film</span>
+      <span className="text-film-subtle text-[10px]">{person.count} films</span>
     </button>
   );
 }

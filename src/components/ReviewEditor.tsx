@@ -54,7 +54,7 @@ export function ReviewEditor({
   const year = formatYear(getReleaseDate(movie));
   const today = new Date().toISOString().split('T')[0];
 
-  const repliesLabel = { all: 'Tutti possono rispondere', following: 'Solo chi seguo', none: 'Nessuno' };
+  const repliesLabel = { all: 'Everyone can reply', following: 'Only people I follow', none: 'No replies' };
 
   async function handleSave() {
     setSaving(true);
@@ -63,7 +63,7 @@ export function ReviewEditor({
       await onSave({ text, rating, liked, watchedOn: watchedOn || null, firstView, hasSpoilers, repliesAllowed });
       setSaving(false);
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Errore nel salvataggio');
+      setSaveError(err instanceof Error ? err.message : 'Could not save review');
       setSaving(false);
     }
   }
@@ -87,7 +87,7 @@ export function ReviewEditor({
           disabled={saving}
           className="shrink-0 bg-film-accent text-film-black text-xs font-bold px-4 py-2 rounded-xl active:opacity-60 disabled:opacity-50"
         >
-          {saving ? '...' : 'Salva'}
+          {saving ? '...' : 'Save'}
         </button>
       </div>
 
@@ -127,22 +127,22 @@ export function ReviewEditor({
 
         {/* Text */}
         <div>
-          <p className="text-film-subtle text-xs uppercase tracking-widest mb-2">La tua recensione</p>
+          <p className="text-film-subtle text-xs uppercase tracking-widest mb-2">Your review</p>
           <textarea
             ref={textRef}
             value={text}
             onChange={e => setText(e.target.value)}
-            placeholder="Cosa ne pensi? (opzionale)"
+            placeholder="What did you think? (optional)"
             className="w-full bg-film-surface border border-film-border rounded-xl px-4 py-3 text-film-text text-sm resize-none leading-relaxed focus:outline-none focus:border-film-accent/50"
             rows={5}
             style={{ fontSize: '16px' }}
           />
-          <p className="text-film-subtle text-xs mt-1 text-right">{text.length} caratteri</p>
+          <p className="text-film-subtle text-xs mt-1 text-right">{text.length} characters</p>
         </div>
 
         {/* Watched On */}
         <div>
-          <p className="text-film-subtle text-xs uppercase tracking-widest mb-2">Data visione</p>
+          <p className="text-film-subtle text-xs uppercase tracking-widest mb-2">Watched on</p>
           <input
             type="date"
             value={watchedOn}
@@ -154,7 +154,7 @@ export function ReviewEditor({
 
         {/* Toggles */}
         <div className="space-y-3">
-          <p className="text-film-subtle text-xs uppercase tracking-widest">Opzioni</p>
+          <p className="text-film-subtle text-xs uppercase tracking-widest">Options</p>
 
           <button
             onClick={() => setFirstView(v => !v)}
@@ -165,7 +165,7 @@ export function ReviewEditor({
           >
             <Eye size={16} className={firstView ? 'text-film-accent' : 'text-film-muted'} />
             <span className={cn('text-sm flex-1 text-left', firstView ? 'text-film-accent' : 'text-film-muted')}>
-              {firstView ? 'Prima visione 🎬' : 'L\'ho già visto prima'}
+              {firstView ? 'First watch' : 'I had seen it before'}
             </span>
           </button>
 
@@ -179,8 +179,8 @@ export function ReviewEditor({
           >
             <AlertTriangle size={16} className={hasSpoilers && hasText ? 'text-yellow-400' : 'text-film-muted'} />
             <span className={cn('text-sm flex-1 text-left', hasSpoilers && hasText ? 'text-yellow-400' : 'text-film-muted')}>
-              {hasSpoilers && hasText ? 'Contiene spoiler ⚠️' : 'Segna come spoiler'}
-              {!hasText && <span className="text-film-subtle text-xs ml-2">(scrivi prima del testo)</span>}
+              {hasSpoilers && hasText ? 'Contains spoilers' : 'Mark as spoiler'}
+              {!hasText && <span className="text-film-subtle text-xs ml-2">(write text first)</span>}
             </span>
           </button>
 

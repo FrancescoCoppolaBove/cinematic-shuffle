@@ -19,36 +19,36 @@ interface TonightViewProps {
 }
 
 function getGreeting(hour: number): string {
-  if (hour < 6) return 'Notte fonda';
-  if (hour < 12) return 'Buongiorno';
-  if (hour < 14) return 'Buon pranzo';
-  if (hour < 18) return 'Buon pomeriggio';
-  if (hour < 22) return 'Buonasera';
-  return 'Buonanotte';
+  if (hour < 6) return 'Late night';
+  if (hour < 12) return 'Good morning';
+  if (hour < 14) return 'Lunch break';
+  if (hour < 18) return 'Good afternoon';
+  if (hour < 22) return 'Good evening';
+  return 'Good night';
 }
 
 function getContextLabel(isWeekend: boolean, hour: number): string {
   if (isWeekend) {
-    if (hour < 14) return 'Sabato mattina — hai tempo';
-    if (hour < 22) return 'Weekend — nessun limite di durata';
-    return 'Notte del weekend';
+    if (hour < 14) return 'Weekend morning, plenty of time';
+    if (hour < 22) return 'Weekend mode, runtime is flexible';
+    return 'Weekend night';
   }
-  if (hour >= 22) return 'Tardi — meglio qualcosa di breve';
-  if (hour >= 18) return 'Serata infrasettimanale';
-  return 'Pomeriggio';
+  if (hour >= 22) return 'Late night, shorter is better';
+  if (hour >= 18) return 'Weeknight viewing';
+  return 'Afternoon watch';
 }
 
 const SLOT_LABELS: Record<TonightPick['slot'], { label: string; color: string; bg: string }> = {
-  tonight:   { label: 'Perfetto per stasera',   color: 'text-film-accent', bg: 'bg-film-accent/10 border-film-accent/30' },
-  streaming: { label: 'Disponibile adesso',      color: 'text-green-400',   bg: 'bg-green-400/10 border-green-400/30' },
-  acclaimed: { label: 'Il più acclamato',        color: 'text-yellow-400',  bg: 'bg-yellow-400/10 border-yellow-400/30' },
-  waiting:   { label: 'Aspetti da più tempo',    color: 'text-purple-400',  bg: 'bg-purple-400/10 border-purple-400/30' },
-  rewatch:   { label: 'Rivedilo stasera',        color: 'text-orange-400',  bg: 'bg-orange-400/10 border-orange-400/30' },
-  trending:  { label: 'Il più chiacchierato',    color: 'text-red-400',     bg: 'bg-red-400/10 border-red-400/30' },
-  short:     { label: 'Breve e perfetto',        color: 'text-sky-400',     bg: 'bg-sky-400/10 border-sky-400/30' },
-  seasonal:  { label: 'Stagione giusta',         color: 'text-amber-400',   bg: 'bg-amber-400/10 border-amber-400/30' },
-  cinephile: { label: 'Consiglio cinefilo',      color: 'text-cyan-400',    bg: 'bg-cyan-400/10 border-cyan-400/30' },
-  personal:  { label: 'Il mio consiglio',        color: 'text-pink-400',    bg: 'bg-pink-400/10 border-pink-400/30' },
+  tonight:   { label: 'Perfect tonight',      color: 'text-film-accent', bg: 'bg-film-accent/10 border-film-accent/30' },
+  streaming: { label: 'Available now',        color: 'text-green-400',   bg: 'bg-green-400/10 border-green-400/30' },
+  acclaimed: { label: 'Highest rated',        color: 'text-yellow-400',  bg: 'bg-yellow-400/10 border-yellow-400/30' },
+  waiting:   { label: 'Longest waiting',      color: 'text-purple-400',  bg: 'bg-purple-400/10 border-purple-400/30' },
+  rewatch:   { label: 'Rewatch tonight',      color: 'text-orange-400',  bg: 'bg-orange-400/10 border-orange-400/30' },
+  trending:  { label: 'Most talked about',    color: 'text-red-400',     bg: 'bg-red-400/10 border-red-400/30' },
+  short:     { label: 'Short and sharp',      color: 'text-sky-400',     bg: 'bg-sky-400/10 border-sky-400/30' },
+  seasonal:  { label: 'Seasonal match',       color: 'text-amber-400',   bg: 'bg-amber-400/10 border-amber-400/30' },
+  cinephile: { label: 'Cinephile pick',       color: 'text-cyan-400',    bg: 'bg-cyan-400/10 border-cyan-400/30' },
+  personal:  { label: 'Personal pick',        color: 'text-pink-400',    bg: 'bg-pink-400/10 border-pink-400/30' },
 };
 
 export function TonightView({ watchlist, watchedMovies, watchedIds, favoriteProviderIds, onOpenMovie, onSetupProviders }: TonightViewProps) {
@@ -64,13 +64,13 @@ export function TonightView({ watchlist, watchedMovies, watchedIds, favoriteProv
     return (
       <div className="flex flex-col items-center justify-center py-20 px-6 text-center gap-4">
         <div className="text-6xl opacity-20">🎬</div>
-        <h2 className="font-display text-2xl text-film-text tracking-wide">Watchlist vuota</h2>
+        <h2 className="font-display text-2xl text-film-text tracking-wide">Your watchlist is empty</h2>
         <p className="text-film-muted text-sm leading-relaxed">
-          Aggiungi film alla tua watchlist per ricevere consigli personalizzati su cosa guardare stasera.
+          Add films and shows to your watchlist to get personalized picks for tonight.
         </p>
         <div className="flex items-center gap-2 px-4 py-2 bg-film-surface border border-film-border rounded-xl">
           <Bookmark size={14} className="text-film-accent" />
-          <span className="text-film-muted text-sm">Cerca un film e premi Watchlist</span>
+          <span className="text-film-muted text-sm">Search for a title and tap Watchlist</span>
         </div>
       </div>
     );
@@ -80,8 +80,8 @@ export function TonightView({ watchlist, watchedMovies, watchedIds, favoriteProv
     return (
       <div className="flex flex-col items-center justify-center py-20 px-6 text-center gap-4">
         <div className="text-6xl opacity-20">✅</div>
-        <h2 className="font-display text-2xl text-film-text tracking-wide">Tutto visto!</h2>
-        <p className="text-film-muted text-sm">Hai visto tutti i film della tua watchlist. Aggiungine altri!</p>
+        <h2 className="font-display text-2xl text-film-text tracking-wide">All caught up!</h2>
+        <p className="text-film-muted text-sm">You have watched everything on your watchlist. Add more titles.</p>
       </div>
     );
   }
@@ -98,7 +98,7 @@ export function TonightView({ watchlist, watchedMovies, watchedIds, favoriteProv
           <button
             onClick={() => setSeed(s => s + 1)}
             className="p-2.5 rounded-xl bg-film-surface border border-film-border text-film-muted active:scale-90 transition-transform"
-            title="Rigenera"
+            title="Refresh picks"
           >
             <RefreshCw size={16} />
           </button>
@@ -109,7 +109,7 @@ export function TonightView({ watchlist, watchedMovies, watchedIds, favoriteProv
           <div className="flex items-center gap-1.5 px-3 py-2 bg-film-surface/50 rounded-xl border border-film-accent/15 mt-2">
             <span className="text-film-accent text-xs">✦</span>
             <p className="text-film-subtle text-xs">
-              Calibrato su {watchedMovies.length} film visti · voto medio {taste.avgPersonalRating.toFixed(1)}★
+              Calibrated on {watchedMovies.length} watched titles · average rating {taste.avgPersonalRating.toFixed(1)}★
             </p>
           </div>
         )}
@@ -123,10 +123,10 @@ export function TonightView({ watchlist, watchedMovies, watchedIds, favoriteProv
         >
           <span className="text-2xl">📺</span>
           <div className="flex-1">
-            <p className="text-film-text text-sm font-medium">Imposta le tue piattaforme</p>
-            <p className="text-film-subtle text-xs mt-0.5">Scopri subito cosa puoi guardare stasera senza costi extra</p>
+            <p className="text-film-text text-sm font-medium">Set your streaming services</p>
+            <p className="text-film-subtle text-xs mt-0.5">See what you can watch tonight at no extra cost.</p>
           </div>
-          <span className="text-film-accent text-xs shrink-0">Imposta →</span>
+          <span className="text-film-accent text-xs shrink-0">Set up →</span>
         </button>
       )}
 
@@ -152,7 +152,7 @@ export function TonightView({ watchlist, watchedMovies, watchedIds, favoriteProv
       {/* Footer: quanti film in watchlist non ancora visti */}
       <div className="text-center pt-2">
         <p className="text-film-subtle text-xs">
-          {watchlist.filter(i => !watchedIds.has(i.id)).length} film in watchlist da vedere
+          {watchlist.filter(i => !watchedIds.has(i.id)).length} unwatched titles in your watchlist
         </p>
       </div>
     </div>
@@ -261,7 +261,7 @@ function PickCard({ pick, onOpen, isFirst, isWatched = false }: {
         {pick.slot === 'streaming' && pick.providerLogo && (
           <div className="flex items-center gap-1.5 mb-1">
             <img src={pick.providerLogo} alt={pick.providerName} className="w-4 h-4 rounded-sm" />
-            <span className="text-green-400 text-xs font-medium">Incluso in {pick.providerName}</span>
+            <span className="text-green-400 text-xs font-medium">Included on {pick.providerName}</span>
           </div>
         )}
         {/* Slot badge */}

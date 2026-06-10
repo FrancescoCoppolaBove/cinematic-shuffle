@@ -72,7 +72,7 @@ export function ShuffleCard({
                 isTV ? 'bg-purple-900/80 border-purple-500/50 text-purple-200' : 'bg-film-black/70 border-white/10 text-white/70'
               )}>
                 {isTV ? <Tv size={10} /> : <Film size={10} />}
-                {isTV ? 'Serie TV' : 'Film'}
+                {isTV ? 'TV show' : 'Film'}
               </span>
             </div>
             {/* Trailer */}
@@ -129,7 +129,7 @@ export function ShuffleCard({
                 {isTV && movie.number_of_seasons && (
                   <>
                     <span className="text-film-border text-xs">·</span>
-                    <span className="text-film-muted text-xs">{movie.number_of_seasons} stag.</span>
+                    <span className="text-film-muted text-xs">{movie.number_of_seasons} seasons</span>
                   </>
                 )}
               </div>
@@ -146,12 +146,12 @@ export function ShuffleCard({
               {/* Regia */}
               {director && (
                 <p className="text-film-subtle text-xs mt-1.5">
-                  Regia <span className="text-film-muted font-medium">{director.name}</span>
+                  Directed by <span className="text-film-muted font-medium">{director.name}</span>
                 </p>
               )}
               {creator && (
                 <p className="text-film-subtle text-xs mt-1.5">
-                  Creato da <span className="text-film-muted font-medium">{creator.name}</span>
+                  Created by <span className="text-film-muted font-medium">{creator.name}</span>
                 </p>
               )}
             </div>
@@ -193,7 +193,7 @@ export function ShuffleCard({
               className="flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-2xl bg-film-accent text-film-black font-semibold active:scale-95 transition-all disabled:opacity-50"
             >
               <Shuffle size={20} className={loading ? 'animate-spin-slow' : ''} />
-              <span className="text-xs font-bold">{loading ? '...' : 'Altro'}</span>
+              <span className="text-xs font-bold">{loading ? '...' : 'Another'}</span>
             </button>
 
             {/* Già visto — apre sempre il modal */}
@@ -207,7 +207,7 @@ export function ShuffleCard({
               )}
             >
               <Eye size={20} />
-              <span>{isWatched ? 'Visto ✓' : 'Già visto'}</span>
+              <span>{isWatched ? 'Watched ✓' : 'Watched?'}</span>
             </button>
 
             {/* Watchlist */}
@@ -221,7 +221,7 @@ export function ShuffleCard({
               )}
             >
               {isOnWatchlist ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
-              <span>{isOnWatchlist ? 'Salvato' : 'Watchlist'}</span>
+              <span>{isOnWatchlist ? 'Saved' : 'Watchlist'}</span>
             </button>
           </div>
 
@@ -231,7 +231,7 @@ export function ShuffleCard({
               <div>
                 <p className="text-film-muted text-xs font-medium">Rewatch</p>
                 <p className="text-film-subtle text-xs">
-                  {rewatchCount === 0 ? 'Prima visione' : `Rivisto ${rewatchCount}×`}
+                  {rewatchCount === 0 ? 'First watch' : `Rewatched ${rewatchCount}×`}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -253,7 +253,7 @@ export function ShuffleCard({
             onClick={onOpenDetail}
             className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-film-surface border border-film-border text-film-muted active:opacity-70 transition-opacity"
           >
-            <span className="text-sm">Scheda completa</span>
+            <span className="text-sm">Full details</span>
             <ChevronRight size={16} />
           </button>
         </div>

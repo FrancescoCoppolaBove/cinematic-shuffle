@@ -27,6 +27,7 @@ import type { TMDBMovieBasic } from './types';
 import { useUpdatePrompt } from './hooks/useUpdatePrompt';
 import { cn } from './utils';
 import { getTitle } from './services/tmdb';
+import { APP_NAME, APP_TAGLINE, BRAND_LOGO_SRC, BRAND_WORDMARK_SRC } from './constants/brand';
 
 // ─── Login screen ───────────────────────────────────────────────
 function LoginScreen({ onSignIn, loading, error }: {
@@ -35,17 +36,16 @@ function LoginScreen({ onSignIn, loading, error }: {
   return (
     <div className="min-h-screen bg-film-black flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-sm space-y-8">
-        <div className="text-center space-y-2">
-          <div className="text-7xl mb-6 select-none">🎬</div>
-          <h1 className="font-display text-5xl text-film-text tracking-[0.2em]">CINEMATIC</h1>
-          <h2 className="font-display text-5xl text-film-accent tracking-[0.2em]">SHUFFLE</h2>
-          <p className="text-film-muted text-sm pt-2">Scopri il tuo prossimo film o serie TV</p>
+        <div className="text-center space-y-4">
+          <img src={BRAND_LOGO_SRC} alt="" className="mx-auto h-28 w-28 rounded-3xl object-contain" />
+          <img src={BRAND_WORDMARK_SRC} alt={APP_NAME} className="mx-auto w-full max-w-[280px] object-contain" />
+          <p className="text-film-muted text-sm uppercase tracking-[0.22em]">{APP_TAGLINE}</p>
         </div>
         <div className="bg-film-surface border border-film-border rounded-2xl p-6 space-y-5">
           <div className="space-y-2 text-center">
-            <p className="text-film-text text-sm font-medium">Accedi per continuare</p>
+            <p className="text-film-text text-sm font-medium">Sign in to continue</p>
             <p className="text-film-subtle text-xs">
-              Il tuo profilo, i film visti e la watchlist vengono sincronizzati su tutti i tuoi dispositivi
+              Your profile, watched titles, and watchlist stay synced across your devices.
             </p>
           </div>
           <button onClick={onSignIn} disabled={loading}
@@ -61,11 +61,11 @@ function LoginScreen({ onSignIn, loading, error }: {
                 </svg>
               )
             }
-            {loading ? 'Accesso in corso...' : 'Accedi con Google'}
+            {loading ? 'Signing in...' : 'Continue with Google'}
           </button>
           {error && <p className="text-film-red text-xs text-center">{error}</p>}
         </div>
-        <p className="text-film-subtle text-xs text-center">I tuoi dati sono privati e accessibili solo a te</p>
+        <p className="text-film-subtle text-xs text-center">Your data is private and only accessible to you.</p>
       </div>
     </div>
   );
@@ -74,19 +74,18 @@ function LoginScreen({ onSignIn, loading, error }: {
 // ─── Nav items ──────────────────────────────────────────────────
 const NAV: { view: AppView; icon: typeof Shuffle; label: string }[] = [
   { view: 'home',    icon: TrendingUp, label: 'Home'    },
-  { view: 'tonight', icon: Moon,       label: 'Stasera' },
+  { view: 'tonight', icon: Moon,       label: 'Tonight' },
   { view: 'shuffle', icon: Shuffle,    label: 'Shuffle' },
-  { view: 'search',  icon: Search,     label: 'Cerca'   },
-  { view: 'profile', icon: User,       label: 'Profilo' },
+  { view: 'search',  icon: Search,     label: 'Search'  },
+  { view: 'profile', icon: User,       label: 'Profile' },
 ];
 
-// Labels for back button per ogni tab
 const VIEW_LABELS: Record<AppView, string> = {
-  tonight: 'Stasera',
+  tonight: 'Tonight',
   home: 'Home',
   shuffle: 'Shuffle',
-  search: 'Cerca',
-  profile: 'Profilo',
+  search: 'Search',
+  profile: 'Profile',
 };
 
 interface Toast { id: number; message: string; type: 'success' | 'info' }
@@ -275,10 +274,10 @@ export default function App() {
       });
     } catch (err) {
       console.error('Failed to load movie detail:', err);
-      showToast('Impossibile caricare i dettagli. Riprova.', 'info');
+      showToast('Could not load details. Try again.', 'info');
     }
     finally { setDetailLoading(false); }
-  }, [view, navStack]);
+  }, [view, navStack, showToast]);
 
   // Navigate to a related movie from within the detail screen (push to stack)
   const openRelatedMovie = useCallback(async (id: number, mediaType: 'movie' | 'tv') => {
@@ -288,14 +287,14 @@ export default function App() {
       setDetailMovie(movie);
       navStack.push({
         type: 'movie', id, mediaType,
-        fromLabel: detailMovie ? getTitle(detailMovie) : 'Indietro',
+        fromLabel: detailMovie ? getTitle(detailMovie) : 'Back',
       });
     } catch (err) {
       console.error('Failed to load related movie:', err);
-      showToast('Impossibile caricare i dettagli. Riprova.', 'info');
+      showToast('Could not load details. Try again.', 'info');
     }
     finally { setDetailLoading(false); }
-  }, [navStack, detailMovie]);
+  }, [navStack, detailMovie, showToast]);
 
   // Preloads adjacent items when a playlist detail opens
   useEffect(() => {
@@ -428,13 +427,13 @@ export default function App() {
   // Current back label for the detail screen
   const backLabel = navStack.stack.length > 1
     ? navStack.stack[navStack.stack.length - 2].fromLabel
-    : navStack.current?.fromLabel ?? 'Indietro';
+    : navStack.current?.fromLabel ?? 'Back';
 
   if (authLoading) {
     return (
       <div className="min-h-screen bg-film-black flex items-center justify-center">
         <div className="text-center space-y-4">
-          <div className="text-5xl select-none">🎬</div>
+          <img src={BRAND_LOGO_SRC} alt={APP_NAME} className="mx-auto h-16 w-16 rounded-2xl object-contain" />
           <div className="w-8 h-8 border-2 border-film-accent border-t-transparent rounded-full animate-spin mx-auto" />
         </div>
       </div>
@@ -455,14 +454,14 @@ export default function App() {
           style={{ top: '1rem' }}>
           <div className="bg-film-surface border border-film-accent/40 rounded-2xl px-4 py-3 flex items-center gap-4 shadow-2xl">
             <div className="flex-1">
-              <p className="text-film-text text-sm font-medium">Aggiornamento disponibile</p>
-              <p className="text-film-muted text-xs mt-0.5">Una nuova versione è pronta</p>
+              <p className="text-film-text text-sm font-medium">Update available</p>
+              <p className="text-film-muted text-xs mt-0.5">A new version is ready.</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <button onClick={dismissUpdate} className="text-film-subtle text-xs px-2 py-1">Dopo</button>
+              <button onClick={dismissUpdate} className="text-film-subtle text-xs px-2 py-1">Later</button>
               <button onClick={applyUpdate}
                 className="bg-film-accent text-film-black text-xs font-bold px-3 py-1.5 rounded-xl active:scale-95">
-                Aggiorna
+                Update
               </button>
             </div>
           </div>
@@ -496,10 +495,7 @@ export default function App() {
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-center">
-          <div className="flex items-center gap-2">
-            <span className="font-display text-lg tracking-[0.2em] text-film-text">CINEMATIC</span>
-            <span className="font-display text-lg tracking-[0.2em] text-film-accent">SHUFFLE</span>
-          </div>
+          <img src={BRAND_WORDMARK_SRC} alt={APP_NAME} className="h-9 w-auto max-w-[210px] object-contain" />
         </div>
       </header>
 
@@ -519,7 +515,7 @@ export default function App() {
             watchedMovies={watchedMovies}
             watchedIds={watchedIds}
             favoriteProviderIds={prefs.favoriteProviderIds}
-            onOpenMovie={(id, mt) => openWithPlaylist(id, mt, undefined, undefined, 'Stasera')}
+            onOpenMovie={(id, mt) => openWithPlaylist(id, mt, undefined, undefined, 'Tonight')}
             onSetupProviders={() => handleNavChange('profile')}
           />
         )}
@@ -546,7 +542,7 @@ export default function App() {
         {view === 'search' && (
           <SearchView
             {...sharedProps}
-            onOpenMovieGlobal={(id: number, mt: 'movie' | 'tv', playlist?: PlaylistItem[], index?: number) => openWithPlaylist(id, mt, playlist, index, 'Cerca')}
+            onOpenMovieGlobal={(id: number, mt: 'movie' | 'tv', playlist?: PlaylistItem[], index?: number) => openWithPlaylist(id, mt, playlist, index, 'Search')}
             onCardQuickView={handleCardQuickView}
           />
         )}
@@ -568,7 +564,7 @@ export default function App() {
             onUpdateProviders={updateProviders}
             onAddToWatchlist={addToWatchlist}
             onRemoveFromWatchlist={removeFromWatchlist}
-            onOpenMovieGlobal={(id, mt, playlist, index) => openWithPlaylist(id, mt, playlist, index, 'Profilo')}
+            onOpenMovieGlobal={(id, mt, playlist, index) => openWithPlaylist(id, mt, playlist, index, 'Profile')}
             onSignOut={signOut}
             lists={lists}
             onCreateList={createList}
@@ -691,7 +687,7 @@ export default function App() {
           onConfirm={async (movies) => {
             await markManyWatched(movies.map(m => ({ movie: m, rating: null, liked: true })));
             dismissOnboarding();
-            showToast(`Profilo creato con ${movies.length} film 🎬`);
+            showToast(`Profile created with ${movies.length} films`);
           }}
         />
       )}

@@ -121,7 +121,7 @@ export function InnerMovieDetail({
         personalRating={personalRating}
         isLiked={isLiked}
         rewatchCount={localRewatchCount}
-        backLabel="Indietro"
+        backLabel="Back"
         onBack={onBack}
         onMarkWatched={(rating) => onMarkWatched?.(movie, rating) ?? Promise.resolve()}
         onUnmarkWatched={() => onUnmarkWatched?.(movie.id) ?? Promise.resolve()}

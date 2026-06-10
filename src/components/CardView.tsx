@@ -333,7 +333,7 @@ export function CardView({
               <button
                 onClick={() => { onOpenFull?.(item.id, item.media_type); onClose(); }}
                 className="w-full mt-2 py-1.5 text-film-subtle text-xs text-center active:opacity-60">
-                Scheda completa →
+                Full details →
               </button>
             )}
           </>
@@ -341,7 +341,7 @@ export function CardView({
           /* Rate mode — solo stelle */
           <div className="py-2">
             <p className="text-film-subtle text-xs text-center uppercase tracking-widest mb-4">
-              {personalRating ? `${personalRating} / 5` : 'Tocca o scorri per votare'}
+              {personalRating ? `${personalRating} / 5` : 'Tap or swipe to rate'}
             </p>
             <InlineStarRating
               value={personalRating}
@@ -351,7 +351,7 @@ export function CardView({
               onClick={() => setBottomMode('cta')}
               className="w-full mt-5 py-3 bg-film-surface border border-film-border rounded-2xl text-film-text text-sm font-medium active:scale-[0.98] transition-transform"
             >
-              {personalRating ? 'Fatto' : 'Salta'}
+              {personalRating ? 'Done' : 'Skip'}
             </button>
           </div>
         )}
