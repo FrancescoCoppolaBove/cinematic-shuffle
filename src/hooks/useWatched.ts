@@ -10,6 +10,7 @@ import {
   updateRewatchCount as updateRewatchCountFs, updateWatchedDate as updateWatchedDateFs,
   fetchWatchlist, addToWatchlistFirestore, removeFromWatchlistFirestore,
   fetchAllTVStatus, fetchFollowingSeries, setTVStatus, markAllEpisodesCompleted, clearAllEpisodes,
+  ensureWatchedSeriesMeta,
   type TVSeriesStatus, type FollowedSeries,
 } from '../services/firestore';
 
@@ -112,7 +113,7 @@ export function useWatched(user: User | null) {
   }, [user, loadAll]);
 
   // ─── Watched ────────────────────────────────────────────────────
-  const markWatched = useCallback(async (movie: TMDBMovieDetail, personalRating: number | null = null) => {
+  const markWatched = useCallback(async (movie: TMDBMovieDetail, personalRating: number | null = null, liked = false) => {
     if (!user) return;
     const entry: Omit<WatchedMovie, 'addedAt'> = {
       id: movie.id,
@@ -122,7 +123,7 @@ export function useWatched(user: User | null) {
       release_date: getReleaseDate(movie),
       vote_average: movie.vote_average,
       personal_rating: personalRating,
-      liked: false,
+      liked,
       rewatchCount: 0,
       genre_ids: movie.genres?.map(g => g.id) ?? [],
       runtime: titleRuntimeMinutes(movie),
@@ -256,24 +257,20 @@ export function useWatched(user: User | null) {
     await markAllEpisodesCompleted(user.uid, movie.id, seasons);
     setTvStatus(prev => new Map(prev).set(movie.id, 'completed'));
     setFollowingSeries(prev => prev.filter(s => s.id !== movie.id));
-    // Also mark in watchedMovies if not already there
-    const entry: Omit<import('../types').WatchedMovie, 'addedAt'> = {
+    // Assicura la serie in libreria SENZA toccare voto/like/rewatch: questo
+    // gira subito dopo markWatched (che ha appena salvato il voto), quindi non
+    // deve sovrascriverlo.
+    await ensureWatchedSeriesMeta(user.uid, {
       id: movie.id,
       title: getTitle(movie),
       original_title: movie.original_title || movie.original_name,
       poster_path: movie.poster_path,
       release_date: getReleaseDate(movie),
       vote_average: movie.vote_average,
-      personal_rating: null,
-      liked: false,
-      rewatchCount: 0,
       genre_ids: movie.genres?.map(g => g.id) ?? [],
       runtime: titleRuntimeMinutes({ ...movie, media_type: 'tv' }),
       original_language: movie.original_language,
-      watchedDate: new Date().toISOString().slice(0, 10),
-      media_type: 'tv',
-    };
-    await addWatchedToFirestore(user.uid, entry);
+    });
     await refresh();
   }, [user, refresh]);
 

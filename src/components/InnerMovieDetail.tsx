@@ -27,7 +27,7 @@ interface InnerMovieDetailProps {
   likedIds?: Set<string>;
   getPersonalRating?: (id: number) => number | null;
   getRewatchCount?: (id: number) => number;
-  onMarkWatched?: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
+  onMarkWatched?: (movie: TMDBMovieDetail, rating: number | null, liked?: boolean) => Promise<void>;
   onUnmarkWatched?: (id: number) => Promise<void>;
   onUpdateRating?: (id: number, rating: number | null) => Promise<void>;
   onToggleLiked?: (id: number) => Promise<void>;
@@ -184,12 +184,10 @@ export function InnerMovieDetail({
           onConfirm={async (result: RatingResult) => {
             setShowRatingModal(false);
             if (result.watched) {
-              await onMarkWatched?.(movie, result.rating);
+              await onMarkWatched?.(movie, result.rating, result.liked);
               if (movie.media_type === 'tv' && onSetCompleted) {
                 await onSetCompleted(movie, movie.seasons ?? []);
               }
-              if (result.liked && !isLiked) await onToggleLiked?.(movie.id);
-              if (!result.liked && isLiked) await onToggleLiked?.(movie.id);
             } else {
               if (isWatched) await onUnmarkWatched?.(movie.id);
               if (movie.media_type === 'tv') await onUnsetTVStatus?.(movie.id);
@@ -255,7 +253,7 @@ export function PersonInner(props: {
   watchedIds: Set<string>; watchlistIds?: Set<string>; likedIds?: Set<string>;
   getPersonalRating?: (id: number) => number | null;
   getRewatchCount?: (id: number) => number;
-  onMarkWatched?: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
+  onMarkWatched?: (movie: TMDBMovieDetail, rating: number | null, liked?: boolean) => Promise<void>;
   onUnmarkWatched?: (id: number) => Promise<void>;
   onUpdateRating?: (id: number, rating: number | null) => Promise<void>;
   onToggleLiked?: (id: number) => Promise<void>;
@@ -314,7 +312,7 @@ export function GenreInner(props: {
   watchedIds: Set<string>; watchlistIds?: Set<string>; likedIds?: Set<string>;
   getPersonalRating?: (id: number) => number | null;
   getRewatchCount?: (id: number) => number;
-  onMarkWatched?: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
+  onMarkWatched?: (movie: TMDBMovieDetail, rating: number | null, liked?: boolean) => Promise<void>;
   onUnmarkWatched?: (id: number) => Promise<void>;
   onUpdateRating?: (id: number, rating: number | null) => Promise<void>;
   onToggleLiked?: (id: number) => Promise<void>;

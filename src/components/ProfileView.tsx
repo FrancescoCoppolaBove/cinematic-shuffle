@@ -2,7 +2,7 @@
  * ProfileView — tre tab: Profilo, Visti, Watchlist
  * Le tab Visti e Watchlist montano i componenti originali completi.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { LogOut, Star, Heart, RotateCcw, Film, Tv, Bookmark, Check } from 'lucide-react';
 import type { User } from 'firebase/auth';
 import type { WatchedMovie, WatchlistItem, TMDBMovieDetail, MovieList } from '../types';
@@ -87,7 +87,10 @@ export function ProfileView({
   const [showProfileReviewEditor, setShowProfileReviewEditor] = useState(false);
   const [openPerson, setOpenPerson] = useState<{ id: number; name: string } | null>(null);
   const [showImport, setShowImport] = useState(false);
-  const { topDirectors, topActors } = useWatchedCredits(watchedMovies);
+  // Lo share del profilo usa SOLO i film: mischiare le serie rende i dati
+  // (ore, generi, registi/attori, nome cinefilo) fuorvianti.
+  const watchedFilms = useMemo(() => watchedMovies.filter(m => m.media_type === 'movie'), [watchedMovies]);
+  const { topDirectors, topActors } = useWatchedCredits(watchedFilms);
 
   useEffect(() => {
     // Ensure own public profile exists
@@ -206,10 +209,10 @@ export function ProfileView({
           </div>
 
           {/* Share Cinephile Profile — generates the image and opens the native share sheet */}
-          {watchedMovies.length > 0 && (
+          {watchedFilms.length > 0 && (
             <button
               onClick={() => sharePortrait(buildPortraitData(
-                watchedMovies,
+                watchedFilms,
                 topDirectors.map(d => getPersonName(d.name)),
                 topActors.map(a => getPersonName(a.name)),
               ))}

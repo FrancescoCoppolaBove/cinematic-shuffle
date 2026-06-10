@@ -737,12 +737,13 @@ export default function App() {
           onConfirm={async (result: RatingResult) => {
             setShowRatingModal(false);
             if (result.watched) {
-              await markWatched(detailMovie, result.rating);
+              // Passa il "liked" direttamente a markWatched: scrive il valore
+              // sul documento corretto (tv:id per le serie) in un colpo solo,
+              // evitando un toggle separato con stato non aggiornato.
+              await markWatched(detailMovie, result.rating, result.liked);
               if (detailMovie.media_type === 'tv') {
                 await setCompleted(detailMovie, detailMovie.seasons ?? []);
               }
-              if (result.liked && !likedIds.has(mkey(detailMovie.id, detailMovie.media_type))) await toggleLiked(detailMovie.id);
-              if (!result.liked && likedIds.has(mkey(detailMovie.id, detailMovie.media_type))) await toggleLiked(detailMovie.id);
             } else {
               if (watchedIds.has(mkey(detailMovie.id, detailMovie.media_type))) await unmarkWatched(detailMovie.id);
               if (detailMovie.media_type === 'tv' && tvStatus.get(detailMovie.id)) {

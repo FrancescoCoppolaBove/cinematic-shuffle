@@ -59,6 +59,33 @@ export async function addWatchedToFirestore(uid: string, movie: Omit<WatchedMovi
   }, { merge: true });
 }
 
+// Assicura che una serie sia presente nella libreria "watched" SENZA toccare i
+// campi utente (voto, like, rewatch, addedAt): aggiorna solo i metadati. Usato
+// da setCompleted, che gira subito dopo markWatched e non deve sovrascrivere il
+// voto appena salvato.
+export async function ensureWatchedSeriesMeta(uid: string, meta: {
+  id: number; title: string; original_title?: string; poster_path: string | null;
+  release_date: string; vote_average: number; genre_ids: number[];
+  runtime: number | null; original_language?: string;
+}): Promise<void> {
+  const ref = watchedRef(uid, meta.id, 'tv');
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    // Doc già presente (es. creato da markWatched): solo metadati, in merge.
+    await setDoc(ref, { ...meta, media_type: 'tv' }, { merge: true });
+  } else {
+    await setDoc(ref, {
+      ...meta,
+      media_type: 'tv',
+      personal_rating: null,
+      liked: false,
+      rewatchCount: 0,
+      watchedDate: new Date().toISOString().slice(0, 10),
+      addedAt: serverTimestamp() as FieldValue,
+    }, { merge: true });
+  }
+}
+
 export async function updateRewatchCount(uid: string, movieId: number, count: number, mt: 'movie' | 'tv' = 'movie') {
   await setDoc(watchedRef(uid, movieId, mt), { rewatchCount: count }, { merge: true });
 }
