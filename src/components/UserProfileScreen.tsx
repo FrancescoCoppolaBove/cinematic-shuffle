@@ -9,21 +9,24 @@ import {
 } from '../services/firestore';
 import { fetchWatchedMovies } from '../services/firestore';
 import { getImageUrl } from '../services/tmdb';
+import { buildProfile, tasteCompatibility } from '../hooks/useUserTaste';
 import { cn } from '../utils';
 import type { User } from 'firebase/auth';
+import type { WatchedMovie } from '../types';
 
 type ProfileTab = 'activity' | 'watched' | 'reviews' | 'likes';
 
 interface UserProfileScreenProps {
   targetUid: string;
   currentUser: User | null;
+  myWatched?: WatchedMovie[];
   onBack: () => void;
   onOpenMovie: (movieId: number, mediaType: 'movie' | 'tv') => void;
   onOpenReview: (review: Review) => void;
 }
 
 export function UserProfileScreen({
-  targetUid, currentUser, onBack, onOpenMovie, onOpenReview,
+  targetUid, currentUser, myWatched, onBack, onOpenMovie, onOpenReview,
 }: UserProfileScreenProps) {
   const [profile, setProfile] = useState<UserPublicProfile | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -81,6 +84,11 @@ export function UserProfileScreen({
     }
   }
 
+  // Compatibilità di gusto (solo se non è il proprio profilo e ci sono dati di entrambi)
+  const compatibility = (!isSelf && myWatched && myWatched.length >= 5 && watchedMovies.length >= 5)
+    ? tasteCompatibility(buildProfile(myWatched), buildProfile(watchedMovies))
+    : null;
+
   const likedMovies = watchedMovies.filter(m => m.liked);
   const recentActivity = [...watchedMovies]
     .sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime())
@@ -135,6 +143,12 @@ export function UserProfileScreen({
           </button>
           <div className="flex-1 min-w-0">
             <p className="text-film-text font-bold text-lg">{profile?.displayName}</p>
+            {compatibility !== null && (
+              <div className="inline-flex items-center gap-1.5 mt-1.5 px-2.5 py-1 rounded-full bg-film-accent/15 border border-film-accent/30">
+                <span className="text-film-accent font-bold text-sm">{compatibility}%</span>
+                <span className="text-film-accent/80 text-xs">affinità di gusto</span>
+              </div>
+            )}
             {profile?.bio && <p className="text-film-muted text-sm mt-1 leading-relaxed">{profile.bio}</p>}
             <div className="flex gap-4 mt-3">
               <div className="text-center">

@@ -215,6 +215,32 @@ export function buildProfile(watchedMovies: WatchedMovie[]): UserProfile {
   };
 }
 
+// ── Compatibilità di gusto tra due utenti ──────────────────────────
+/**
+ * Percentuale di affinità (0–100) tra due profili: combina la similarità
+ * coseno dei pesi di genere, la sovrapposizione dei generi top e la lingua
+ * principale in comune. Restituisce null se mancano dati sufficienti.
+ */
+export function tasteCompatibility(a: UserProfile, b: UserProfile): number | null {
+  if (a.watchedCount < 5 || b.watchedCount < 5) return null;
+
+  const ids = new Set([...Object.keys(a.genreWeights), ...Object.keys(b.genreWeights)].map(Number));
+  let dot = 0, na = 0, nb = 0;
+  for (const id of ids) {
+    const x = a.genreWeights[id] ?? 0, y = b.genreWeights[id] ?? 0;
+    dot += x * y; na += x * x; nb += y * y;
+  }
+  const cos = na > 0 && nb > 0 ? dot / (Math.sqrt(na) * Math.sqrt(nb)) : 0;
+
+  const topA = new Set(a.topGenreIds.slice(0, 5));
+  const overlap = b.topGenreIds.slice(0, 5).filter(id => topA.has(id)).length / 5;
+
+  const langMatch = a.topLanguages[0] && a.topLanguages[0] === b.topLanguages[0] ? 1 : 0;
+
+  const score = cos * 0.6 + overlap * 0.3 + langMatch * 0.1;
+  return Math.round(Math.min(1, Math.max(0, score)) * 100);
+}
+
 // ── Strategia di query ─────────────────────────────────────────────
 
 export type QueryStrategy = 'random' | 'genre_single' | 'genre_multi' | 'explore';

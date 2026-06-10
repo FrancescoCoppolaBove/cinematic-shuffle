@@ -463,6 +463,7 @@ export function ProfileView({
         <UserProfileScreen
           targetUid={openUserProfile}
           currentUser={user as import('firebase/auth').User}
+          myWatched={watchedMovies}
           onBack={() => setOpenUserProfile(null)}
           onOpenMovie={() => {}}
           onOpenReview={() => {}}
