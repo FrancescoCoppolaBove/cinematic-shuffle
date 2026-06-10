@@ -58,7 +58,7 @@ export function ListsTab({
             value={newName}
             onChange={e => setNewName(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleCreate(); }}
-            placeholder="Nome della lista…"
+            placeholder="List name…"
             maxLength={60}
             className="flex-1 bg-film-card border border-film-border rounded-xl px-3 py-2.5 text-film-text placeholder:text-film-subtle focus:outline-none focus:border-film-accent"
           />
@@ -81,7 +81,7 @@ export function ListsTab({
       {lists.length === 0 && !creating && (
         <div className="flex flex-col items-center text-center py-12 text-film-muted">
           <ListPlus size={32} className="mb-3 opacity-50" />
-          <p className="text-sm">Create themed lists like<br />"Maratona Nolan" o "Da vedere con lei".</p>
+          <p className="text-sm">Create themed lists like<br />"Nolan marathon" or "Date night".</p>
           <p className="text-film-subtle text-xs mt-2">Add films from each title's page.</p>
         </div>
       )}
@@ -108,7 +108,7 @@ export function ListsTab({
           </div>
           <div className="flex-1 text-left min-w-0">
             <p className="text-film-text text-sm font-semibold truncate">{list.name}</p>
-            <p className="text-film-subtle text-xs">{list.items.length} titoli</p>
+            <p className="text-film-subtle text-xs">{list.items.length} titles</p>
           </div>
         </button>
       ))}

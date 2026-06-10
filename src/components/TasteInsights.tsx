@@ -177,7 +177,7 @@ export function TasteInsights({ watchedMovies, onOpenPerson }: {
         <div className="bg-gradient-to-r from-film-accent/15 to-transparent border border-film-accent/25 rounded-2xl px-4 py-3 flex items-center gap-3">
           <span className="font-display text-2xl text-film-accent font-bold">{stats.thisYearCount}</span>
           <span className="text-film-text text-sm leading-tight">
-            titoli segnati nel <span className="font-semibold">{stats.thisYear}</span>
+            titles logged in <span className="font-semibold">{stats.thisYear}</span>
           </span>
         </div>
       )}
