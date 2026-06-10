@@ -5,6 +5,7 @@ import { useAuth } from './hooks/useAuth';
 import { useWatched } from './hooks/useWatched';
 import { useLists } from './hooks/useLists';
 import { AddToListModal } from './components/AddToListModal';
+import { OnboardingTaste } from './components/OnboardingTaste';
 import { useNavigationStack } from './hooks/useNavigationStack';
 import type { PlaylistItem } from './hooks/useNavigationStack';
 import { getMovieDetail } from './services/tmdb';
@@ -210,10 +211,24 @@ export default function App() {
 
   const {
     watchedMovies, watchedIds, watchlist, watchlistIds,
+    loading: watchedLoading,
     markWatched, markManyWatched, unmarkWatched, updateRating, toggleLiked, incrementRewatch,
     addToWatchlist, removeFromWatchlist,
     tvStatus, setFollowing, setCompleted, unsetTVStatus,
   } = useWatched(user);
+
+  // ─── Onboarding del gusto (primo accesso, libreria vuota) ────────
+  const [onboardHidden, setOnboardHidden] = useState(false);
+  useEffect(() => { setOnboardHidden(false); }, [user?.uid]);
+  const onboardKey = user ? `cinematic_onboard_done_${user.uid}` : '';
+  let onboardAlreadyDone = false;
+  try { onboardAlreadyDone = !!(onboardKey && localStorage.getItem(onboardKey)); } catch { /* ignore */ }
+  const showOnboarding = !!user && !watchedLoading && watchedMovies.length === 0
+    && !onboardHidden && !onboardAlreadyDone;
+  const dismissOnboarding = useCallback(() => {
+    try { if (onboardKey) localStorage.setItem(onboardKey, '1'); } catch { /* ignore */ }
+    setOnboardHidden(true);
+  }, [onboardKey]);
   const {
     lists, createList, renameList, deleteList, addToList, removeFromList,
   } = useLists(user);
@@ -666,6 +681,18 @@ export default function App() {
       )}
 
       {user && <InstallPrompt />}
+
+      {/* Onboarding del gusto — primo accesso con libreria vuota */}
+      {showOnboarding && (
+        <OnboardingTaste
+          onSkip={dismissOnboarding}
+          onConfirm={async (movies) => {
+            await markManyWatched(movies.map(m => ({ movie: m, rating: null, liked: true })));
+            dismissOnboarding();
+            showToast(`Profilo creato con ${movies.length} film 🎬`);
+          }}
+        />
+      )}
 
       {/* CardQuickView — direct child of root div, same pattern as RatingModal */}
       {cardQuickView && (
