@@ -25,7 +25,7 @@ import type { RatingResult } from './components/RatingModal';
 import { CardQuickView } from './components/CardQuickView';
 import type { TMDBMovieBasic } from './types';
 import { useUpdatePrompt } from './hooks/useUpdatePrompt';
-import { cn } from './utils';
+import { cn, mkey } from './utils';
 import { getTitle } from './services/tmdb';
 
 // ─── Login screen ───────────────────────────────────────────────
@@ -254,7 +254,7 @@ export default function App() {
     watchedMovies.find(m => m.id === id)?.personal_rating ?? null, [watchedMovies]);
 
   const likedIds = useMemo(
-    () => new Set(watchedMovies.filter(m => m.liked).map(m => m.id)),
+    () => new Set(watchedMovies.filter(m => m.liked).map(m => mkey(m.id, m.media_type))),
     [watchedMovies]
   );
 
@@ -630,8 +630,8 @@ export default function App() {
       {navStack.isOpen && detailMovie && (
         <MovieDetailScreen
           movie={detailMovie}
-          isWatched={watchedIds.has(detailMovie.id)}
-          isOnWatchlist={watchlistIds.has(detailMovie.id)}
+          isWatched={watchedIds.has(mkey(detailMovie.id, detailMovie.media_type))}
+          isOnWatchlist={watchlistIds.has(mkey(detailMovie.id, detailMovie.media_type))}
           personalRating={getPersonalRating(detailMovie.id)}
           showShuffleBtn={view === 'shuffle'}
           backLabel={backLabel}
@@ -646,7 +646,7 @@ export default function App() {
           onRemoveFromWatchlist={() => removeFromWatchlist(detailMovie.id)}
           onOpenMovie={openRelatedMovie}
           onToggleLiked={toggleLiked}
-          isLiked={detailMovie ? (likedIds.has(detailMovie.id)) : false}
+          isLiked={detailMovie ? (likedIds.has(mkey(detailMovie.id, detailMovie.media_type))) : false}
           onIncrementRewatch={incrementRewatch}
           rewatchCount={detailMovie ? (watchedMovies.find(m => m.id === detailMovie.id)?.rewatchCount ?? 0) : 0}
           watchedIds={watchedIds}
@@ -708,9 +708,9 @@ export default function App() {
         <CardQuickView
           movie={cardQuickView.movie}
           mediaType={cardQuickView.mediaType}
-          isWatched={watchedIds.has(cardQuickView.movie.id)}
-          isLiked={likedIds.has(cardQuickView.movie.id)}
-          isOnWatchlist={watchlistIds.has(cardQuickView.movie.id)}
+          isWatched={watchedIds.has(mkey(cardQuickView.movie.id, cardQuickView.movie.media_type))}
+          isLiked={likedIds.has(mkey(cardQuickView.movie.id, cardQuickView.movie.media_type))}
+          isOnWatchlist={watchlistIds.has(mkey(cardQuickView.movie.id, cardQuickView.movie.media_type))}
           personalRating={getPersonalRating(cardQuickView.movie.id)}
           onClose={() => setCardQuickView(null)}
           onOpenFull={() => {
@@ -730,11 +730,11 @@ export default function App() {
       {showRatingModal && detailMovie && (
         <RatingModal
           movie={detailMovie}
-          initialWatched={watchedIds.has(detailMovie.id)}
+          initialWatched={watchedIds.has(mkey(detailMovie.id, detailMovie.media_type))}
           initialRating={getPersonalRating(detailMovie.id)}
-          initialLiked={likedIds.has(detailMovie.id)}
-          initialWatchlist={watchlistIds.has(detailMovie.id)}
-          showWatchlistBtn={!watchedIds.has(detailMovie.id)}
+          initialLiked={likedIds.has(mkey(detailMovie.id, detailMovie.media_type))}
+          initialWatchlist={watchlistIds.has(mkey(detailMovie.id, detailMovie.media_type))}
+          showWatchlistBtn={!watchedIds.has(mkey(detailMovie.id, detailMovie.media_type))}
           onConfirm={async (result: RatingResult) => {
             setShowRatingModal(false);
             if (result.watched) {
@@ -742,17 +742,17 @@ export default function App() {
               if (detailMovie.media_type === 'tv') {
                 await setCompleted(detailMovie, detailMovie.seasons ?? []);
               }
-              if (result.liked && !likedIds.has(detailMovie.id)) await toggleLiked(detailMovie.id);
-              if (!result.liked && likedIds.has(detailMovie.id)) await toggleLiked(detailMovie.id);
+              if (result.liked && !likedIds.has(mkey(detailMovie.id, detailMovie.media_type))) await toggleLiked(detailMovie.id);
+              if (!result.liked && likedIds.has(mkey(detailMovie.id, detailMovie.media_type))) await toggleLiked(detailMovie.id);
             } else {
-              if (watchedIds.has(detailMovie.id)) await unmarkWatched(detailMovie.id);
+              if (watchedIds.has(mkey(detailMovie.id, detailMovie.media_type))) await unmarkWatched(detailMovie.id);
               if (detailMovie.media_type === 'tv' && tvStatus.get(detailMovie.id)) {
                 await unsetTVStatus(detailMovie.id);
               }
             }
           }}
           onToggleWatchlist={
-            watchlistIds.has(detailMovie.id)
+            watchlistIds.has(mkey(detailMovie.id, detailMovie.media_type))
               ? () => removeFromWatchlist(detailMovie.id)
               : () => addToWatchlist(detailMovie)
           }
@@ -765,9 +765,9 @@ export default function App() {
       {showReviewEditor && detailMovie && user && (
         <ReviewEditor
           movie={detailMovie}
-          initialWatched={watchedIds.has(detailMovie.id)}
+          initialWatched={watchedIds.has(mkey(detailMovie.id, detailMovie.media_type))}
           initialRating={getPersonalRating(detailMovie.id)}
-          initialLiked={likedIds.has(detailMovie.id)}
+          initialLiked={likedIds.has(mkey(detailMovie.id, detailMovie.media_type))}
           onCancel={() => setShowReviewEditor(false)}
           onSave={async (draft: ReviewDraft) => {
             if (!user) return;

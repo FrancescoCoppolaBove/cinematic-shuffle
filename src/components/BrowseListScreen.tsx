@@ -16,7 +16,7 @@ import {
   browseDiscover, discoverByGenre, discoverByKeyword,
 } from '../services/tmdb';
 import type { BrowseFilters, DiscoverPageResult } from '../services/tmdb';
-import { formatYear, formatRating, cn } from '../utils';
+import { formatYear, formatRating, cn, mkey } from '../utils';
 import { InnerMovieDetail } from './InnerMovieDetail';
 
 export type BrowseSource =
@@ -34,9 +34,9 @@ export type BrowseSource =
 
 interface BrowseListScreenProps {
   source: BrowseSource;
-  watchedIds: Set<number>;
-  watchlistIds?: Set<number>;
-  likedIds?: Set<number>;
+  watchedIds: Set<string>;
+  watchlistIds?: Set<string>;
+  likedIds?: Set<string>;
   getPersonalRating?: (id: number) => number | null;
   onMarkWatched?: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
   onUnmarkWatched?: (id: number) => Promise<void>;
@@ -189,12 +189,12 @@ export function BrowseListScreen({
       const q = clientFilters.search.toLowerCase();
       if (!getEnglishTitle(m).toLowerCase().includes(q)) return false;
     }
-    if (clientFilters.watchedStatus === 'watched' && !watchedIds.has(m.id)) return false;
-    if (clientFilters.watchedStatus === 'unwatched' && watchedIds.has(m.id)) return false;
-    if (clientFilters.likedStatus === 'liked' && !likedIds.has(m.id)) return false;
-    if (clientFilters.likedStatus === 'not_liked' && likedIds.has(m.id)) return false;
-    if (clientFilters.watchlistStatus === 'watchlist' && !watchlistIds.has(m.id)) return false;
-    if (clientFilters.watchlistStatus === 'not_watchlist' && watchlistIds.has(m.id)) return false;
+    if (clientFilters.watchedStatus === 'watched' && !watchedIds.has(mkey(m.id, m.media_type))) return false;
+    if (clientFilters.watchedStatus === 'unwatched' && watchedIds.has(mkey(m.id, m.media_type))) return false;
+    if (clientFilters.likedStatus === 'liked' && !likedIds.has(mkey(m.id, m.media_type))) return false;
+    if (clientFilters.likedStatus === 'not_liked' && likedIds.has(mkey(m.id, m.media_type))) return false;
+    if (clientFilters.watchlistStatus === 'watchlist' && !watchlistIds.has(mkey(m.id, m.media_type))) return false;
+    if (clientFilters.watchlistStatus === 'not_watchlist' && watchlistIds.has(mkey(m.id, m.media_type))) return false;
     if (clientFilters.ratedStatus === 'rated' && !getPersonalRating?.(m.id)) return false;
     if (clientFilters.ratedStatus === 'not_rated' && getPersonalRating?.(m.id)) return false;
     return true;
@@ -256,7 +256,7 @@ export function BrowseListScreen({
                 <PosterCard
                   key={m.id}
                   movie={m}
-                  isWatched={watchedIds.has(m.id)}
+                  isWatched={watchedIds.has(mkey(m.id, m.media_type))}
                   onClick={() => setInnerMovie({ id: m.id, mediaType: m.media_type ?? mediaType })}
                 />
               ))}
@@ -281,9 +281,9 @@ export function BrowseListScreen({
                 <div className="relative shrink-0 w-11 h-16 rounded-lg overflow-hidden bg-film-surface">
                   {m.poster_path
                     ? <img src={getImageUrl(m.poster_path, 'w92') || ''} alt={getEnglishTitle(m)}
-                        className={cn("w-full h-full object-cover", watchedIds.has(m.id) && "opacity-40 grayscale")} />
+                        className={cn("w-full h-full object-cover", watchedIds.has(mkey(m.id, m.media_type)) && "opacity-40 grayscale")} />
                     : <div className="w-full h-full flex items-center justify-center text-base">{m.media_type === 'tv' ? '📺' : '🎬'}</div>}
-                  {watchedIds.has(m.id) && <div className="absolute top-1 right-1 w-3.5 h-3.5 bg-green-900/80 rounded-full flex items-center justify-center"><span className="text-green-300 text-[7px] font-bold">✓</span></div>}
+                  {watchedIds.has(mkey(m.id, m.media_type)) && <div className="absolute top-1 right-1 w-3.5 h-3.5 bg-green-900/80 rounded-full flex items-center justify-center"><span className="text-green-300 text-[7px] font-bold">✓</span></div>}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-film-text text-sm font-medium truncate">{getEnglishTitle(m)}</p>

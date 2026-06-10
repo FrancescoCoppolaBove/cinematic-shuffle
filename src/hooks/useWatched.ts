@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { mkey } from '../utils';
 import type { User } from 'firebase/auth';
 import type { WatchedMovie, WatchlistItem, TMDBMovieDetail } from '../types';
 import { getTitle, getReleaseDate } from '../services/tmdb';
@@ -13,10 +14,10 @@ import {
 
 export function useWatched(user: User | null) {
   const [watchedMovies, setWatchedMovies] = useState<WatchedMovie[]>([]);
-  const [watchedIds, setWatchedIds] = useState<Set<number>>(new Set());
+  const [watchedIds, setWatchedIds] = useState<Set<string>>(new Set());
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [tvStatus, setTvStatus] = useState<Map<number, TVSeriesStatus>>(new Map());
-  const [watchlistIds, setWatchlistIds] = useState<Set<number>>(new Set());
+  const [watchlistIds, setWatchlistIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const prevUid = useRef<string | null>(null);
 
@@ -30,9 +31,9 @@ export function useWatched(user: User | null) {
       fetchAllTVStatus(uid),
     ]);
     setWatchedMovies(watched);
-    setWatchedIds(new Set(watched.map(m => m.id)));
+    setWatchedIds(new Set(watched.map(m => mkey(m.id, m.media_type))));
     setWatchlist(wl);
-    setWatchlistIds(new Set(wl.map(m => m.id)));
+    setWatchlistIds(new Set(wl.map(m => mkey(m.id, m.media_type))));
     setTvStatus(tvStat);
     setLoading(false);
   }, []);
@@ -74,7 +75,7 @@ export function useWatched(user: User | null) {
     };
     await addWatchedToFirestore(user.uid, entry);
     // If it was on watchlist, remove it
-    if (watchlistIds.has(movie.id)) {
+    if (watchlistIds.has(mkey(movie.id, movie.media_type))) {
       await removeFromWatchlistFirestore(user.uid, movie.id, movie.media_type);
     }
     await refresh();
@@ -151,7 +152,7 @@ export function useWatched(user: User | null) {
   // ─── Watchlist ──────────────────────────────────────────────────
   const addToWatchlist = useCallback(async (movie: TMDBMovieDetail) => {
     if (!user) return;
-    if (watchlistIds.has(movie.id)) return;
+    if (watchlistIds.has(mkey(movie.id, movie.media_type))) return;
     const item: Omit<WatchlistItem, 'addedAt'> = {
       id: movie.id,
       title: getTitle(movie),

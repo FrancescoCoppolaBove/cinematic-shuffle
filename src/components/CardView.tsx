@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { X, Eye, Heart, Star, Bookmark, BookmarkCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { TMDBMovieDetail } from '../types';
 import { getImageUrl, getMovieDetail, getTitle, getReleaseDate } from '../services/tmdb';
-import { formatYear, formatRating, cn } from '../utils';
+import { formatYear, formatRating, cn, mkey } from '../utils';
 
 export interface CardItem {
   id: number;
@@ -21,9 +21,9 @@ export interface CardItem {
 
 interface CardViewProps {
   items: CardItem[];
-  watchedIds: Set<number>;
-  watchlistIds: Set<number>;
-  likedIds?: Set<number>;
+  watchedIds: Set<string>;
+  watchlistIds: Set<string>;
+  likedIds?: Set<string>;
   getPersonalRating: (id: number) => number | null;
   onMarkWatched: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
   onUnmarkWatched: (id: number) => Promise<void>;
@@ -63,9 +63,9 @@ export function CardView({
   const item = items[index];
   if (!item) return null;
 
-  const isWatched = watchedIds.has(item.id);
-  const isOnWatchlist = watchlistIds.has(item.id);
-  const isLiked = likedIds?.has(item.id) ?? false;
+  const isWatched = watchedIds.has(mkey(item.id, item.media_type));
+  const isOnWatchlist = watchlistIds.has(mkey(item.id, item.media_type));
+  const isLiked = likedIds?.has(mkey(item.id, item.media_type)) ?? false;
   const personalRating = getPersonalRating(item.id);
   const title = getTitle(item);
   const canPrev = index > 0;

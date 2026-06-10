@@ -6,6 +6,7 @@
  * z-index 95 → sta sopra PersonDetailScreen (88) e GenreMoviesScreen (89).
  */
 import { useState, useCallback, useEffect, Fragment } from 'react';
+import { mkey } from '../utils';
 import { ChevronLeft } from 'lucide-react';
 import { getMovieDetail } from '../services/tmdb';
 import type { TMDBMovieDetail } from '../types';
@@ -21,9 +22,9 @@ import { GenreMoviesScreen } from './GenreMoviesScreen';
 interface InnerMovieDetailProps {
   id: number;
   mediaType: 'movie' | 'tv';
-  watchedIds: Set<number>;
-  watchlistIds?: Set<number>;
-  likedIds?: Set<number>;
+  watchedIds: Set<string>;
+  watchlistIds?: Set<string>;
+  likedIds?: Set<string>;
   getPersonalRating?: (id: number) => number | null;
   getRewatchCount?: (id: number) => number;
   onMarkWatched?: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
@@ -106,9 +107,9 @@ export function InnerMovieDetail({
     );
   }
 
-  const isWatched = watchedIds.has(movie.id);
-  const isOnWatchlist = watchlistIds.has(movie.id);
-  const isLiked = likedIds.has(movie.id);
+  const isWatched = watchedIds.has(mkey(movie.id, movie.media_type));
+  const isOnWatchlist = watchlistIds.has(mkey(movie.id, movie.media_type));
+  const isLiked = likedIds.has(mkey(movie.id, movie.media_type));
   const personalRating = getPersonalRating?.(movie.id) ?? null;
 
   return (
@@ -251,7 +252,7 @@ export function InnerMovieDetail({
 
 export function PersonInner(props: {
   personId: number; personName: string;
-  watchedIds: Set<number>; watchlistIds?: Set<number>; likedIds?: Set<number>;
+  watchedIds: Set<string>; watchlistIds?: Set<string>; likedIds?: Set<string>;
   getPersonalRating?: (id: number) => number | null;
   getRewatchCount?: (id: number) => number;
   onMarkWatched?: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
@@ -310,7 +311,7 @@ export function PersonInner(props: {
 
 export function GenreInner(props: {
   id: number; name: string; type: 'genre' | 'keyword'; mediaType: 'movie' | 'tv';
-  watchedIds: Set<number>; watchlistIds?: Set<number>; likedIds?: Set<number>;
+  watchedIds: Set<string>; watchlistIds?: Set<string>; likedIds?: Set<string>;
   getPersonalRating?: (id: number) => number | null;
   getRewatchCount?: (id: number) => number;
   onMarkWatched?: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;

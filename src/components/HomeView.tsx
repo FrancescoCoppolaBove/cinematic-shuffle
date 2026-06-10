@@ -5,16 +5,16 @@ import {
   getTrending, getTrendingPage,
   getImageUrl, getEnglishTitle, getReleaseDate,
 } from '../services/tmdb';
-import { formatYear, formatRating, cn } from '../utils';
+import { formatYear, formatRating, cn, mkey } from '../utils';
 import { GridControls, DEFAULT_GRID_FILTERS } from './GridControls';
 import type { GridFilters, ViewMode } from './GridControls';
 import { CardView } from './CardView';
 import { useMemo } from 'react';
 
 interface HomeViewProps {
-  watchedIds: Set<number>;
-  watchlistIds: Set<number>;
-  likedIds?: Set<number>;
+  watchedIds: Set<string>;
+  watchlistIds: Set<string>;
+  likedIds?: Set<string>;
   getPersonalRating: (id: number) => number | null;
   onMarkWatched: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
   onUnmarkWatched: (id: number) => Promise<void>;
@@ -121,7 +121,7 @@ function TrendingSection({
 }: {
   title: string; subtitle: string;
   items: TrendingItem[]; loading: boolean;
-  watchedIds: Set<number>; watchlistIds: Set<number>;
+  watchedIds: Set<string>; watchlistIds: Set<string>;
   onSelect: (item: TrendingItem) => void;
   onSeeAll: () => void;
   accentColor: string;
@@ -161,8 +161,8 @@ function TrendingSection({
               key={item.id}
               item={item}
               rank={idx + 1}
-              isWatched={watchedIds.has(item.id)}
-              isOnWatchlist={watchlistIds.has(item.id)}
+              isWatched={watchedIds.has(mkey(item.id, item.media_type))}
+              isOnWatchlist={watchlistIds.has(mkey(item.id, item.media_type))}
               onClick={() => onSelect(item)}
             />
           ))}
@@ -181,9 +181,9 @@ function PopularFullPage({
   onBack, onSelect, onOpenMovieGlobal,
 }: {
   mediaType: 'movie' | 'tv';
-  watchedIds: Set<number>;
-  watchlistIds: Set<number>;
-  likedIds?: Set<number>;
+  watchedIds: Set<string>;
+  watchlistIds: Set<string>;
+  likedIds?: Set<string>;
   getPersonalRating: (id: number) => number | null;
   onMarkWatched: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
   onUnmarkWatched: (id: number) => Promise<void>;
@@ -296,8 +296,8 @@ function PopularFullPage({
                   key={`${item.id}-${idx}`}
                   item={item}
                   rank={idx + 1}
-                  isWatched={watchedIds.has(item.id)}
-                  isOnWatchlist={watchlistIds.has(item.id)}
+                  isWatched={watchedIds.has(mkey(item.id, item.media_type))}
+                  isOnWatchlist={watchlistIds.has(mkey(item.id, item.media_type))}
                   onClick={() => onSelect(item, filtered, idx)}
                 />
               ))}

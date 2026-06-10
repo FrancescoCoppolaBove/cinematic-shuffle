@@ -9,16 +9,16 @@ import { ListFilterBar, DEFAULT_CLIENT_FILTERS } from './ListFilterBar';
 import type { ClientFilters } from './ListFilterBar';
 import type { TMDBMovieBasic, TMDBMovieDetail } from '../types';
 import { discoverByGenre, discoverByKeyword, getImageUrl, getEnglishTitle, getReleaseDate } from '../services/tmdb';
-import { formatYear, formatRating, cn } from '../utils';
+import { formatYear, formatRating, cn, mkey } from '../utils';
 
 interface GenreMoviesScreenProps {
   id: number;
   name: string;
   type: 'genre' | 'keyword';
   mediaType: 'movie' | 'tv';
-  watchedIds: Set<number>;
-  watchlistIds?: Set<number>;
-  likedIds?: Set<number>;
+  watchedIds: Set<string>;
+  watchlistIds?: Set<string>;
+  likedIds?: Set<string>;
   getPersonalRating?: (id: number) => number | null;
   onMarkWatched?: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
   onUnmarkWatched?: (id: number) => Promise<void>;
@@ -93,16 +93,16 @@ export function GenreMoviesScreen({
       const q = clientFilters.search.toLowerCase();
       list = list.filter(m => getEnglishTitle(m).toLowerCase().includes(q));
     }
-    if (clientFilters.watchedStatus === 'watched') list = list.filter(m => watchedIds.has(m.id));
-    if (clientFilters.watchedStatus === 'unwatched') list = list.filter(m => !watchedIds.has(m.id));
-    if (clientFilters.likedStatus === 'liked') list = list.filter(m => likedIds.has(m.id));
-    if (clientFilters.likedStatus === 'not_liked') list = list.filter(m => !likedIds.has(m.id));
-    if (clientFilters.watchlistStatus === 'watchlist') list = list.filter(m => watchlistIds.has(m.id));
-    if (clientFilters.watchlistStatus === 'not_watchlist') list = list.filter(m => !watchlistIds.has(m.id));
+    if (clientFilters.watchedStatus === 'watched') list = list.filter(m => watchedIds.has(mkey(m.id, m.media_type)));
+    if (clientFilters.watchedStatus === 'unwatched') list = list.filter(m => !watchedIds.has(mkey(m.id, m.media_type)));
+    if (clientFilters.likedStatus === 'liked') list = list.filter(m => likedIds.has(mkey(m.id, m.media_type)));
+    if (clientFilters.likedStatus === 'not_liked') list = list.filter(m => !likedIds.has(mkey(m.id, m.media_type)));
+    if (clientFilters.watchlistStatus === 'watchlist') list = list.filter(m => watchlistIds.has(mkey(m.id, m.media_type)));
+    if (clientFilters.watchlistStatus === 'not_watchlist') list = list.filter(m => !watchlistIds.has(mkey(m.id, m.media_type)));
     return list;
   }, [movies, clientFilters, watchedIds, likedIds, watchlistIds]);
 
-  const watchedCount = movies.filter(m => watchedIds.has(m.id)).length;
+  const watchedCount = movies.filter(m => watchedIds.has(mkey(m.id, m.media_type))).length;
 
   return (
     <div
@@ -169,13 +169,13 @@ export function GenreMoviesScreen({
                         src={getImageUrl(m.poster_path, 'w342') || ''}
                         alt={getEnglishTitle(m)}
                         className={cn("w-full h-full object-cover",
-                          watchedIds.has(m.id) && clientFilters.fadeWatched && "opacity-40 grayscale")}
+                          watchedIds.has(mkey(m.id, m.media_type)) && clientFilters.fadeWatched && "opacity-40 grayscale")}
                       />
                     : <div className="w-full h-full flex items-center justify-center text-2xl text-film-subtle">
                         {mediaType === 'tv' ? '📺' : '🎬'}
                       </div>
                   }
-                  {watchedIds.has(m.id) && (
+                  {watchedIds.has(mkey(m.id, m.media_type)) && (
                     <div className="absolute top-1.5 right-1.5 bg-green-500/90 rounded-full w-4 h-4 flex items-center justify-center">
                       <span className="text-white text-[8px] font-bold">✓</span>
                     </div>
@@ -222,11 +222,11 @@ export function GenreMoviesScreen({
                         src={getImageUrl(m.poster_path, 'w92') || ''}
                         alt={getEnglishTitle(m)}
                         className={cn("w-full h-full object-cover",
-                          watchedIds.has(m.id) && clientFilters.fadeWatched && "opacity-40 grayscale")}
+                          watchedIds.has(mkey(m.id, m.media_type)) && clientFilters.fadeWatched && "opacity-40 grayscale")}
                       />
                     : <div className="w-full h-full flex items-center justify-center text-base">{mediaType === 'tv' ? '📺' : '🎬'}</div>
                   }
-                  {watchedIds.has(m.id) && (
+                  {watchedIds.has(mkey(m.id, m.media_type)) && (
                     <div className="absolute top-1 right-1 w-3.5 h-3.5 bg-green-900/80 rounded-full flex items-center justify-center">
                       <span className="text-green-300 text-[7px] font-bold">✓</span>
                     </div>

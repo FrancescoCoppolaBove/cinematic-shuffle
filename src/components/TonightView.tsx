@@ -7,12 +7,12 @@ import { RefreshCw, Clock, Star, Bookmark, Play, ChevronRight } from 'lucide-rea
 import type { WatchedMovie, WatchlistItem } from '../types';
 import { useTonightPick, type TonightPick } from '../hooks/useTonightPick';
 import { getImageUrl, getEnglishTitle, getOriginalTitle, getReleaseDate } from '../services/tmdb';
-import { formatYear, formatRating, cn } from '../utils';
+import { formatYear, formatRating, cn, mkey } from '../utils';
 
 interface TonightViewProps {
   watchlist: WatchlistItem[];
   watchedMovies: WatchedMovie[];
-  watchedIds: Set<number>;
+  watchedIds: Set<string>;
   favoriteProviderIds: number[];
   onOpenMovie: (id: number, mediaType: 'movie' | 'tv') => void;
   onSetupProviders: () => void;
@@ -152,7 +152,7 @@ export function TonightView({ watchlist, watchedMovies, watchedIds, favoriteProv
       {/* Footer: quanti film in watchlist non ancora visti */}
       <div className="text-center pt-2">
         <p className="text-film-subtle text-xs">
-          {watchlist.filter(i => !watchedIds.has(i.id)).length} movies on your watchlist to watch
+          {watchlist.filter(i => !watchedIds.has(mkey(i.id, i.media_type))).length} movies on your watchlist to watch
         </p>
       </div>
     </div>

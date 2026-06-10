@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { Eye } from 'lucide-react';
 import type { WatchedMovie, TMDBMovieDetail } from '../types';
 import { getImageUrl, getMovieDetail, getEnglishTitle, getReleaseDate } from '../services/tmdb';
-import { formatYear, formatRating } from '../utils';
+import { formatYear, formatRating, mkey } from '../utils';
 import { MovieCard } from './MovieCard';
 import { GridControls, DEFAULT_GRID_FILTERS } from './GridControls';
 import type { GridFilters, ViewMode } from './GridControls';
@@ -10,15 +10,15 @@ import { CardView } from './CardView';
 
 interface WatchedViewProps {
   watchedMovies: WatchedMovie[];
-  watchedIds: Set<number>;
-  watchlistIds: Set<number>;
+  watchedIds: Set<string>;
+  watchlistIds: Set<string>;
   loading: boolean;
   getPersonalRating: (id: number) => number | null;
   onMarkWatched: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
   onUnmarkWatched: (id: number) => Promise<void>;
   onUpdateRating: (id: number, rating: number | null) => Promise<void>;
   onAddToWatchlist: (movie: TMDBMovieDetail) => Promise<void>;
-  likedIds?: Set<number>;
+  likedIds?: Set<string>;
   onToggleLiked?: (id: number) => Promise<void>;
   onRemoveFromWatchlist: (id: number) => Promise<void>;
   onOpenMovieGlobal?: (id: number, mediaType: 'movie' | 'tv', playlist?: import('../hooks/useNavigationStack').PlaylistItem[], index?: number) => void;
@@ -91,8 +91,8 @@ onOpenMovieGlobal,
         </button>
         <MovieCard
           movie={selectedMovie}
-          isWatched={watchedIds.has(selectedMovie.id)}
-          isOnWatchlist={watchlistIds.has(selectedMovie.id)}
+          isWatched={watchedIds.has(mkey(selectedMovie.id, selectedMovie.media_type))}
+          isOnWatchlist={watchlistIds.has(mkey(selectedMovie.id, selectedMovie.media_type))}
           personalRating={getPersonalRating(selectedMovie.id)}
           showShuffleBtn={false}
           onMarkWatched={r => onMarkWatched(selectedMovie, r)}

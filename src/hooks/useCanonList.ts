@@ -3,6 +3,7 @@
  * TMDB con cache su localStorage, e calcola quanti ne ha visti l'utente.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { mkey } from '../utils';
 import type { CanonList } from '../data/canonLists';
 import { searchMovieByTitleYear, type ResolvedFilm } from '../services/tmdb';
 
@@ -30,7 +31,7 @@ function writeCache(title: string, year: number, v: ResolvedFilm | null) {
   try { localStorage.setItem(cacheKey(title, year), v ? JSON.stringify(v) : 'null'); } catch { /* quota */ }
 }
 
-export function useCanonList(list: CanonList, watchedIds: Set<number>) {
+export function useCanonList(list: CanonList, watchedIds: Set<string>) {
   const [entries, setEntries] = useState<CanonEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
@@ -79,7 +80,7 @@ export function useCanonList(list: CanonList, watchedIds: Set<number>) {
     for (const e of entries) {
       if (!e.resolved) continue;
       t++;
-      if (watchedIds.has(e.resolved.id)) w++;
+      if (watchedIds.has(mkey(e.resolved.id, 'movie'))) w++;
     }
     return { watchedCount: w, total: t };
   }, [entries, watchedIds]);

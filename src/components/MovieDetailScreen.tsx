@@ -9,7 +9,7 @@ import {
   getImageUrl, getProviderLogoUrl, getEnglishTitle, getOriginalTitle, getReleaseDate,
   getBestTrailer, getWatchProviders, getCollection,
 } from '../services/tmdb';
-import { formatRuntime, formatYear, formatRating, cn } from '../utils';
+import { formatRuntime, formatYear, formatRating, cn, mkey } from '../utils';
 import { getAuth } from 'firebase/auth';
 import { fetchWatchedEpisodes, toggleWatchedEpisode, markAllEpisodesInSeason,
   fetchReviewsForMovie, voteReview, saveReview, fetchUserReview } from '../services/firestore';
@@ -47,9 +47,9 @@ interface MovieDetailScreenProps {
   onOpenMovie?: (id: number, mediaType: 'movie' | 'tv') => void;
   isLiked?: boolean;
   rewatchCount?: number;
-  watchedIds?: Set<number>;
-  watchlistIds?: Set<number>;
-  likedIds?: Set<number>;
+  watchedIds?: Set<string>;
+  watchlistIds?: Set<string>;
+  likedIds?: Set<string>;
   getPersonalRatingFull?: (id: number) => number | null;
   getRewatchCountFull?: (id: number) => number;
   onMarkWatchedFull?: (movie: import('../types').TMDBMovieDetail, rating: number | null) => Promise<void>;
@@ -678,7 +678,7 @@ export function MovieDetailScreen({
                   <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
                     {collectionParts?.map(part => (
                       <RelatedCard key={part.id} item={part} isCurrent={part.id === movie.id}
-                        isWatched={(propWatchedIds ?? new Set()).has(part.id)}
+                        isWatched={(propWatchedIds ?? new Set()).has(mkey(part.id, 'movie'))}
                         mediaType="movie" onClick={() => onOpenMovie?.(part.id, 'movie')} />
                     ))}
                   </div>
@@ -775,7 +775,7 @@ export function MovieDetailScreen({
                 <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
                   {similar.map(item => (
                     <RelatedCard key={item.id} item={item} isCurrent={false}
-                      isWatched={(propWatchedIds ?? new Set()).has(item.id)}
+                      isWatched={(propWatchedIds ?? new Set()).has(mkey(item.id, movie.media_type))}
                       mediaType={movie.media_type} onClick={() => onOpenMovie?.(item.id, movie.media_type)} />
                   ))}
                 </div>

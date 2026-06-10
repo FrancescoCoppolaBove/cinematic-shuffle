@@ -7,7 +7,7 @@ import { RatingModal } from './RatingModal';
 import { PersonInner, GenreInner } from './InnerMovieDetail';
 import { MovieDetailTabs } from './MovieDetailTabs';
 import type { RatingResult } from './RatingModal';
-import { cn } from '../utils';
+import { cn, mkey } from '../utils';
 import type { WatchedMovie } from '../types';
 import { useUserTaste } from '../hooks/useUserTaste';
 import { getImageUrl, getTitle, getEnglishTitle, getOriginalTitle, getReleaseDate, getBestTrailer, getWatchProviders, getProviderLogoUrl } from '../services/tmdb';
@@ -15,8 +15,8 @@ import { formatYear, formatRating, formatRuntime } from '../utils';
 import { Star, Clock, MapPin } from 'lucide-react';
 
 interface ShuffleViewProps {
-  watchedIds: Set<number>;
-  watchlistIds: Set<number>;
+  watchedIds: Set<string>;
+  watchlistIds: Set<string>;
   watchedMovies: WatchedMovie[];
   getPersonalRating: (id: number) => number | null;
   onMarkWatched: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
@@ -24,7 +24,7 @@ interface ShuffleViewProps {
   onUpdateRating: (id: number, rating: number | null) => Promise<void>;
   onAddToWatchlist: (movie: TMDBMovieDetail) => Promise<void>;
   onRemoveFromWatchlist: (id: number) => Promise<void>;
-  likedIds?: Set<number>;
+  likedIds?: Set<string>;
   onToggleLiked?: (id: number) => Promise<void>;
   onIncrementRewatch?: (id: number, delta: number) => Promise<void>;
   onOpenMovieGlobal?: (id: number, mediaType: 'movie' | 'tv') => void;
@@ -84,9 +84,9 @@ export function ShuffleView({
   const { movie, loading, error, hasSearched, shuffle } = useShuffle();
   const { profile, getStrategyAndFilters } = useUserTaste(watchedMovies);
 
-  const isWatched = movie ? watchedIds.has(movie.id) : false;
-  const isOnWatchlist = movie ? watchlistIds.has(movie.id) : false;
-  const isLiked = movie ? (likedIds?.has(movie.id) ?? false) : false;
+  const isWatched = movie ? watchedIds.has(mkey(movie.id, movie.media_type)) : false;
+  const isOnWatchlist = movie ? watchlistIds.has(mkey(movie.id, movie.media_type)) : false;
+  const isLiked = movie ? (likedIds?.has(mkey(movie.id, movie.media_type)) ?? false) : false;
   const personalRating = movie ? getPersonalRating(movie.id) : null;
   const rewatchCount = movie ? (watchedMovies.find(m => m.id === movie.id)?.rewatchCount ?? 0) : 0;
 
@@ -396,7 +396,7 @@ interface ShuffleMovieCardProps {
   isWatched: boolean;
   isOnWatchlist: boolean;
   rewatchCount: number;
-  watchedIds?: Set<number>;
+  watchedIds?: Set<string>;
   onShuffle: () => void;
   onOpenRating: () => void;
   onWatchlistToggle: () => void;
@@ -547,13 +547,13 @@ function ShuffleMovieCard({
               <DoubleFeaturePoster
                 posterPath={partner.poster_path}
                 title={getTitle(partner)}
-                watched={watchedIds.has(partner.id)}
+                watched={watchedIds.has(mkey(partner.id, partner.media_type))}
                 onClick={() => onOpenMovieId(partner.id, partner.media_type ?? (isTV ? 'tv' : 'movie'))}
               />
             </div>
             <button onClick={() => {
               const pool = similar.filter(s => s.poster_path && s.id !== partner.id);
-              const fresh = pool.filter(s => !watchedIds.has(s.id));
+              const fresh = pool.filter(s => !watchedIds.has(mkey(s.id, s.media_type)));
               const arr = fresh.length ? fresh : pool;
               if (arr.length) setPartner(arr[Math.floor(Math.random() * arr.length)]);
             }} className="w-full py-1.5 text-film-accent text-xs active:opacity-70">↻ Change second film</button>
@@ -562,7 +562,7 @@ function ShuffleMovieCard({
           <button
             onClick={() => {
               const pool = similar.filter(s => s.poster_path);
-              const fresh = pool.filter(s => !watchedIds.has(s.id));
+              const fresh = pool.filter(s => !watchedIds.has(mkey(s.id, s.media_type)));
               const arr = fresh.length ? fresh : pool;
               if (arr.length) setPartner(arr[Math.floor(Math.random() * arr.length)]);
             }}
@@ -609,7 +609,7 @@ function ShuffleMovieCard({
                 className="shrink-0 w-20 text-left active:scale-95 transition-all">
                 <div className="w-20 aspect-[2/3] rounded-xl overflow-hidden bg-film-surface border border-film-border">
                   {item.poster_path
-                    ? <img src={getImageUrl(item.poster_path, 'w185') || ''} alt={getTitle(item)} className={`w-full h-full object-cover${watchedIds.has(item.id) ? ' opacity-40 grayscale' : ''}`} />
+                    ? <img src={getImageUrl(item.poster_path, 'w185') || ''} alt={getTitle(item)} className={`w-full h-full object-cover${watchedIds.has(mkey(item.id, item.media_type)) ? ' opacity-40 grayscale' : ''}`} />
                     : <div className="w-full h-full flex items-center justify-center text-lg">{isTV ? '📺' : '🎬'}</div>
                   }
                 </div>

@@ -31,3 +31,9 @@ export function formatDate(isoString: string): string {
 export function cn(...classes: (string | false | null | undefined)[]): string {
   return classes.filter(Boolean).join(' ');
 }
+
+// Composite key for the watched/watchlist/liked Sets: movies and TV shows can
+// share the same numeric TMDB id, so identity must include the media type.
+export function mkey(id: number, mt?: string): string {
+  return `${mt === 'tv' ? 'tv' : 'movie'}:${id}`;
+}

@@ -7,15 +7,15 @@ import { ChevronLeft } from 'lucide-react';
 import { InnerMovieDetail } from './InnerMovieDetail';
 import type { TMDBPerson, TMDBPersonCredits, TMDBPersonCreditMovie } from '../services/tmdb';
 import { getPersonDetail, getPersonCredits, getImageUrl, getTitle, getReleaseDate } from '../services/tmdb';
-import { formatYear, cn } from '../utils';
+import { formatYear, cn, mkey } from '../utils';
 
 interface PersonDetailScreenProps {
   personId: number;
   personName: string;
   backLabel?: string;
-  watchedIds: Set<number>;
-  watchlistIds?: Set<number>;
-  likedIds?: Set<number>;
+  watchedIds: Set<string>;
+  watchlistIds?: Set<string>;
+  likedIds?: Set<string>;
   getPersonalRating?: (id: number) => number | null;
   onMarkWatched?: (movie: import('../types').TMDBMovieDetail, rating: number | null) => Promise<void>;
   onUnmarkWatched?: (id: number) => Promise<void>;
@@ -62,20 +62,20 @@ export function PersonDetailScreen({
   }, {}) ?? {};
 
   const castCount = credits?.cast.length ?? 0;
-  const watchedCastCount = credits?.cast.filter(m => watchedIds.has(m.id)).length ?? 0;
+  const watchedCastCount = credits?.cast.filter(m => watchedIds.has(mkey(m.id, m.media_type))).length ?? 0;
   const watchedCrewCount = Object.values(crewByDepartment).flat()
-    .filter((m, i, a) => a.findIndex(x => x.id === m.id) === i && watchedIds.has(m.id)).length;
+    .filter((m, i, a) => a.findIndex(x => x.id === m.id) === i && watchedIds.has(mkey(m.id, m.media_type))).length;
 
   // Completismo: filmografia "principale" della persona (regia se regista,
   // altrimenti recitazione) per il banner in cima.
   const directingCredits = crewByDepartment['Directing'] ?? [];
   const isDirector = (person?.known_for_department === 'Directing') || directingCredits.length > castCount;
   const primaryCredits = isDirector ? directingCredits : (credits?.cast ?? []);
-  const primaryWatched = primaryCredits.filter(m => watchedIds.has(m.id)).length;
+  const primaryWatched = primaryCredits.filter(m => watchedIds.has(mkey(m.id, m.media_type))).length;
   const primaryPct = primaryCredits.length ? Math.round((primaryWatched / primaryCredits.length) * 100) : 0;
   const primaryLabel = isDirector ? 'Director filmography' : 'Acting filmography';
   const passesFilters = (m: { id: number; media_type: 'movie' | 'tv' }) =>
-    (!onlyUnseen || !watchedIds.has(m.id)) &&
+    (!onlyUnseen || !watchedIds.has(mkey(m.id, m.media_type))) &&
     (mediaFilter === 'all' || m.media_type === mediaFilter);
 
   return (
@@ -231,7 +231,7 @@ export function PersonDetailScreen({
                       key={`cast-${m.id}`}
                       movie={m}
                       subtitle={m.character}
-                      isWatched={watchedIds.has(m.id)}
+                      isWatched={watchedIds.has(mkey(m.id, m.media_type))}
                       onClick={() => setInnerMovie({ id: m.id, mediaType: m.media_type })}
                     />
                   ))}
@@ -252,7 +252,7 @@ export function PersonDetailScreen({
                     return (order.indexOf(a) ?? 99) - (order.indexOf(b) ?? 99);
                   })
                   .map(([dept, movies]) => {
-                    const watched = movies.filter(m => watchedIds.has(m.id)).length;
+                    const watched = movies.filter(m => watchedIds.has(mkey(m.id, m.media_type))).length;
                     return (
                     <div key={dept}>
                       <div className="flex items-center gap-2 mb-3">
@@ -266,7 +266,7 @@ export function PersonDetailScreen({
                             key={`crew-${m.id}`}
                             movie={m}
                             subtitle={m.job ?? ''}
-                            isWatched={watchedIds.has(m.id)}
+                            isWatched={watchedIds.has(mkey(m.id, m.media_type))}
                             onClick={() => setInnerMovie({ id: m.id, mediaType: m.media_type })}
                           />
                         ))}

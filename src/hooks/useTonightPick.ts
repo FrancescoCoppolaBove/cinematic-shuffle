@@ -20,6 +20,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+import { mkey } from '../utils';
 import type { WatchedMovie, WatchlistItem } from '../types';
 import type { TMDBMovieBasic } from '../types';
 import {
@@ -113,8 +114,8 @@ export function buildTasteProfile(watched: WatchedMovie[]): TasteProfile {
   return { genreWeights, recentGenreIds, preferredRuntime, avgPersonalRating, qualityThreshold, topGenreIds, hasData: watched.length >= 3 };
 }
 
-function scoreItem(item: WatchlistItem, taste: TasteProfile, ctx: TimeContext, watchedIds: Set<number>): number {
-  if (watchedIds.has(item.id)) return -1;
+function scoreItem(item: WatchlistItem, taste: TasteProfile, ctx: TimeContext, watchedIds: Set<string>): number {
+  if (watchedIds.has(mkey(item.id, item.media_type))) return -1;
   let score = 0;
   const genreIds = item.genre_ids ?? [];
   if (genreIds.length > 0 && taste.hasData) {
@@ -191,7 +192,7 @@ const PROVIDER_INFO: Record<number, { name: string; logo: string }> = {
 export function useTonightPick(
   watchlist: WatchlistItem[],
   watchedMovies: WatchedMovie[],
-  watchedIds: Set<number>,
+  watchedIds: Set<string>,
   favoriteProviderIds: number[] = [],
   seed: number = 0
 ) {
@@ -207,7 +208,8 @@ export function useTonightPick(
   const [loading, setLoading] = useState(true);
 
   const allKnownIds = useMemo(() => {
-    const ids = new Set(watchedIds);
+    const ids = new Set<number>();
+    for (const k of watchedIds) ids.add(Number(k.split(':')[1]));
     watchlist.forEach(i => ids.add(i.id));
     return ids;
   }, [watchedIds, watchlist]);
@@ -216,7 +218,7 @@ export function useTonightPick(
     setLoading(true);
     const excludeIds = [...allKnownIds];
     const watchlistItems = watchlist
-      .filter(i => !watchedIds.has(i.id))
+      .filter(i => !watchedIds.has(mkey(i.id, i.media_type)))
       .map(i => ({ id: i.id, mediaType: i.media_type }));
 
     Promise.all([
@@ -238,7 +240,7 @@ export function useTonightPick(
   }, [seed, taste.topGenreIds, taste.qualityThreshold, favoriteProviderIds]);
 
   const picks = useMemo<TonightPick[]>(() => {
-    const available = watchlist.filter(i => !watchedIds.has(i.id));
+    const available = watchlist.filter(i => !watchedIds.has(mkey(i.id, i.media_type)));
     const result: TonightPick[] = [];
     const usedIds = new Set<number>();
 
@@ -336,21 +338,21 @@ export function useTonightPick(
     }
 
     // SLOT 6: Most talked-about
-    const trending = trendingItems.filter(m => !usedIds.has(m.id) && !watchedIds.has(m.id))[0];
+    const trending = trendingItems.filter(m => !usedIds.has(m.id) && !watchedIds.has(mkey(m.id, m.media_type)))[0];
     if (trending) {
       result.push({ item: toWatchlistLike(trending), score: 0, slot: 'trending', reason: "Everyone's talking about it this week", reasonEmoji: '🔥', fromWatchlist: false });
       usedIds.add(trending.id);
     }
 
     // SLOT 7: Breve e perfetto
-    const short = shortItems.filter(m => !usedIds.has(m.id) && !watchedIds.has(m.id))[0];
+    const short = shortItems.filter(m => !usedIds.has(m.id) && !watchedIds.has(mkey(m.id, m.media_type)))[0];
     if (short) {
       result.push({ item: toWatchlistLike(short), score: short.vote_average, slot: 'short', reason: 'Top quality in under 95 minutes', reasonEmoji: '⏱️', fromWatchlist: false });
       usedIds.add(short.id);
     }
 
     // SLOT 8: Stagione giusta
-    const seasonal = seasonalItems.filter(m => !usedIds.has(m.id) && !watchedIds.has(m.id))[0];
+    const seasonal = seasonalItems.filter(m => !usedIds.has(m.id) && !watchedIds.has(mkey(m.id, m.media_type)))[0];
     if (seasonal) {
       const sk = getSeasonalKeyword();
       result.push({ item: toWatchlistLike(seasonal), score: seasonal.vote_average, slot: 'seasonal', reason: sk?.label ?? 'Perfect for this time of year', reasonEmoji: sk?.emoji ?? '🗓️', fromWatchlist: false });
@@ -358,14 +360,14 @@ export function useTonightPick(
     }
 
     // SLOT 9: Consiglio cinefilo
-    const cinephile = cinephileItems.filter(m => !usedIds.has(m.id) && !watchedIds.has(m.id))[0];
+    const cinephile = cinephileItems.filter(m => !usedIds.has(m.id) && !watchedIds.has(mkey(m.id, m.media_type)))[0];
     if (cinephile) {
       result.push({ item: toWatchlistLike(cinephile), score: cinephile.vote_average, slot: 'cinephile', reason: `${cinephile.vote_average.toFixed(1)}/10 · Un gioiello poco conosciuto`, reasonEmoji: '🎞️', fromWatchlist: false });
       usedIds.add(cinephile.id);
     }
 
     // SLOT 10: Il mio consiglio
-    const personal = personalItems.filter(m => !usedIds.has(m.id) && !watchedIds.has(m.id))[0];
+    const personal = personalItems.filter(m => !usedIds.has(m.id) && !watchedIds.has(mkey(m.id, m.media_type)))[0];
     if (personal) {
       result.push({ item: toWatchlistLike(personal), score: personal.vote_average, slot: 'personal', reason: taste.hasData ? 'Picked for you based on your taste' : `${personal.vote_average.toFixed(1)}/10 · Worth it`, reasonEmoji: '💡', fromWatchlist: false });
     }

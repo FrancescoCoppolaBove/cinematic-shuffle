@@ -11,6 +11,7 @@
  * - Errore solo se TMDB restituisce zero risultati dopo 10 tentativi
  */
 import { useState, useCallback, useRef } from 'react';
+import { mkey } from '../utils';
 import type { TMDBMovieDetail, TMDBMovieBasic, MovieFilters } from '../types';
 import { getMovieDetail, getShuffleHistory, addToShuffleHistory } from '../services/tmdb';
 import type { QueryStrategyResult, UserProfile } from './useUserTaste';
@@ -105,7 +106,7 @@ export function useShuffle() {
 
   const shuffle = useCallback(async (
     strategyResult: QueryStrategyResult,
-    watchedIds: Set<number>,
+    watchedIds: Set<string>,
     profile: UserProfile
   ) => {
     setState(prev => ({ ...prev, loading: true, error: null }));
@@ -150,8 +151,8 @@ export function useShuffle() {
         // Tentativi 7-9: ignora watchedStatus (fallback se visto tutto)
         const pool = attempt < 7
           ? results.filter(m => {
-              if (watchedStatus === 'unwatched') return !watchedIds.has(m.id);
-              if (watchedStatus === 'watched')   return  watchedIds.has(m.id);
+              if (watchedStatus === 'unwatched') return !watchedIds.has(mkey(m.id, mediaType));
+              if (watchedStatus === 'watched')   return  watchedIds.has(mkey(m.id, mediaType));
               return true;
             })
           : results;

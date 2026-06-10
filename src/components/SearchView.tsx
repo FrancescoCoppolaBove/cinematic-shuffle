@@ -16,16 +16,16 @@ import {
 } from '../services/tmdb';
 import type { PersonSearchResult, CompanySearchResult } from '../services/tmdb';
 import { TMDB_MOVIE_GENRES, COMMON_LANGUAGES, COMMON_COUNTRIES } from '../types';
-import { formatYear, formatRating, cn } from '../utils';
+import { formatYear, formatRating, cn, mkey } from '../utils';
 import { InnerMovieDetail } from './InnerMovieDetail';
 import { PersonDetailScreen } from './PersonDetailScreen';
 import { BrowseListScreen } from './BrowseListScreen';
 import type { BrowseSource } from './BrowseListScreen';
 
 interface SearchViewProps {
-  watchedIds: Set<number>;
-  watchlistIds: Set<number>;
-  likedIds?: Set<number>;
+  watchedIds: Set<string>;
+  watchlistIds: Set<string>;
+  likedIds?: Set<string>;
   getPersonalRating?: (id: number) => number | null;
   onMarkWatched?: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
   onUnmarkWatched?: (id: number) => Promise<void>;
@@ -254,9 +254,9 @@ export function SearchView({
                     className={cn("w-full flex items-center gap-3 px-4 py-3 active:bg-film-surface/50 text-left", i < filmResults.length - 1 && "border-b border-film-border/40")}>
                     <div className="relative shrink-0 w-9 h-[52px] rounded-md overflow-hidden bg-film-surface">
                       {r.poster_path
-                        ? <img src={getImageUrl(r.poster_path, 'w92') || ''} alt={getEnglishTitle(r)} className={cn("w-full h-full object-cover", watchedIds.has(r.id) && "opacity-40 grayscale")} />
+                        ? <img src={getImageUrl(r.poster_path, 'w92') || ''} alt={getEnglishTitle(r)} className={cn("w-full h-full object-cover", watchedIds.has(mkey(r.id, r.media_type)) && "opacity-40 grayscale")} />
                         : <div className="w-full h-full flex items-center justify-center text-xs">{r.media_type === 'tv' ? '📺' : '🎬'}</div>}
-                      {watchedIds.has(r.id) && <div className="absolute inset-0 flex items-end justify-center pb-0.5"><span className="text-green-400 text-[8px] font-bold">✓</span></div>}
+                      {watchedIds.has(mkey(r.id, r.media_type)) && <div className="absolute inset-0 flex items-end justify-center pb-0.5"><span className="text-green-400 text-[8px] font-bold">✓</span></div>}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-film-text text-sm font-medium truncate">{getEnglishTitle(r)}</p>

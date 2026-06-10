@@ -3,6 +3,7 @@ import type {
   SearchResult, TrendingItem,
 } from '../types';
 import { DECADES } from '../types';
+import { mkey } from '../utils';
 
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMG_BASE = 'https://image.tmdb.org/t/p';
@@ -612,7 +613,7 @@ function weightedRandomPage(totalPages: number): number {
 
 export async function getRandomContent(
   filters: MovieFilters,
-  watchedIds: Set<number>
+  watchedIds: Set<string>
 ): Promise<TMDBMovieDetail | null> {
   const history = getShuffleHistory();
   const recentHistory = new Set(history.slice(0, 20)); // escludi gli ultimi 20
@@ -640,8 +641,8 @@ export async function getRandomContent(
   for (const page of pageCandidates) {
     const response = page === 1 ? first : await discoverContent(filters, page);
     const candidates = response.results.filter(m => {
-      if (filters.watchedStatus === 'unwatched' && watchedIds.has(m.id)) return false;
-      if (filters.watchedStatus === 'watched' && !watchedIds.has(m.id)) return false;
+      if (filters.watchedStatus === 'unwatched' && watchedIds.has(mkey(m.id, m.media_type))) return false;
+      if (filters.watchedStatus === 'watched' && !watchedIds.has(mkey(m.id, m.media_type))) return false;
       return true;
     });
     // Preferisci film non visti di recente nello shuffle
@@ -659,8 +660,8 @@ export async function getRandomContent(
 
   // Fallback: usa qualsiasi film dalla prima pagina che rispetti i filtri
   const fallback = first.results.find(m => {
-    if (filters.watchedStatus === 'unwatched' && watchedIds.has(m.id)) return false;
-    if (filters.watchedStatus === 'watched' && !watchedIds.has(m.id)) return false;
+    if (filters.watchedStatus === 'unwatched' && watchedIds.has(mkey(m.id, m.media_type))) return false;
+    if (filters.watchedStatus === 'watched' && !watchedIds.has(mkey(m.id, m.media_type))) return false;
     return true;
   });
   if (!fallback) return null;

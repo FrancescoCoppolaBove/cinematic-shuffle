@@ -33,9 +33,9 @@ interface ProfileViewProps {
   user: User;
   watchedMovies: WatchedMovie[];
   watchlist: WatchlistItem[];
-  watchedIds: Set<number>;
-  watchlistIds: Set<number>;
-  likedIds: Set<number>;
+  watchedIds: Set<string>;
+  watchlistIds: Set<string>;
+  likedIds: Set<string>;
   getPersonalRating: (id: number) => number | null;
   onUpdateRating: (id: number, rating: number | null) => Promise<void>;
   favoriteProviderIds: number[];

@@ -11,12 +11,12 @@ import { useCanonList } from '../hooks/useCanonList';
 import { getImageUrl } from '../services/tmdb';
 import { InnerMovieDetail } from './InnerMovieDetail';
 import type { TMDBMovieDetail } from '../types';
-import { cn } from '../utils';
+import { cn, mkey } from '../utils';
 
 // Callback necessari per aprire il dettaglio del film dentro la lista.
 export interface CanonMovieActions {
-  watchlistIds: Set<number>;
-  likedIds: Set<number>;
+  watchlistIds: Set<string>;
+  likedIds: Set<string>;
   getPersonalRating: (id: number) => number | null;
   onMarkWatched: (movie: TMDBMovieDetail, rating: number | null) => Promise<void>;
   onUnmarkWatched: (id: number) => Promise<void>;
@@ -27,7 +27,7 @@ export interface CanonMovieActions {
 }
 
 interface Props extends CanonMovieActions {
-  watchedIds: Set<number>;
+  watchedIds: Set<string>;
 }
 
 export function CanonChecklists({ watchedIds, ...actions }: Props) {
@@ -65,7 +65,7 @@ export function CanonChecklists({ watchedIds, ...actions }: Props) {
 }
 
 function CanonCard({ list, watchedIds, onClick }: {
-  list: CanonList; watchedIds: Set<number>; onClick: () => void;
+  list: CanonList; watchedIds: Set<string>; onClick: () => void;
 }) {
   const { watchedCount, total, loading, progress } = useCanonList(list, watchedIds);
   const pct = total > 0 ? Math.round((watchedCount / total) * 100) : 0;
@@ -89,14 +89,14 @@ function CanonCard({ list, watchedIds, onClick }: {
 }
 
 function CanonListScreen({ list, watchedIds, actions, onBack }: {
-  list: CanonList; watchedIds: Set<number>; actions: CanonMovieActions; onBack: () => void;
+  list: CanonList; watchedIds: Set<string>; actions: CanonMovieActions; onBack: () => void;
 }) {
   const { entries, watchedCount, total, loading, progress } = useCanonList(list, watchedIds);
   const [onlyUnseen, setOnlyUnseen] = useState(false);
   const [innerMovie, setInnerMovie] = useState<number | null>(null);
   const pct = total > 0 ? Math.round((watchedCount / total) * 100) : 0;
 
-  const visible = entries.filter(e => e.resolved && (!onlyUnseen || !watchedIds.has(e.resolved!.id)));
+  const visible = entries.filter(e => e.resolved && (!onlyUnseen || !watchedIds.has(mkey(e.resolved!.id, 'movie'))));
 
   return createPortal((
     <div className="fixed inset-0 z-[110] bg-film-black flex flex-col" style={{ isolation: 'isolate' }}>
@@ -143,7 +143,7 @@ function CanonListScreen({ list, watchedIds, actions, onBack }: {
         <div className="grid grid-cols-3 gap-2">
           {visible.map(e => {
             const r = e.resolved!;
-            const isWatched = watchedIds.has(r.id);
+            const isWatched = watchedIds.has(mkey(r.id, 'movie'));
             const poster = getImageUrl(r.poster_path, 'w342');
             return (
               <button key={e.key} onClick={() => setInnerMovie(r.id)}
