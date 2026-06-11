@@ -154,7 +154,7 @@ export function ImportLetterboxd({ onImport, onClose }: Props) {
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-green-400">
                 <CheckCircle size={20} />
-                <p className="text-film-text font-medium">{result.imported} film importati 🎉</p>
+                <p className="text-film-text font-medium">{result.imported} titles imported 🎉</p>
               </div>
               {result.notFound.length > 0 && (
                 <div className="bg-film-surface border border-film-border rounded-xl p-3">

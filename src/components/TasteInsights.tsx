@@ -157,36 +157,15 @@ export function TasteInsights({ watchedMovies, onOpenPerson }: {
         onOpenPerson={onOpenPerson}
       />
 
-      {/* Attori più visti (top 10) — avatar scorrevoli */}
-      <div className="bg-film-surface border border-film-border rounded-2xl p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Users size={14} className="text-film-accent" />
-          <span className="text-film-subtle text-xs uppercase tracking-widest">Most-watched actors</span>
-        </div>
-        {topActors.length === 0 ? (
-          creditsLoading ? (
-            <>
-              <div className="flex gap-3 -mx-1 px-1">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="flex flex-col items-center gap-1.5 w-16 shrink-0">
-                    <div className="w-16 h-16 rounded-full bg-film-card animate-pulse" />
-                    <div className="w-12 h-2 rounded bg-film-card animate-pulse" />
-                  </div>
-                ))}
-              </div>
-              <LoadingHint pct={pct} />
-            </>
-          ) : (
-            <p className="text-film-subtle text-xs">No data</p>
-          )
-        ) : (
-          <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-1 px-1">
-            {topActors.slice(0, 10).map((p, i) => (
-              <ActorAvatar key={p.id} person={p} rank={i + 1} onOpenPerson={onOpenPerson} />
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Attori più visti (top 10) — classifica verticale come i registi */}
+      <PeopleRanking
+        icon={<Users size={14} />}
+        title="Most-watched actors"
+        people={topActors.slice(0, 10)}
+        loading={creditsLoading && topActors.length === 0}
+        pct={pct}
+        onOpenPerson={onOpenPerson}
+      />
 
       {/* Attività dell'anno */}
       {stats.thisYearCount > 0 && (
@@ -262,31 +241,6 @@ function PeopleRanking({ icon, title, people, loading, pct, onOpenPerson }: {
         </div>
       )}
     </div>
-  );
-}
-
-function ActorAvatar({ person, rank, onOpenPerson }: {
-  person: RankedPerson; rank: number;
-  onOpenPerson?: (id: number, name: string) => void;
-}) {
-  const photo = getImageUrl(person.profile_path, 'w185');
-  return (
-    <button
-      onClick={() => onOpenPerson?.(person.id, person.name)}
-      disabled={!onOpenPerson}
-      className="flex flex-col items-center gap-1.5 w-16 shrink-0 active:opacity-60 disabled:active:opacity-100"
-    >
-      <div className="relative w-16 h-16 rounded-full overflow-hidden bg-film-card border border-film-border">
-        {photo
-          ? <img src={photo} alt={person.name} className="w-full h-full object-cover" />
-          : <div className="w-full h-full flex items-center justify-center text-film-subtle text-lg">{person.name[0]}</div>}
-        <span className="absolute -top-0.5 -left-0.5 w-5 h-5 rounded-full bg-film-accent text-film-black text-[10px] font-bold flex items-center justify-center border-2 border-film-surface">
-          {rank}
-        </span>
-      </div>
-      <span className="text-film-text text-[11px] text-center leading-tight line-clamp-2">{getPersonName(person.name)}</span>
-      <span className="text-film-subtle text-[10px]">{person.count} {person.count === 1 ? 'title' : 'titles'}</span>
-    </button>
   );
 }
 

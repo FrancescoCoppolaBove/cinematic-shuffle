@@ -281,7 +281,7 @@ export function ShuffleView({
             </div>
             <p className="text-base">Press Shuffle to discover</p>
             <p className="text-sm text-film-subtle">
-              {filters.mediaType === 'tv' ? 'una serie TV' : filters.mediaType === 'both' ? 'qualcosa di nuovo' : 'un film'}
+              {filters.mediaType === 'tv' ? 'a TV series' : filters.mediaType === 'both' ? 'something new' : 'a movie'}
             </p>
           </div>
         )}
