@@ -143,6 +143,10 @@ export function MovieDetailScreen({
   // Lo stato vive qui (non nell'overlay) così la barra di avanzamento e le
   // singole stagioni restano sincronizzate quando l'utente spunta gli episodi.
   const [watchedEps, setWatchedEps] = useState<Set<string>>(new Set());
+  // Ricarichiamo gli episodi visti anche quando cambia lo stato della serie o
+  // il flag "watched": marcare la serie come vista completa TUTTI gli episodi
+  // (markAllEpisodesCompleted) e unmark li azzera — la barra deve rifletterlo
+  // subito, senza dover riaprire il dettaglio.
   useEffect(() => {
     if (!isTV) { setWatchedEps(new Set()); return; }
     const uid = getAuth().currentUser?.uid;
@@ -152,7 +156,7 @@ export function MovieDetailScreen({
       .then(s => { if (alive) setWatchedEps(s); })
       .catch(() => {});
     return () => { alive = false; };
-  }, [isTV, movie.id]);
+  }, [isTV, movie.id, tvSeriesStatus, isWatched]);
 
   // Stagioni regolari (escludendo gli Special / stagione 0) usate per il
   // progresso complessivo; gli Special restano tracciabili a parte.
