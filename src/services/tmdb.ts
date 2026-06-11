@@ -765,12 +765,27 @@ export async function getPersonCredits(personId: number): Promise<TMDBPersonCred
     media_type: m.media_type === 'tv' ? 'tv' : 'movie',
   });
 
-  // Deduplicazione per id
+  // Deduplicazione per id (per il cast: una voce per film)
   const dedupe = (arr: TMDBPersonCreditMovie[]) => {
     const seen = new Set<number>();
     return arr.filter(m => {
       if (seen.has(m.id)) return false;
       seen.add(m.id);
+      return true;
+    });
+  };
+
+  // Crew: una persona può avere PIÙ ruoli sullo stesso film (es. un regista è
+  // spesso anche sceneggiatore e produttore → 3 voci con lo stesso id). NON
+  // deduplichiamo globalmente per id, altrimenti il film sopravvive in un solo
+  // reparto e sparisce da "Directing". Deduplichiamo per (id, reparto) così il
+  // film compare in OGNI reparto in cui la persona ha lavorato.
+  const dedupeCrewByDept = (arr: TMDBPersonCreditMovie[]) => {
+    const seen = new Set<string>();
+    return arr.filter(m => {
+      const key = `${m.id}-${m.department ?? m.job ?? 'Other'}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
       return true;
     });
   };
@@ -787,7 +802,7 @@ export async function getPersonCredits(personId: number): Promise<TMDBPersonCred
     .sort(sortBySignificance);
 
   // Crew: sort by popularity but also remove obvious duplicates per department
-  const crewFiltered = dedupe(data.crew.filter(isValidMedia).map(toItem))
+  const crewFiltered = dedupeCrewByDept(data.crew.filter(isValidMedia).map(toItem))
     .sort(sortBySignificance);
 
   return { cast: castFiltered, crew: crewFiltered };

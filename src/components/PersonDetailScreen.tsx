@@ -171,14 +171,14 @@ export function PersonDetailScreen({
               <TabBtn
                 active={tab === 'cast'}
                 onClick={() => setTab('cast')}
-                label="Come attore"
+                label="As actor"
                 badge={castCount}
                 watchedBadge={watchedCastCount}
               />
               <TabBtn
                 active={tab === 'crew'}
                 onClick={() => setTab('crew')}
-                label="Ruoli tecnici"
+                label="Crew"
                 badge={Object.values(crewByDepartment).flat().filter((m, i, a) => a.findIndex(x => x.id === m.id) === i).length}
                 watchedBadge={watchedCrewCount}
               />
@@ -216,9 +216,9 @@ export function PersonDetailScreen({
             <div>
               {castCount > 0 && (
                 <div className="flex items-center justify-between py-2 px-1 mb-3">
-                  <span className="text-film-subtle text-xs uppercase tracking-wider">Film come attore</span>
+                  <span className="text-film-subtle text-xs uppercase tracking-wider">Acting credits</span>
                   <span className={cn('text-xs font-medium', watchedCastCount > 0 ? 'text-green-400' : 'text-film-subtle')}>
-                    {watchedCastCount > 0 ? `${watchedCastCount} visti su ${castCount}` : `${castCount} totali`}
+                    {watchedCastCount > 0 ? `${watchedCastCount} of ${castCount} watched` : `${castCount} total`}
                   </span>
                 </div>
               )}
@@ -280,7 +280,7 @@ export function PersonDetailScreen({
         </div>
       ) : (
         <div className="text-center py-16 text-film-muted">
-          <p>Impossibile caricare i dettagli</p>
+          <p>Could not load details</p>
         </div>
       )}
       </div>
