@@ -18,6 +18,7 @@ import { saveReview, upsertUserPublicProfile } from '../services/firestore';
 import type { RatingResult } from './RatingModal';
 import { PersonDetailScreen } from './PersonDetailScreen';
 import { GenreMoviesScreen } from './GenreMoviesScreen';
+import { useTVStatus } from '../contexts/tvStatus';
 
 interface InnerMovieDetailProps {
   id: number;
@@ -50,6 +51,7 @@ export function InnerMovieDetail({
   onBack,
   tvStatus, onSetFollowing, onSetCompleted, onUnsetTVStatus,
 }: InnerMovieDetailProps) {
+  const tvCtx = useTVStatus();
   const [movie, setMovie] = useState<TMDBMovieDetail | null>(null);
   const [loading, setLoading] = useState(true);
   // Per aprire un altro film dai "simili" dentro questo overlay
@@ -185,10 +187,16 @@ export function InnerMovieDetail({
             setShowRatingModal(false);
             if (result.watched) {
               await onMarkWatched?.(movie, result.rating, result.liked);
-              if (movie.media_type === 'tv' && onSetCompleted) {
-                await onSetCompleted(movie, movie.seasons ?? []);
+              if (movie.media_type === 'tv') {
+                // setCompleted via prop o, se non cablato (es. dettaglio aperto
+                // da ricerca/persona/genere), via context.
+                if (onSetCompleted) await onSetCompleted(movie, movie.seasons ?? []);
+                else if (tvCtx) await tvCtx.setCompleted(movie, movie.seasons ?? []);
               }
             } else {
+              if (movie.media_type === 'tv' && !onUnsetTVStatus && tvCtx && tvCtx.tvStatus.get(movie.id)) {
+                await tvCtx.unsetTVStatus(movie.id);
+              }
               if (isWatched) await onUnmarkWatched?.(movie.id);
               if (movie.media_type === 'tv') await onUnsetTVStatus?.(movie.id);
             }

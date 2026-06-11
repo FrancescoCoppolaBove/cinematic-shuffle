@@ -8,6 +8,7 @@ import { AddToListModal } from './components/AddToListModal';
 import { OnboardingTaste } from './components/OnboardingTaste';
 import { useNavigationStack } from './hooks/useNavigationStack';
 import type { PlaylistItem } from './hooks/useNavigationStack';
+import { TVStatusContext } from './contexts/tvStatus';
 import { getMovieDetail } from './services/tmdb';
 import { HomeView } from './components/HomeView';
 import { TonightView } from './components/TonightView';
@@ -395,7 +396,6 @@ export default function App() {
     setDetailMovie(null);
   }, [navStack]);
 
-  // Shared props passed to all main views
   const sharedProps = {
     watchedIds, watchlistIds, watchedMovies,
     likedIds,
@@ -415,6 +415,13 @@ export default function App() {
     onSetCompleted: (movie: TMDBMovieDetail, seasons: { season_number: number; episode_count: number }[]) => setCompleted(movie, seasons),
     onUnsetTVStatus: (seriesId: number) => unsetTVStatus(seriesId),
   };
+
+  // Stato/azioni serie TV via context: il pulsante Follow e il completamento
+  // funzionano in OGNI dettaglio, anche aperto da ricerca/persona/genere/browse.
+  const tvCtxValue = useMemo(
+    () => ({ tvStatus, setFollowing, setCompleted, unsetTVStatus }),
+    [tvStatus, setFollowing, setCompleted, unsetTVStatus],
+  );
 
   // Extended opener that supports playlist context (for grids)
   const openWithPlaylist = useCallback((
@@ -446,6 +453,7 @@ export default function App() {
   }
 
   return (
+    <TVStatusContext.Provider value={tvCtxValue}>
     <div className="relative flex flex-col bg-film-black text-film-text" style={{ height: 'var(--app-height, calc(100dvh + env(safe-area-inset-bottom)))', overscrollBehavior: 'none' }}>
       <div className="fixed inset-0 pointer-events-none opacity-30 bg-grain z-50" />
 
@@ -791,5 +799,6 @@ export default function App() {
         />
       )}
     </div>
+    </TVStatusContext.Provider>
   );
 }

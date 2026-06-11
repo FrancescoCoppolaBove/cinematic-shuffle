@@ -24,6 +24,7 @@ import { PersonInner, GenreInner } from './InnerMovieDetail';
 import { BrowseListScreen } from './BrowseListScreen';
 import { StarRating } from './StarRating';
 import type { PlaylistItem } from '../hooks/useNavigationStack';
+import { useTVStatus } from '../contexts/tvStatus';
 
 interface MovieDetailScreenProps {
   movie: TMDBMovieDetail;
@@ -139,6 +140,21 @@ export function MovieDetailScreen({
   const backdrop = getImageUrl(movie.backdrop_path, 'w780');
   const isTV = movie.media_type === 'tv';
 
+  // Stato serie via context (funziona da QUALSIASI punto d'ingresso); cade sui
+  // prop se per qualche motivo il context non c'è.
+  const tvCtx = useTVStatus();
+  const seriesStatus: 'following' | 'completed' | null = isTV
+    ? (tvCtx ? (tvCtx.tvStatus.get(movie.id) ?? null) : (tvSeriesStatus ?? null))
+    : (tvSeriesStatus ?? null);
+
+  const handleToggleFollow = useCallback(async () => {
+    if (seriesStatus === 'following') {
+      if (tvCtx) await tvCtx.unsetTVStatus(movie.id); else await onUnsetTVStatus?.();
+    } else {
+      if (tvCtx) await tvCtx.setFollowing(movie.id, movie); else await onSetFollowing?.();
+    }
+  }, [seriesStatus, tvCtx, movie, onUnsetTVStatus, onSetFollowing]);
+
   // ── Avanzamento serie (episodi visti) ──────────────────────────
   // Lo stato vive qui (non nell'overlay) così la barra di avanzamento e le
   // singole stagioni restano sincronizzate quando l'utente spunta gli episodi.
@@ -156,7 +172,7 @@ export function MovieDetailScreen({
       .then(s => { if (alive) setWatchedEps(s); })
       .catch(() => {});
     return () => { alive = false; };
-  }, [isTV, movie.id, tvSeriesStatus, isWatched]);
+  }, [isTV, movie.id, seriesStatus, isWatched]);
 
   // Stagioni regolari (escludendo gli Special / stagione 0) usate per il
   // progresso complessivo; gli Special restano tracciabili a parte.
@@ -633,32 +649,26 @@ export function MovieDetailScreen({
                     onClick={() => onRequestRating?.()}
                     className={cn(
                       'flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border transition-all active:scale-95',
-                      tvSeriesStatus === 'completed'
+                      seriesStatus === 'completed'
                         ? 'border-green-600/50 bg-green-950/30 text-green-400'
                         : 'border-film-border bg-film-surface text-film-muted'
                     )}
                   >
                     <Eye size={14} />
-                    {tvSeriesStatus === 'completed' ? 'Completed ✓' : 'Watched'}
+                    {seriesStatus === 'completed' ? 'Completed ✓' : 'Watched'}
                   </button>
                   {/* "Sto seguendo" */}
                   <button
-                    onClick={async () => {
-                      if (tvSeriesStatus === 'following') {
-                        await onUnsetTVStatus?.();
-                      } else {
-                        await onSetFollowing?.();
-                      }
-                    }}
+                    onClick={handleToggleFollow}
                     className={cn(
                       'flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border transition-all active:scale-95',
-                      tvSeriesStatus === 'following'
+                      seriesStatus === 'following'
                         ? 'border-blue-500/50 bg-blue-950/30 text-blue-400'
                         : 'border-film-border bg-film-surface text-film-muted'
                     )}
                   >
                     <Tv size={14} />
-                    {tvSeriesStatus === 'following' ? 'Following 📺' : 'Follow'}
+                    {seriesStatus === 'following' ? 'Following 📺' : 'Follow'}
                   </button>
                 </>
               ) : (
