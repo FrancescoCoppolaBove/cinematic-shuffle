@@ -24,6 +24,7 @@ interface GenreMoviesScreenProps {
   onUnmarkWatched?: (id: number) => Promise<void>;
   onUpdateRating?: (id: number, rating: number | null) => Promise<void>;
   onToggleLiked?: (id: number) => Promise<void>;
+  onIncrementRewatch?: (id: number, delta: number) => Promise<void>;
   onAddToWatchlist?: (movie: TMDBMovieDetail) => Promise<void>;
   onRemoveFromWatchlist?: (id: number) => Promise<void>;
   onBack: () => void;
@@ -34,7 +35,7 @@ export function GenreMoviesScreen({
   id, name, type, mediaType,
   watchedIds, watchlistIds = new Set(), likedIds = new Set(),
   getPersonalRating, onMarkWatched, onUnmarkWatched, onUpdateRating,
-  onToggleLiked, onAddToWatchlist, onRemoveFromWatchlist,
+  onToggleLiked, onIncrementRewatch, onAddToWatchlist, onRemoveFromWatchlist,
   onBack, onOpenMovie: _onOpenMovie,
 }: GenreMoviesScreenProps) {
   const [movies, setMovies] = useState<TMDBMovieBasic[]>([]);
@@ -266,6 +267,7 @@ export function GenreMoviesScreen({
           onUnmarkWatched={onUnmarkWatched}
           onUpdateRating={onUpdateRating}
           onToggleLiked={onToggleLiked}
+          onIncrementRewatch={onIncrementRewatch}
           onAddToWatchlist={onAddToWatchlist}
           onRemoveFromWatchlist={onRemoveFromWatchlist}
           onBack={() => setInnerMovie(null)}

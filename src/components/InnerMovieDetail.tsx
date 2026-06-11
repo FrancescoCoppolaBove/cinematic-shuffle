@@ -287,6 +287,7 @@ export function PersonInner(props: {
         onMarkWatched={props.onMarkWatched}
         onUnmarkWatched={props.onUnmarkWatched}
         onToggleLiked={props.onToggleLiked}
+        onIncrementRewatch={props.onIncrementRewatch}
         onAddToWatchlist={props.onAddToWatchlist}
         onRemoveFromWatchlist={props.onRemoveFromWatchlist}
         onBack={props.onBack}
@@ -349,6 +350,7 @@ export function GenreInner(props: {
         onUnmarkWatched={props.onUnmarkWatched}
         onUpdateRating={props.onUpdateRating}
         onToggleLiked={props.onToggleLiked}
+        onIncrementRewatch={props.onIncrementRewatch}
         onAddToWatchlist={props.onAddToWatchlist}
         onRemoveFromWatchlist={props.onRemoveFromWatchlist}
         onBack={props.onBack}
