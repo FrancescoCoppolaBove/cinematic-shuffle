@@ -186,7 +186,7 @@ export function PersonDetailScreen({
             <div className="flex items-center gap-2 flex-wrap">
               {/* Segmentato tipo */}
               <div className="flex gap-1 bg-film-surface border border-film-border rounded-full p-0.5">
-                {([['all', 'Tutti'], ['movie', 'Film'], ['tv', 'Serie']] as const).map(([val, label]) => (
+                {([['all', 'All'], ['movie', 'Film'], ['tv', 'TV']] as const).map(([val, label]) => (
                   <button
                     key={val}
                     onClick={() => setMediaFilter(val)}
@@ -258,7 +258,7 @@ export function PersonDetailScreen({
                       <div className="flex items-center gap-2 mb-3">
                         <h3 className="text-film-subtle text-xs uppercase tracking-widest">{dept}</h3>
                         <span className="text-film-subtle text-xs">· {movies.length}</span>
-                        {watched > 0 && <span className="text-green-400 text-xs">· {watched} visti</span>}
+                        {watched > 0 && <span className="text-green-400 text-xs">· {watched} watched</span>}
                       </div>
                       <div className="grid grid-cols-3 gap-2">
                         {movies.filter(passesFilters).map(m => (

@@ -72,7 +72,7 @@ export function ShuffleCard({
                 isTV ? 'bg-purple-900/80 border-purple-500/50 text-purple-200' : 'bg-film-black/70 border-white/10 text-white/70'
               )}>
                 {isTV ? <Tv size={10} /> : <Film size={10} />}
-                {isTV ? 'Serie TV' : 'Film'}
+                {isTV ? 'Series' : 'Film'}
               </span>
             </div>
             {/* Trailer */}
@@ -207,7 +207,7 @@ export function ShuffleCard({
               )}
             >
               <Eye size={20} />
-              <span>{isWatched ? 'Visto ✓' : 'Watched'}</span>
+              <span>{isWatched ? 'Watched ✓' : 'Watch'}</span>
             </button>
 
             {/* Watchlist */}

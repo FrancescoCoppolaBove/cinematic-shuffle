@@ -125,7 +125,7 @@ export function ReviewDetailScreen({
               </button>
               <p className="text-film-subtle text-xs mt-0.5">
                 {new Date(review.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
-                {review.watchedOn && ` · Visto il ${new Date(review.watchedOn).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}`}
+                {review.watchedOn && ` · Watched on ${new Date(review.watchedOn).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}`}
               </p>
             </div>
           </div>

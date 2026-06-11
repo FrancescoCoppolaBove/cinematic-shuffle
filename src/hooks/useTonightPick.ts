@@ -278,7 +278,7 @@ export function useTonightPick(
           item: streaming.item,
           score: streaming.item.vote_average,
           slot: 'streaming',
-          reason: `Disponibile su ${pInfo?.name ?? 'una tua piattaforma'} — nessun costo extra`,
+          reason: `Available on ${pInfo?.name ?? 'one of your platforms'} — no extra cost`,
           reasonEmoji: '📺',
           fromWatchlist: true,
           providerName: pInfo?.name,

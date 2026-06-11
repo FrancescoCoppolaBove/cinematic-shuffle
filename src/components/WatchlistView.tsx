@@ -201,7 +201,7 @@ function WatchlistCard({
         onClick={onSelect}
         disabled={isLoading}
         className="absolute inset-0 w-full h-full"
-        aria-label={`Apri ${title}`}
+        aria-label={`Open ${title}`}
       >
         {poster
           ? <img

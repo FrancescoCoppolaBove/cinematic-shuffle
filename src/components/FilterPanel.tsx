@@ -132,14 +132,14 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
                   : 'bg-film-card text-film-muted hover:text-film-text border border-film-border'
               )}
             >
-              {opt === 'all' ? 'Tutti' : opt === 'unwatched' ? 'Unwatched' : 'Watched'}
+              {opt === 'all' ? 'All' : opt === 'unwatched' ? 'Unwatched' : 'Watched'}
             </button>
           ))}
         </div>
       </FilterSection>
 
       {/* Anno / Decade */}
-      <FilterSection icon={<Calendar size={14} />} label="Periodo">
+      <FilterSection icon={<Calendar size={14} />} label="Period">
         <div className="space-y-3">
           {/* Decade */}
           <div className="relative">
@@ -167,7 +167,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
               type="number"
               min={1900}
               max={new Date().getFullYear()}
-              placeholder="es. 1994"
+              placeholder="e.g. 1994"
               value={filters.year || ''}
               onChange={e => {
                 const val = e.target.value ? parseInt(e.target.value) : undefined;
@@ -286,7 +286,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
       {filters.mediaType !== 'tv' ? <FilterSection icon={<User size={14} />} label="Director">
         <input
           type="text"
-          placeholder="es. Christopher Nolan"
+          placeholder="e.g. Christopher Nolan"
           value={directorQuery}
           onChange={e => {
             setDirectorQuery(e.target.value);

@@ -123,9 +123,9 @@ export function GenreMoviesScreen({
           <div className="flex-1 min-w-0">
             <p className="text-film-text font-semibold truncate">{name}</p>
             <p className="text-film-subtle text-xs">
-              {type === 'genre' ? 'Genre' : 'Tema'} · {mediaType === 'tv' ? 'Serie TV' : 'Film'}
+              {type === 'genre' ? 'Genre' : 'Theme'} · {mediaType === 'tv' ? 'Series' : 'Film'}
               {watchedCount > 0 && (
-                <span className="text-green-400 ml-1.5">· {watchedCount} visti</span>
+                <span className="text-green-400 ml-1.5">· {watchedCount} watched</span>
               )}
             </p>
           </div>

@@ -54,7 +54,7 @@ export function ReviewEditor({
   const year = formatYear(getReleaseDate(movie));
   const today = new Date().toISOString().split('T')[0];
 
-  const repliesLabel = { all: 'Tutti possono rispondere', following: 'Solo chi seguo', none: 'None' };
+  const repliesLabel = { all: 'Everyone can reply', following: 'Only people I follow', none: 'None' };
 
   async function handleSave() {
     setSaving(true);

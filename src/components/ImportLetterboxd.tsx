@@ -100,7 +100,7 @@ export function ImportLetterboxd({ onImport, onClose }: Props) {
       setResult({ imported: items.length, notFound });
       setPhase('done');
     } catch {
-      setError('Errore nella lettura del file.');
+      setError('Could not read the file.');
       setPhase('idle');
     }
   }

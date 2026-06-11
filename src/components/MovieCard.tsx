@@ -107,7 +107,7 @@ export function MovieCard({
                   : 'bg-film-black/70 border-film-border/50 text-film-muted'
               )}>
                 {isTV ? <Tv size={10} /> : <Film size={10} />}
-                {isTV ? 'Serie TV' : 'Film'}
+                {isTV ? 'Series' : 'Film'}
               </span>
             </div>
             {/* Trailer button overlay on backdrop */}
@@ -158,7 +158,7 @@ export function MovieCard({
                       : 'bg-film-card border-film-border text-film-muted'
                   )}>
                     {isTV ? <Tv size={9} /> : <Film size={9} />}
-                    {isTV ? 'Serie TV' : 'Film'}
+                    {isTV ? 'Series' : 'Film'}
                   </span>
                 )}
 
@@ -262,7 +262,7 @@ export function MovieCard({
               {!isWatched ? (
                 <button onClick={() => setShowRatingModal(true)}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border border-film-border bg-film-card text-film-muted hover:text-film-text hover:border-film-accent transition-all active:scale-95">
-                  <Eye size={14} />Già visto
+                  <Eye size={14} />Watched ✓
                 </button>
               ) : (
                 <button onClick={onUnmarkWatched}

@@ -83,7 +83,7 @@ export function getReleaseDate(item: { release_date?: string; first_air_date?: s
 function getApiKey(): string {
   const key = (import.meta.env.VITE_TMDB_API_KEY as string | undefined)?.trim();
   if (!key || key === 'la_tua_tmdb_api_key_qui') {
-    throw new Error('API key TMDB mancante. Configura VITE_TMDB_API_KEY nel file .env');
+    throw new Error('Missing TMDB API key. Set VITE_TMDB_API_KEY in your .env file');
   }
   return key;
 }

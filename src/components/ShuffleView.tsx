@@ -184,7 +184,7 @@ export function ShuffleView({
                 {mt === 'movie' && <Film size={12} />}
                 {mt === 'tv' && <Tv size={12} />}
                 {mt === 'both' && <Shuffle size={12} />}
-                {mt === 'movie' ? 'Film' : mt === 'tv' ? 'Serie' : 'Tutti'}
+                {mt === 'movie' ? 'Film' : mt === 'tv' ? 'TV' : 'All'}
               </button>
             ))}
           </div>
@@ -522,7 +522,7 @@ function ShuffleMovieCard({
         <button onClick={onOpenRating}
           className={cn('flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl border transition-all active:scale-95 text-xs font-medium',
             isWatched ? 'border-green-600/50 bg-green-950/30 text-green-400' : 'border-film-border bg-film-surface text-film-muted')}>
-          <Eye size={20} /><span>{isWatched ? 'Visto ✓' : 'Watched'}</span>
+          <Eye size={20} /><span>{isWatched ? 'Watched ✓' : 'Watch'}</span>
         </button>
         <button onClick={onWatchlistToggle}
           className={cn('flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl border transition-all active:scale-95 text-xs font-medium',
