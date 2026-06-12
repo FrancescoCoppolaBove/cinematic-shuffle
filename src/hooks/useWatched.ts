@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { mkey } from '../utils';
+import { titleRuntimeMinutes } from '../utils/runtime';
 import type { User } from 'firebase/auth';
 import type { WatchedMovie, WatchlistItem, TMDBMovieDetail } from '../types';
 import { getTitle, getReleaseDate, getMovieDetail } from '../services/tmdb';
@@ -13,26 +14,6 @@ import {
   ensureWatchedSeriesMeta,
   type TVSeriesStatus, type FollowedSeries,
 } from '../services/firestore';
-
-/**
- * Minuti "guardati" da attribuire a un titolo nella libreria.
- * - Film: la durata del film.
- * - Serie TV: durata episodio × numero di episodi (stima dell'intera serie),
- *   così le ore guardate non contano una serie da 60 episodi come ~45 minuti.
- *   Fallback: durata di un singolo episodio se mancano i conteggi.
- */
-function titleRuntimeMinutes(movie: TMDBMovieDetail): number | null {
-  if (movie.media_type === 'tv') {
-    const eps = movie.number_of_episodes ?? 0;
-    const perEp = movie.episode_run_time?.[0] ?? 0;
-    // Molte serie su TMDB non espongono episode_run_time a livello di serie:
-    // in quel caso usiamo una stima prudente di 40 min/episodio così le ore
-    // non risultano 0 per show con decine di episodi.
-    if (eps > 0) return (perEp > 0 ? perEp : 40) * eps;
-    return perEp > 0 ? perEp : null;
-  }
-  return movie.runtime ?? null;
-}
 
 export function useWatched(user: User | null) {
   const [watchedMovies, setWatchedMovies] = useState<WatchedMovie[]>([]);

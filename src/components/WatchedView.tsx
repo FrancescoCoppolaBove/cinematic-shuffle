@@ -54,6 +54,10 @@ onOpenMovieGlobal,
     return list;
   }, [watchedMovies, filters]);
 
+  // Conteggi per il selettore Movies/TV (hook PRIMA di qualsiasi early return).
+  const movieCount = useMemo(() => watchedMovies.filter(m => m.media_type === 'movie').length, [watchedMovies]);
+  const tvCount = watchedMovies.length - movieCount;
+
   const handleSelect = useCallback(async (movie: WatchedMovie, playlist?: WatchedMovie[], index?: number) => {
     if (onOpenMovieGlobal) {
       // Solo passa la playlist se siamo in modalità card (playlist esplicita passata)
@@ -105,9 +109,6 @@ onOpenMovieGlobal,
       </div>
     );
   }
-
-  const movieCount = useMemo(() => watchedMovies.filter(m => m.media_type === 'movie').length, [watchedMovies]);
-  const tvCount = watchedMovies.length - movieCount;
 
   return (
     <div className="space-y-4">

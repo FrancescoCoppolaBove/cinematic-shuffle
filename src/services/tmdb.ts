@@ -4,6 +4,7 @@ import type {
 } from '../types';
 import { DECADES } from '../types';
 import { mkey } from '../utils';
+import { dedupeById, dedupeCrewByDept } from '../utils/credits';
 
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMG_BASE = 'https://image.tmdb.org/t/p';
@@ -19,6 +20,8 @@ export const getProviderLogoUrl = (path: string) => `${PROVIDER_IMG}${path}`;
 // Rileva se una stringa contiene caratteri non-latini (giapponese, coreano, cinese, arabo, russo, ecc.)
 function hasNonLatinChars(s: string): boolean {
   // Copre: CJK, Hangul, Hiragana, Katakana, Arabo, Ebraico, Cirillico, Thai, Devanagari, ecc.
+  // Il match \u00E8 per intervalli di code-unit (volutamente), non per equivalenza canonica.
+  // eslint-disable-next-line no-misleading-character-class
   return /[\u0370-\u03FF\u0400-\u04FF\u0600-\u06FF\u0900-\u097F\u0E00-\u0E7F\u3000-\u9FFF\uAC00-\uD7AF\uF900-\uFAFF]/.test(s);
 }
 
@@ -765,30 +768,7 @@ export async function getPersonCredits(personId: number): Promise<TMDBPersonCred
     media_type: m.media_type === 'tv' ? 'tv' : 'movie',
   });
 
-  // Deduplicazione per id (per il cast: una voce per film)
-  const dedupe = (arr: TMDBPersonCreditMovie[]) => {
-    const seen = new Set<number>();
-    return arr.filter(m => {
-      if (seen.has(m.id)) return false;
-      seen.add(m.id);
-      return true;
-    });
-  };
-
-  // Crew: una persona può avere PIÙ ruoli sullo stesso film (es. un regista è
-  // spesso anche sceneggiatore e produttore → 3 voci con lo stesso id). NON
-  // deduplichiamo globalmente per id, altrimenti il film sopravvive in un solo
-  // reparto e sparisce da "Directing". Deduplichiamo per (id, reparto) così il
-  // film compare in OGNI reparto in cui la persona ha lavorato.
-  const dedupeCrewByDept = (arr: TMDBPersonCreditMovie[]) => {
-    const seen = new Set<string>();
-    return arr.filter(m => {
-      const key = `${m.id}-${m.department ?? m.job ?? 'Other'}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  };
+  // Dedup cast/crew: helper puri in utils/credits (testati in isolamento).
 
   // Sort by popularity (reflects actual significance) with vote_average as tiebreaker
   // This ensures important films aren't missing even if they have niche ratings
@@ -798,7 +778,7 @@ export async function getPersonCredits(personId: number): Promise<TMDBPersonCred
     return (b.vote_average ?? 0) - (a.vote_average ?? 0);
   };
 
-  const castFiltered = dedupe(data.cast.filter(isValidMedia).map(toItem))
+  const castFiltered = dedupeById(data.cast.filter(isValidMedia).map(toItem))
     .sort(sortBySignificance);
 
   // Crew: sort by popularity but also remove obvious duplicates per department

@@ -1,5 +1,5 @@
 export function formatRuntime(minutes: number | null): string {
-  if (!minutes) return 'N/D';
+  if (!minutes) return 'N/A';
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   if (h === 0) return `${m}min`;
@@ -8,7 +8,7 @@ export function formatRuntime(minutes: number | null): string {
 }
 
 export function formatYear(dateStr: string): string {
-  if (!dateStr) return 'N/D';
+  if (!dateStr) return 'N/A';
   return dateStr.split('-')[0];
 }
 
@@ -18,7 +18,7 @@ export function formatRating(rating: number): string {
 
 export function formatDate(isoString: string): string {
   try {
-    return new Date(isoString).toLocaleDateString('it-IT', {
+    return new Date(isoString).toLocaleDateString('en-US', {
       day: 'numeric',
       month: 'long',
       year: 'numeric',

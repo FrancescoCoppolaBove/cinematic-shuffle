@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import {
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   onAuthStateChanged,
   type User,
 } from 'firebase/auth';
+import { Capacitor } from '@capacitor/core';
 import { auth, googleProvider, isFirebaseConfigured } from '../services/firebase';
 import { upsertUserPublicProfile } from '../services/firestore';
 
@@ -23,6 +26,12 @@ export function useAuth() {
 
   useEffect(() => {
     if (!isFirebaseConfigured()) return;
+
+    // Sul native il sign-in avviene via redirect: al rientro nell'app
+    // completiamo il flusso leggendo l'esito. Su web è un no-op innocuo.
+    getRedirectResult(auth).catch(err => {
+      setState(s => ({ ...s, loading: false, error: err?.message ?? null }));
+    });
 
     const unsub = onAuthStateChanged(
       auth,
@@ -45,6 +54,13 @@ export function useAuth() {
     if (!isFirebaseConfigured()) return;
     setState(s => ({ ...s, loading: true, error: null }));
     try {
+      // Nelle WebView native (iOS/Android via Capacitor) il popup OAuth non
+      // funziona: usiamo il redirect, completato da getRedirectResult al
+      // ritorno. Su web teniamo il popup (UX migliore, niente full reload).
+      if (Capacitor.isNativePlatform()) {
+        await signInWithRedirect(auth, googleProvider);
+        return; // la pagina farà redirect; lo stato si aggiorna al rientro
+      }
       await signInWithPopup(auth, googleProvider);
       // onAuthStateChanged aggiornerà lo stato automaticamente
     } catch (err) {
