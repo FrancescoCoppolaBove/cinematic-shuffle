@@ -207,7 +207,7 @@ export default function App() {
   const [detailMovie, setDetailMovie] = useState<TMDBMovieDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  const { user, loading: authLoading, error: authError, signInWithGoogle, signOut } = useAuth();
+  const { user, loading: authLoading, error: authError, signInWithGoogle, signOut, deleteAccount } = useAuth();
   const { prefs, updateProviders } = useUserPreferences(user);
 
   const {
@@ -582,6 +582,7 @@ export default function App() {
             onRemoveFromWatchlist={removeFromWatchlist}
             onOpenMovieGlobal={(id, mt, playlist, index) => openWithPlaylist(id, mt, playlist, index, 'Profile')}
             onSignOut={signOut}
+            onDeleteAccount={deleteAccount}
             lists={lists}
             onCreateList={createList}
             onRenameList={renameList}

@@ -628,6 +628,37 @@ export async function upsertUserPublicProfile(
   await setDoc(userPublicDoc(uid), profile, { merge: true });
 }
 
+// ─── Account deletion (GDPR) ──────────────────────────────────────
+// Cancella TUTTI i dati dell'utente da Firestore. Best-effort: ogni blocco è
+// isolato così un errore parziale non blocca il resto. Va eseguito MENTRE
+// l'utente è ancora autenticato (le regole richiedono l'owner).
+async function deleteAllInCollection(collRef: ReturnType<typeof collection>): Promise<void> {
+  const snap = await getDocs(collRef);
+  await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+}
+
+export async function deleteAllUserData(uid: string): Promise<void> {
+  const subs = ['watched', 'watchlist', 'tvStatus', 'watchedEpisodes', 'lists', 'following', 'followers', 'settings'];
+  for (const s of subs) {
+    try { await deleteAllInCollection(collection(db, 'users', uid, s)); } catch { /* best-effort */ }
+  }
+  // Recensioni, risposte e voti dell'utente (collezioni top-level).
+  try {
+    const r = await getDocs(query(reviewsCol(), where('userId', '==', uid)));
+    await Promise.all(r.docs.map(d => deleteDoc(d.ref)));
+  } catch { /* best-effort */ }
+  try {
+    const rep = await getDocs(query(repliesCol(), where('userId', '==', uid)));
+    await Promise.all(rep.docs.map(d => deleteDoc(d.ref)));
+  } catch { /* best-effort */ }
+  try {
+    const lk = await getDocs(query(reviewLikesCol(), where('uid', '==', uid)));
+    await Promise.all(lk.docs.map(d => deleteDoc(d.ref)));
+  } catch { /* best-effort */ }
+  try { await deleteDoc(userPublicDoc(uid)); } catch { /* best-effort */ }
+  try { await deleteDoc(doc(db, 'users', uid)); } catch { /* best-effort */ }
+}
+
 // ─── Following ────────────────────────────────────────────────────
 export async function followUser(myUid: string, targetUid: string): Promise<void> {
   await setDoc(doc(followCol(myUid), targetUid), { followedAt: serverTimestamp() });

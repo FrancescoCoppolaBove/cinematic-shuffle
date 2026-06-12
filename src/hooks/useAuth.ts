@@ -4,12 +4,14 @@ import {
   signInWithRedirect,
   getRedirectResult,
   signOut,
+  deleteUser,
+  reauthenticateWithPopup,
   onAuthStateChanged,
   type User,
 } from 'firebase/auth';
 import { Capacitor } from '@capacitor/core';
 import { auth, googleProvider, isFirebaseConfigured } from '../services/firebase';
-import { upsertUserPublicProfile } from '../services/firestore';
+import { upsertUserPublicProfile, deleteAllUserData } from '../services/firestore';
 
 interface AuthState {
   user: User | null;
@@ -79,12 +81,37 @@ export function useAuth() {
     await signOut(auth);
   }
 
+  // Cancellazione account (GDPR Art. 17): rimuove TUTTI i dati e poi l'account.
+  // La cancellazione dati avviene mentre si è autenticati; deleteUser può
+  // richiedere un login recente → ri-autenticazione (popup su web).
+  async function deleteAccount() {
+    if (!isFirebaseConfigured()) return;
+    const u = auth.currentUser;
+    if (!u) return;
+    await deleteAllUserData(u.uid);
+    try {
+      await deleteUser(u);
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      if (code === 'auth/requires-recent-login' && !Capacitor.isNativePlatform()) {
+        await reauthenticateWithPopup(u, googleProvider);
+        await deleteUser(u);
+        return;
+      }
+      // I dati sono già stati rimossi; chiudiamo comunque la sessione e
+      // segnaliamo l'errore (es. su native serve ri-loggare per finire).
+      await signOut(auth);
+      throw err;
+    }
+  }
+
   return {
     user: state.user,
     loading: state.loading,
     error: state.error,
     signInWithGoogle,
     signOut: signOutUser,
+    deleteAccount,
     isConfigured: isFirebaseConfigured(),
   };
 }

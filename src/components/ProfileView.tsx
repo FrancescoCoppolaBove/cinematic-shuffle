@@ -50,6 +50,7 @@ interface ProfileViewProps {
   onRemoveFromWatchlist: (id: number) => Promise<void>;
   onOpenMovieGlobal: (id: number, mt: 'movie' | 'tv', playlist?: PlaylistItem[], index?: number) => void;
   onSignOut: () => void;
+  onDeleteAccount: () => Promise<void>;
   lists: MovieList[];
   onCreateList: (name: string) => Promise<MovieList | null>;
   onRenameList: (listId: string, name: string) => Promise<void>;
@@ -69,7 +70,7 @@ export function ProfileView({
   getPersonalRating, onUpdateRating, onMarkWatched, onUnmarkWatched,
   favoriteProviderIds, onUpdateProviders,
   onToggleLiked, onAddToWatchlist, onRemoveFromWatchlist,
-  onOpenMovieGlobal, onSignOut,
+  onOpenMovieGlobal, onSignOut, onDeleteAccount,
   lists, onCreateList, onRenameList, onDeleteList, onRemoveFromList,
   onImportWatched, onUpdateWatchedDate,
   followingSeries, onUnfollow,
@@ -87,6 +88,21 @@ export function ProfileView({
   const [showProfileReviewEditor, setShowProfileReviewEditor] = useState(false);
   const [openPerson, setOpenPerson] = useState<{ id: number; name: string } | null>(null);
   const [showImport, setShowImport] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await onDeleteAccount();
+      // L'onAuthStateChanged riporterà al login: nessun altro stato da gestire.
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : 'Could not delete the account. Please sign in again and retry.');
+      setDeleting(false);
+    }
+  };
   // Lo share del profilo usa SOLO i film: mischiare le serie rende i dati
   // (ore, generi, registi/attori, nome cinefilo) fuorvianti.
   const watchedFilms = useMemo(() => watchedMovies.filter(m => m.media_type === 'movie'), [watchedMovies]);
@@ -292,6 +308,21 @@ export function ProfileView({
             </div>
           </div>
 
+          {/* Account & legal */}
+          <div className="space-y-2.5 pt-1">
+            <div className="flex items-center justify-center gap-3 text-xs text-film-subtle">
+              <a href="/privacy-policy.html" target="_blank" rel="noopener noreferrer" className="underline hover:text-film-text">Privacy Policy</a>
+              <span>·</span>
+              <a href="/terms.html" target="_blank" rel="noopener noreferrer" className="underline hover:text-film-text">Terms</a>
+            </div>
+            <button
+              onClick={() => { setDeleteError(null); setShowDeleteConfirm(true); }}
+              className="w-full py-2.5 rounded-2xl border border-film-red/40 text-film-red text-sm active:bg-film-red/10 transition-colors"
+            >
+              Delete account
+            </button>
+          </div>
+
 
 
         </div>
@@ -468,6 +499,42 @@ export function ProfileView({
       )}
 
       </div>{/* end scroll wrapper */}
+
+      {/* Delete-account confirmation */}
+      {showDeleteConfirm && (
+        <div
+          className="absolute inset-0 z-30 flex items-center justify-center bg-film-black/75 backdrop-blur-sm p-6"
+          onClick={() => { if (!deleting) setShowDeleteConfirm(false); }}
+        >
+          <div
+            className="bg-film-surface border border-film-border rounded-2xl p-5 max-w-sm w-full space-y-3"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-film-text font-semibold">Delete your account?</h3>
+            <p className="text-film-muted text-sm leading-relaxed">
+              This permanently deletes your watched library, watchlist, lists, episode
+              progress, reviews and profile. This action cannot be undone.
+            </p>
+            {deleteError && <p className="text-film-red text-xs leading-relaxed">{deleteError}</p>}
+            <div className="flex gap-2 pt-1">
+              <button
+                disabled={deleting}
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-2.5 rounded-xl border border-film-border text-film-muted text-sm disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={deleting}
+                onClick={handleDeleteAccount}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold disabled:opacity-60"
+              >
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showImport && (
         <ImportLetterboxd
